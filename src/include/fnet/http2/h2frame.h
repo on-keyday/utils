@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -16,7 +16,7 @@
 #include "../../binary/expandable_writer.h"
 #include "../../binary/ex_number.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::http2 {
         enum class H2Error {
             none = 0x0,
@@ -832,4 +832,4 @@ namespace utils {
             }
         }  // namespace frame
     }      // namespace fnet::http2
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include "header.h"
 #include "body.h"
 
-namespace utils::http::header {
+namespace futils::http::header {
 
     template <class String>
     auto default_parse_callback(body::HTTPBodyInfo& info, auto&& header) {
@@ -111,4 +111,4 @@ namespace utils::http::header {
         return true;
     }
 
-}  // namespace utils::http::header
+}  // namespace futils::http::header

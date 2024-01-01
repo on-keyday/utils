@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "secret_manager.h"
 #include "../packet/crypto.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::crypto {
         template <class T>
         concept has_version = requires(T t) {
@@ -194,4 +194,4 @@ namespace utils {
             }
         };
     }  // namespace fnet::quic::crypto
-}  // namespace utils
+}  // namespace futils

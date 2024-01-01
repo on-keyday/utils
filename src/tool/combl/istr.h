@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -85,14 +85,14 @@ namespace combl::istr {
 
         std::string to_string() const {
             if (auto v = as_int64()) {
-                return utils::number::to_string<std::string>(*v);
+                return futils::number::to_string<std::string>(*v);
             }
             else if (auto v = as_uint64()) {
-                return utils::number::to_string<std::string>(*v);
+                return futils::number::to_string<std::string>(*v);
             }
             else if (auto v = as_string()) {
                 std::string str;
-                utils::escape::escape_str(*v, str, utils::escape::EscapeFlag::hex | utils::escape::EscapeFlag::utf16);
+                futils::escape::escape_str(*v, str, futils::escape::EscapeFlag::hex | futils::escape::EscapeFlag::utf16);
                 return "\"" + str + "\"";
             }
             else if (value.index() == 4) {

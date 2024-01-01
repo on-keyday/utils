@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include <compare>
 #include <chrono>
 
-namespace utils::timer {
+namespace futils::timer {
     struct Time {
        private:
         std::uint64_t second = 0;
@@ -133,4 +133,4 @@ namespace utils::timer {
               }) {}
     };
 
-}  // namespace utils::timer
+}  // namespace futils::timer

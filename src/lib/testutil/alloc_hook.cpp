@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,14 +15,14 @@
 #include <number/to_string.h>
 #include <number/insert_space.h>
 #include <platform/detect.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <crtdbg.h>
 #include <windows.h>
 #endif
 
-namespace utils {
+namespace futils {
     namespace test {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #ifdef _DEBUG
         _CRT_ALLOC_HOOK base_alloc_hook;
         std::int64_t total_alloced;
@@ -140,4 +140,4 @@ namespace utils {
 #endif
 #endif
     }  // namespace test
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "../basic/logic.h"
 #include "range.h"
 
-namespace utils::comb2::composite {
+namespace futils::comb2::composite {
     template <class Begin, class Inner, class End, class MustMatchError = types::MustMatchErrorFn>
     constexpr auto comment(Begin&& b, Inner&& in, End&& e, bool nest = false, MustMatchError&& err = MustMatchError{}) {
         return ops::proxy([=](auto&& seq, auto&& ctx, auto&& rec) {
@@ -82,4 +82,4 @@ namespace utils::comb2::composite {
         }
         static_assert(check_comment());
     }  // namespace test
-}  // namespace utils::comb2::composite
+}  // namespace futils::comb2::composite

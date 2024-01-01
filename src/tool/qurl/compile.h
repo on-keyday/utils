@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,12 +15,12 @@
 #include <list>
 
 namespace qurl {
-    namespace comb2 = utils::comb2;
+    namespace comb2 = futils::comb2;
     namespace compile {
 
         namespace node = comb2::tree::node;
 
-        using CodeW = utils::helper::CodeWriter<std::string, std::string_view>;
+        using CodeW = futils::helper::CodeWriter<std::string, std::string_view>;
         inline void write_nodes(CodeW &w, const std::shared_ptr<comb2::tree::Element> &elm) {
             if (auto id = comb2::tree::is_Ident<const char *>(elm)) {
                 w.writeln(id->tag, ": ", id->ident);
@@ -45,8 +45,8 @@ namespace qurl {
             for (auto &istr : istrs) {
                 w.write(to_string(istr.op), " ", istr.value.to_string());
                 w.writeln(" ;pos={",
-                          utils::number::to_string<std::string>(istr.pos.begin), ",",
-                          utils::number::to_string<std::string>(istr.pos.end), "}");
+                          futils::number::to_string<std::string>(istr.pos.begin), ",",
+                          futils::number::to_string<std::string>(istr.pos.end), "}");
                 if (auto fn = istr.value.get<std::shared_ptr<runtime::Func>>()) {
                     write_asm(w, (*fn)->istrs);
                 }

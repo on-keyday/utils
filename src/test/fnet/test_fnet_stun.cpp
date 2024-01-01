@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,8 +12,8 @@
 #include <thread>
 #include <fnet/connect.h>
 
-void test_fnet_stun_run(utils::binary::writer& w, utils::fnet::ip::Version version) {
-    using namespace utils::fnet;
+void test_fnet_stun_run(futils::binary::writer& w, futils::fnet::ip::Version version) {
+    using namespace futils::fnet;
     using namespace std::chrono_literals;
     stun::StunContext ctx;
     SockAddr resolv;
@@ -24,7 +24,7 @@ void test_fnet_stun_run(utils::binary::writer& w, utils::fnet::ip::Version versi
     ctx.original_address.family = local.addr.type() == NetAddrType::ipv6 ? stun::family_ipv6 : stun::family_ipv4;
     ctx.original_address.port = local.port();
     memcpy(ctx.original_address.address, local.addr.data(), local.addr.size());
-    utils::byte duf[12]{1, 2, 3, 4, 5, 6, 4, 4, 4, 3, 0x93, 0x84};
+    futils::byte duf[12]{1, 2, 3, 4, 5, 6, 4, 4, 4, 3, 0x93, 0x84};
     memcpy(ctx.transaction_id, duf, 12);
     stun::StunResult result = stun::StunResult::do_request;
     while (true) {
@@ -50,7 +50,7 @@ void test_fnet_stun_run(utils::binary::writer& w, utils::fnet::ip::Version versi
                     }
                     continue;
                 }
-                utils::binary::reader r{data->first};
+                futils::binary::reader r{data->first};
                 result = ctx.response(r);
                 break;
             }
@@ -61,9 +61,9 @@ void test_fnet_stun_run(utils::binary::writer& w, utils::fnet::ip::Version versi
 }
 
 void test_fnet_stun() {
-    utils::byte buf[2500];
-    utils::binary::writer w{buf};
-    test_fnet_stun_run(w, utils::fnet::ip::Version::ipv4);
+    futils::byte buf[2500];
+    futils::binary::writer w{buf};
+    test_fnet_stun_run(w, futils::fnet::ip::Version::ipv4);
 }
 
 int main() {

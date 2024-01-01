@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,7 +15,7 @@
 #include "../helper/disable_self.h"
 #include "../unicode/utf/convert.h"
 
-namespace utils {
+namespace futils {
     namespace env::sys {
         using env_value_t = view::basic_rvec<wrap::path_char>;
 
@@ -175,8 +175,8 @@ namespace utils {
             static_assert(check_setter_getter());
         }  // namespace test
 
-        utils_DLL_EXPORT EnvGetter STDCALL env_getter();
-        utils_DLL_EXPORT EnvSetter STDCALL env_setter();
+        futils_DLL_EXPORT EnvGetter STDCALL env_getter();
+        futils_DLL_EXPORT EnvSetter STDCALL env_setter();
 
         template <class BufType, class Convert = wrap::path_string>
         constexpr auto expand_sys() {
@@ -195,4 +195,4 @@ namespace utils {
             };
         }
     }  // namespace env::sys
-}  // namespace utils
+}  // namespace futils

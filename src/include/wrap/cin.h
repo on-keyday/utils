@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -17,9 +17,9 @@
 #include "light/stream.h"
 #include <file/file.h>
 
-namespace utils {
+namespace futils {
     namespace wrap {
-        struct utils_DLL_EXPORT UtfIn {
+        struct futils_DLL_EXPORT UtfIn {
            private:
             const file::File& file;
             thread::LiteLock lock;
@@ -55,7 +55,7 @@ namespace utils {
             }
         };
 
-        utils_DLL_EXPORT UtfIn& STDCALL cin_wrap();
+        futils_DLL_EXPORT UtfIn& STDCALL cin_wrap();
 
         struct InputState {
             // input
@@ -74,13 +74,13 @@ namespace utils {
         /// @param buf  output buffer
         /// @param state input state
         /// @return true if input is terminated with end of line or ctrl-c
-        utils_DLL_EXPORT bool STDCALL input(wrap::path_string& buf, InputState* state = nullptr);
+        futils_DLL_EXPORT bool STDCALL input(wrap::path_string& buf, InputState* state = nullptr);
         inline bool input(wrap::path_string& buf, bool non_block, bool no_echo = false) {
             InputState state;
             state.non_block = non_block;
             state.no_echo = no_echo;
             return input(buf, &state);
         }
-        utils_DLL_EXPORT void STDCALL enable_ctrl_c(bool en, unsigned int& flag);
+        futils_DLL_EXPORT void STDCALL enable_ctrl_c(bool en, unsigned int& flag);
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

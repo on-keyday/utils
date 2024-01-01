@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include "dll/dllh.h"
 #include <cstddef>
 
-namespace utils {
+namespace futils {
     namespace fnet {
 
         struct DebugInfo {
@@ -34,4 +34,4 @@ namespace utils {
         fnet_dll_export(void) set_normal_allocs(Allocs alloc);
         fnet_dll_export(void) set_objpool_allocs(Allocs alloc);
     }  // namespace fnet
-}  // namespace utils
+}  // namespace futils

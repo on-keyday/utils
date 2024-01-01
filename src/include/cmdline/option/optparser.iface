@@ -1,10 +1,10 @@
-#    utils - utility library
+#    futils - utility library
 #    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
 
 # optparser - option value interface
-package utils::cmdline::option
+package futils::cmdline::option
 # generate code
 # tool\ifacegen -i src/include/cmdline/option/optparser.iface -o src/include/cmdline/option/optparser.h -VeSn --license --helper-deref "\"../../helper/deref.h\""
 

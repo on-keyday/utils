@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <iostream>
 #include <cassert>
 #include <platform/detect.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <fcntl.h>
 #include <io.h>
 #include "Windows.h"
@@ -21,7 +21,7 @@
 #define _O_U8TEXT 0
 #endif
 
-namespace utils {
+namespace futils {
     namespace wrap {
         static thread::LiteLock gllock;
         static bool initialized = false;
@@ -38,7 +38,7 @@ namespace utils {
 
         ::FILE* is_std(std::ios_base& io) {
             auto addr = std::addressof(io);
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             if (addr == std::addressof(std::wcin)) {
                 return stdin;
             }
@@ -64,7 +64,7 @@ namespace utils {
             return nullptr;
         }
 
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         static bool change_output_mode(auto handle) {
             ::DWORD original;
             if (!GetConsoleMode(handle, &original)) {
@@ -154,7 +154,7 @@ namespace utils {
         }
 #endif
         static bool io_init() {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             if (!in_init() || !out_init()) {
                 return false;
             }
@@ -176,4 +176,4 @@ namespace utils {
         }
 
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

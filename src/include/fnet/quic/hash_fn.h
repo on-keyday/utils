@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -16,30 +16,30 @@
 namespace std {
 
     template <>
-    struct hash<utils::fnet::quic::packetnum::Value> {
+    struct hash<futils::fnet::quic::packetnum::Value> {
         constexpr size_t operator()(auto pn) const {
             return std::hash<decltype(pn.as_uint())>{}(pn.as_uint());
         }
     };
 
     template <>
-    struct hash<utils::fnet::quic::stream::StreamID> {
+    struct hash<futils::fnet::quic::stream::StreamID> {
         constexpr auto operator()(auto id) const noexcept {
             return std::hash<std::uint64_t>{}(id);
         }
     };
 
     template <>
-    struct hash<utils::view::rvec> {
+    struct hash<futils::view::rvec> {
         constexpr auto operator()(auto id) const noexcept {
             return std::hash<std::string_view>{}(std::string_view(id.as_char(), id.size()));
         }
     };
 
     template <>
-    struct hash<utils::fnet::flex_storage> {
+    struct hash<futils::fnet::flex_storage> {
         constexpr auto operator()(auto&& fx) const noexcept {
-            return std::hash<utils::view::rvec>{}(fx);
+            return std::hash<futils::view::rvec>{}(fx);
         }
     };
 }  // namespace std

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,15 +10,15 @@
 #include <fnet/addrinfo.h>
 #include <fnet/socket.h>
 #include <fnet/connect.h>
-using namespace utils::fnet::quic::use::rawptr;
+using namespace futils::fnet::quic::use::rawptr;
 
-using path = utils::wrap::path_string;
+using path = futils::wrap::path_string;
 path libssl;
 path libcrypto;
 std::string cert;
 
 void load_env() {
-    auto env = utils::env::sys::env_getter();
+    auto env = futils::env::sys::env_getter();
     env.get_or(libssl, "FNET_LIBSSL", fnet_lazy_dll_path("libssl.dll"));
     env.get_or(libcrypto, "FNET_LIBCRYPTO", fnet_lazy_dll_path("libcrypto.dll"));
     env.get_or(cert, "FNET_NET_CERT", "cert.pem");
@@ -26,10 +26,10 @@ void load_env() {
 
 int main() {
     load_env();
-    utils::fnet::tls::set_libcrypto(libcrypto.data());
-    utils::fnet::tls::set_libssl(libssl.data());
+    futils::fnet::tls::set_libcrypto(libcrypto.data());
+    futils::fnet::tls::set_libssl(libssl.data());
     auto ctx = std::make_shared<Context>();
-    namespace tls = utils::fnet::tls;
+    namespace tls = futils::fnet::tls;
     auto conf = tls::configure();
     assert(conf);
     conf.set_alpn("\x02h3");
@@ -38,7 +38,7 @@ int main() {
     auto ok = ctx->init(std::move(config)) &&
               ctx->connect_start("www.google.com");
     assert(ok);
-    auto [sock, addr] = utils::fnet::connect("www.google.com", "443", utils::fnet::sockattr_udp(), false).value();
+    auto [sock, addr] = futils::fnet::connect("www.google.com", "443", futils::fnet::sockattr_udp(), false).value();
 
     while (true) {
         auto [data, _, idle] = ctx->create_udp_payload();
@@ -48,7 +48,7 @@ int main() {
         if (data.size()) {
             sock.writeto(addr.addr, data);
         }
-        utils::byte buf[2000];
+        futils::byte buf[2000];
         auto rdata = sock.readfrom(buf);
         if (rdata && rdata->first.size()) {
             ctx->parse_udp_payload(rdata->first);

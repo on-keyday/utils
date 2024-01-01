@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,6 +12,6 @@
 namespace fs = std::filesystem;
 
 int main(int argc, char** argv) {
-    fs::path path = utils::wrap::get_exepath<std::string>();
-    utils::wrap::cout_wrap() << path;
+    fs::path path = futils::wrap::get_exepath<std::string>();
+    futils::wrap::cout_wrap() << path;
 }

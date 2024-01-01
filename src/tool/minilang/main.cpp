@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,11 +11,11 @@
 #include <file/file_view.h>
 #include <space/line_pos.h>
 #include <fstream>
-using namespace utils::cmdline;
-namespace hlp = utils::helper;
-namespace wrap = utils::wrap;
-auto& cout = utils::wrap::cout_wrap();
-auto& cerr = utils::wrap::cerr_wrap();
+using namespace futils::cmdline;
+namespace hlp = futils::helper;
+namespace wrap = futils::wrap;
+auto& cout = futils::wrap::cout_wrap();
+auto& cerr = futils::wrap::cerr_wrap();
 
 enum class OutputFormat {
     none,
@@ -47,7 +47,7 @@ void dump_stack(auto& opt, auto& stack, auto& seq) {
         cerr << v.msg << "\n";
         seq.rptr = v.node->expr->pos();
         wrap::string err;
-        auto linepos = utils::space::write_src_loc(err, seq);
+        auto linepos = futils::space::write_src_loc(err, seq);
         cout << opt.input << ":" << linepos.line + 1 << ":" << linepos.pos + 1 << "\n";
         cout << err << "\n";
     }
@@ -77,12 +77,12 @@ int main(int argc, char** argv) {
         return -1;
     }
     minilang::expr::Expr* expr = nullptr;
-    utils::file::View view;
+    futils::file::View view;
     if (!view.open(opt.input)) {
         report("failed to open file ", opt.input);
         return -1;
     }
-    auto seq = utils::make_ref_seq(view);
+    auto seq = futils::make_ref_seq(view);
     minilang::expr::Errors<wrap::string, wrap::vector> errs;
     if (!minilang::parse(seq, expr, errs)) {
         report("failed to parse file ", opt.input);
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
             }
             wrap::string err;
             seq.rptr = v.end;
-            auto linepos = utils::space::write_src_loc(err, seq);
+            auto linepos = futils::space::write_src_loc(err, seq);
             cout << "src: " << opt.input << ":" << linepos.line + 1 << ":" << linepos.pos + 1 << "\n";
             cout << err << "\n";
         }

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include "../frame/cast.h"
 #include "format.h"
 
-namespace utils::fnet::quic::log {
+namespace futils::fnet::quic::log {
     // if omit_data is true, data field (crypto/stream/connection_close(reason_phrase)/datagram) will be ommited
     // if data_as_hex is true, print above data as hexadecimal format, otherwise print like string
     // (like "\x02h3")
@@ -172,4 +172,4 @@ namespace utils::fnet::quic::log {
             call_format(frame);
         }
     }
-}  // namespace utils::fnet::quic::log
+}  // namespace futils::fnet::quic::log

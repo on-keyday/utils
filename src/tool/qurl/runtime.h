@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -127,11 +127,11 @@ namespace qurl {
 
         struct Param {
             std::string param;
-            utils::comb2::Pos pos;
+            futils::comb2::Pos pos;
         };
 
         struct Func {
-            utils::comb2::Pos pos;
+            futils::comb2::Pos pos;
             std::vector<Param> params;
             std::vector<Instruction> istrs;
         };
@@ -157,7 +157,7 @@ namespace qurl {
 
         struct Value {
             std::variant<std::monostate, std::string, std::int64_t, std::uint64_t, Name, std::shared_ptr<Func>, BuiltinObject*, Label> value;
-            utils::comb2::Pos pos = utils::comb2::npos;
+            futils::comb2::Pos pos = futils::comb2::npos;
 
             template <class T>
             T* get() {
@@ -171,23 +171,23 @@ namespace qurl {
             std::string to_string(bool use_null = false) const {
                 if (auto s = std::get_if<std::string>(&value)) {
                     std::string val;
-                    utils::escape::escape_str(*s, val);
+                    futils::escape::escape_str(*s, val);
                     return "\"" + val + "\"";
                 }
                 if (auto i = std::get_if<std::uint64_t>(&value)) {
-                    return "#" + utils::number::to_string<std::string>(*i);
+                    return "#" + futils::number::to_string<std::string>(*i);
                 }
                 if (auto n = std::get_if<Name>(&value)) {
                     return "[" + n->name + "]";
                 }
                 if (auto n = std::get_if<std::shared_ptr<Func>>(&value)) {
-                    return "<function arg: " + utils::number::to_string<std::string>((*n)->params.size()) + ">";
+                    return "<function arg: " + futils::number::to_string<std::string>((*n)->params.size()) + ">";
                 }
                 if (auto n = std::get_if<std::monostate>(&value); n && use_null) {
                     return "null";
                 }
                 if (auto n = std::get_if<Label>(&value)) {
-                    return ":" + utils::number::to_string<std::string>(n->label);
+                    return ":" + futils::number::to_string<std::string>(n->label);
                 }
                 return {};
             }
@@ -196,7 +196,7 @@ namespace qurl {
         struct Instruction {
             Op op = Op::UNDEF;
             Value value;
-            utils::comb2::Pos pos = utils::comb2::npos;
+            futils::comb2::Pos pos = futils::comb2::npos;
         };
 
         struct InstrScope {
@@ -206,7 +206,7 @@ namespace qurl {
         };
 
         struct Var {
-            utils::comb2::Pos pos;
+            futils::comb2::Pos pos;
             Value value;
         };
 
@@ -229,7 +229,7 @@ namespace qurl {
             std::shared_ptr<Scope> scope;
             std::uint64_t pc = 0;
             std::shared_ptr<InstrScope> istrs;
-            utils::comb2::Pos src_pos;
+            futils::comb2::Pos src_pos;
             std::vector<Error> errors;
             std::map<std::string, BuiltinObject> builtins;
             SuspendEnv suspend;
@@ -490,7 +490,7 @@ namespace qurl {
                 maybe_init_scope();
                 auto& istr = (*istrs->istrs)[istrs->pc];
                 auto& cpc = istrs->pc;
-                auto inc = utils::helper::defer([&] {
+                auto inc = futils::helper::defer([&] {
                     cpc++;
                 });
                 src_pos = istr.pos;

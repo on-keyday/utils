@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,10 +11,10 @@
 #include <unicode/utf/convert.h>
 #include <fnet/dll/errno.h>
 #include <platform/detect.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <Windows.h>
 #endif
-namespace utils {
+namespace futils {
     namespace fnet::error {
         struct Defined {
             NumErrMode mode = NumErrMode::use_default;
@@ -98,7 +98,7 @@ namespace utils {
                 });
             }
 
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 
             static auto d = helper::init([]() {
                 register_categspec_nummsg(Category::os, NumErrMode::use_custom, [](helper::IPushBacker<> pn, std::uint64_t code) {
@@ -130,4 +130,4 @@ namespace utils {
             return Error(get_error(), Category::os);
         }
     }  // namespace fnet::error
-}  // namespace utils
+}  // namespace futils

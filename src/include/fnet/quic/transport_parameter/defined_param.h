@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -18,7 +18,7 @@
 #include "preferred_address.h"
 #include "../../storage.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::trsparam {
 
         struct DuplicateSetChecker {
@@ -426,4 +426,4 @@ namespace utils {
         }
 
     }  // namespace fnet::quic::trsparam
-}  // namespace utils
+}  // namespace futils

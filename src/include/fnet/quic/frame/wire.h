@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,7 +15,7 @@
 #include "token.h"
 #include "conn_id.h"
 
-namespace utils::fnet::quic::frame {
+namespace futils::fnet::quic::frame {
     static_assert(test::check_padding());
     static_assert(test::check_dgram());
     static_assert(test::check_crypto());
@@ -31,4 +31,4 @@ namespace utils::fnet::quic::frame {
     static_assert(test::check_retire_connection_id());
     static_assert(test::check_connection_close());
     static_assert(test::check_ack());
-}  // namespace utils::fnet::quic::frame
+}  // namespace futils::fnet::quic::frame

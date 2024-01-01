@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,16 +14,16 @@
 #include <coro/coro.h>
 #include <chrono>
 #include <platform/detect.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <format>
 #define HAS_FORMAT
 #endif
-using namespace utils::fnet;
-struct Flags : utils::cmdline::templ::HelpOption {
+using namespace futils::fnet;
+struct Flags : futils::cmdline::templ::HelpOption {
     std::vector<std::string> args;
 };
-auto& cout = utils::wrap::cout_wrap();
-auto& cerr = utils::wrap::cerr_wrap();
+auto& cout = futils::wrap::cout_wrap();
+auto& cerr = futils::wrap::cerr_wrap();
 
 auto now() {
     return std::chrono::system_clock::now();
@@ -35,7 +35,7 @@ struct TimePoint {
     point begin;
     point end;
     bool failure = false;
-    utils::byte ttl = 0;
+    futils::byte ttl = 0;
 };
 
 struct Data {
@@ -52,14 +52,14 @@ struct Workers {
     size_t limit = 4;
 };
 
-void do_ping(utils::coro::C* ctx, Data* p) {
+void do_ping(futils::coro::C* ctx, Data* p) {
     auto wk = static_cast<Workers*>(ctx->get_thread_context());
     icmp::ICMPEcho hdr;
     hdr.type = icmp::Type::echo;
     hdr.identifier = p->i;
     hdr.seq_number = 1;
-    utils::byte buffer[60];
-    utils::binary::writer w{buffer};
+    futils::byte buffer[60];
+    futils::binary::writer w{buffer};
     hdr.data = "buffer yes or no yahoo object !!";
     hdr.render_with_checksum(w).value();
     auto rem = p->sock.write(w.written());
@@ -73,8 +73,8 @@ void do_ping(utils::coro::C* ctx, Data* p) {
     BufferManager<std::string> buf_mgr;
     buf_mgr.buffer.resize(1200);
     auto res = p->sock.readfrom_async(
-        utils::fnet::async_addr_then(buf_mgr, [=](Socket&& s, BufferManager<std::string> buf_mgr, NetAddrPort&& remote, NotifyResult&& r) {
-            auto d = utils::helper::defer([&] {
+        futils::fnet::async_addr_then(buf_mgr, [=](Socket&& s, BufferManager<std::string> buf_mgr, NetAddrPort&& remote, NotifyResult&& r) {
+            auto d = futils::helper::defer([&] {
                 p->period.back().end = now();
                 if (p->count + 1 < wk->limit) {
                     if (!ctx->add_coroutine(p, do_ping)) {
@@ -92,7 +92,7 @@ void do_ping(utils::coro::C* ctx, Data* p) {
                 p->period.back().failure = true;
                 return;
             }
-            utils::binary::reader rd{val->first};
+            futils::binary::reader rd{val->first};
             ip::IPv4Header hdr;
             icmp::ICMPEcho reply;
             auto res = hdr.parse_with_checksum(rd)
@@ -107,7 +107,7 @@ void do_ping(utils::coro::C* ctx, Data* p) {
             }
             p->period.back().ttl = hdr.ttl;
             auto text = ipv4(hdr.src_addr.addr, 0).addr.to_string<std::string>();
-            cout << utils::wrap::packln("ping to ", p->target, " (", text, ")", " succeeded");
+            cout << futils::wrap::packln("ping to ", p->target, " (", text, ")", " succeeded");
         }));
     if (!res) {
         cerr << res.error().error<std::string>() << "\n";
@@ -129,7 +129,7 @@ void do_ping(utils::coro::C* ctx, Data* p) {
     }
 }
 
-void ping(utils::coro::C* ctx, Data* p) {
+void ping(futils::coro::C* ctx, Data* p) {
     auto wk = static_cast<Workers*>(ctx->get_thread_context());
     auto attr = sockattr_raw(ip::Version::ipv4, ip::Protocol::icmp);
     auto c = connect_with(p->target, {}, attr, false, [&](WithState, auto&& wait) {
@@ -150,19 +150,19 @@ void ping(utils::coro::C* ctx, Data* p) {
     do_ping(ctx, p);
 }
 
-int Main(Flags& flags, utils::cmdline::option::Context& ctx) {
+int Main(Flags& flags, futils::cmdline::option::Context& ctx) {
     if (flags.args.size() == 0) {
         cerr << "need host name";
         return -1;
     }
-    auto result = utils::wrap::run_this_as_admin();
-    if (result != utils::wrap::RunResult::already_admin) {
-        if (result != utils::wrap::RunResult::started) {
+    auto result = futils::wrap::run_this_as_admin();
+    if (result != futils::wrap::RunResult::already_admin) {
+        if (result != futils::wrap::RunResult::started) {
             cerr << "need admin";
         }
         return 0;
     }
-    auto co = utils::coro::make_coro(100, 100);
+    auto co = futils::coro::make_coro(100, 100);
     if (!co) {
         cerr << "cannot make coroutine\n";
         return -1;
@@ -176,7 +176,7 @@ int Main(Flags& flags, utils::cmdline::option::Context& ctx) {
         co.add_coroutine(
             &target, ping);
     }
-    co.add_coroutine(nullptr, [](utils::coro::C* c, void*) {
+    co.add_coroutine(nullptr, [](futils::coro::C* c, void*) {
         auto w = static_cast<Workers*>(c->get_thread_context());
         while (w->count) {
             wait_io_event(1);
@@ -214,9 +214,9 @@ int Main(Flags& flags, utils::cmdline::option::Context& ctx) {
 
 int main(int argc, char** argv) {
     Flags flags;
-    return utils::cmdline::templ::parse_or_err<std::string>(
+    return futils::cmdline::templ::parse_or_err<std::string>(
         argc, argv, flags, [](auto&& str, bool err) { cout << str; },
-        [](Flags& flags, utils::cmdline::option::Context& ctx) {
+        [](Flags& flags, futils::cmdline::option::Context& ctx) {
             return Main(flags, ctx);
         });
 }

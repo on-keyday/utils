@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,11 +10,11 @@
 #include <functional>
 
 void test_cout() {
-    auto& cout = utils::wrap::cout_wrap();
+    auto& cout = futils::wrap::cout_wrap();
 
     cout << U"ありがとう!\n";
     cout << 3;
-    cout << utils::wrap::pack("\nerror: ", 3, U" is not ", u"a vector\n")
+    cout << futils::wrap::pack("\nerror: ", 3, U" is not ", u"a vector\n")
                 .pack(u8"please pay money, つまるところ かねはらえ\n", std::hex, 12);
     std::function<int(int)> f;
 }

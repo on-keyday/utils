@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "../../binary/view.h"
 #include <tuple>
 
-namespace utils::unicode::utf {
+namespace futils::unicode::utf {
     enum class UTFType {
         unknown,
         utf8,
@@ -127,4 +127,4 @@ namespace utils::unicode::utf {
             return read_impl(do_convert);
         }
     };
-}  // namespace utils::unicode::utf
+}  // namespace futils::unicode::utf

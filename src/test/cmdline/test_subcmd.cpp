@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,9 +10,9 @@
 #include <cmdline/subcmd/parse.h>
 #include <wrap/cout.h>
 
-using namespace utils::cmdline;
+using namespace futils::cmdline;
 void test_subcommand(int argc, char** argv) {
-    auto& cout = utils::wrap::cout_wrap();
+    auto& cout = futils::wrap::cout_wrap();
     subcmd::RunContext ctx;
     auto default_runner = [&](subcmd::RunCommand& ctx) {
         for (auto& a : ctx.arg()) {

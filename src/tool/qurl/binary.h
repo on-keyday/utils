@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,9 +11,9 @@
 
 namespace qurl {
     namespace raw {
-        namespace binary = utils::binary;
-        using byte = utils::byte;
-        enum class Instruction : utils::byte {
+        namespace binary = futils::binary;
+        using byte = futils::byte;
+        enum class Instruction : futils::byte {
             // undefined operation
             UNDEF,
             // stack control
@@ -53,7 +53,7 @@ namespace qurl {
         };
 
         struct Arg {
-            utils::byte arg[16];
+            futils::byte arg[16];
             bool number(byte n_byte, std::uint64_t value, RepFlag rep) {
                 binary::flags_t<byte, 2, 2, 1, 3> flag;
                 if (n_byte != 1 && n_byte != 2 && n_byte != 4 && n_byte != 8) {

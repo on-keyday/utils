@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include "../status.h"
 #include "../../core/sequencer.h"
 
-namespace utils::comb2 {
+namespace futils::comb2 {
     namespace types {
         template <class Tag, class A>
         struct Group : opti::MaybeEmptyA<A> {
@@ -86,4 +86,4 @@ namespace utils::comb2 {
         }
     }  // namespace ops
 
-}  // namespace utils::comb2
+}  // namespace futils::comb2

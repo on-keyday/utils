@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include "../basic/logic.h"
 #include "../basic/unicode.h"
 
-namespace utils::comb2::composite {
+namespace futils::comb2::composite {
     using namespace ops;
     constexpr auto small_alphabet = range('a', 'z');
     constexpr auto large_alphabet = range('A', 'Z');
@@ -49,4 +49,4 @@ namespace utils::comb2::composite {
 
         static_assert(check_ident());
     }  // namespace test
-}  // namespace utils::comb2::composite
+}  // namespace futils::comb2::composite

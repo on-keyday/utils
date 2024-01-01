@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,9 +11,9 @@
 #include <random>
 #include <chrono>
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::context {
-        inline bool default_gen_random(std::shared_ptr<void>&, utils::view::wvec data, utils::fnet::quic::connid::RandomUsage) {
+        inline bool default_gen_random(std::shared_ptr<void>&, futils::view::wvec data, futils::fnet::quic::connid::RandomUsage) {
             std::random_device dev;
             std::uniform_int_distribution uni(0, 255);
             for (auto& d : data) {
@@ -25,7 +25,7 @@ namespace utils {
         Config use_default_config(tls::TLSConfig&& tls) {
             Config config;
             config.tls_config = std::move(tls);
-            config.connid_parameters.random = utils::fnet::quic::connid::Random{
+            config.connid_parameters.random = futils::fnet::quic::connid::Random{
                 nullptr,
                 default_gen_random,
             };
@@ -58,4 +58,4 @@ namespace utils {
             return alc;
         }
     }  // namespace fnet::quic::context
-}  // namespace utils
+}  // namespace futils

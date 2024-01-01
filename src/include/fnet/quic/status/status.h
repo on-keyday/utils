@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -17,7 +17,7 @@
 #include "loss_timer.h"
 #include "ack_range.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::status {
 
         template <class Alg>
@@ -587,4 +587,4 @@ namespace utils {
 
         constexpr auto sizeof_Status = sizeof(Status<NullAlgorithm>);
     }  // namespace fnet::quic::status
-}  // namespace utils
+}  // namespace futils

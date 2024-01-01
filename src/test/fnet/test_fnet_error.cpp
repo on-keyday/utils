@@ -1,15 +1,15 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
 */
 
 #include <fnet/error.h>
-using namespace utils;
+using namespace futils;
 
 int main() {
-    fnet::error::Error err(errno, utils::fnet::error::Category::os);
+    fnet::error::Error err(errno, futils::fnet::error::Category::os);
     assert(err.category() == fnet::error::Category::os);
     struct LocalError {
         int val = 0;

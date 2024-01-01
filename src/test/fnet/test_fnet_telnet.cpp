@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -7,11 +7,11 @@
 
 #include <fnet/connect.h>
 #include <fstream>
-namespace fnet = utils::fnet;
+namespace fnet = futils::fnet;
 
 int main() {
     auto [sock, addr] = fnet::connect("koukoku.shadan.open.ad.jp", "23", fnet::sockattr_tcp()).value();
-    utils::byte data[2000]{};
+    futils::byte data[2000]{};
     std::string buffer;
     size_t count = 0;
     for (;;) {

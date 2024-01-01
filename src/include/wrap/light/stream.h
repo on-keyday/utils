@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,9 +11,9 @@
 
 #include <iosfwd>
 #include <platform/detect.h>
-namespace utils {
+namespace futils {
     namespace wrap {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         using ostream = std::wostream;
         using istream = std::wistream;
         using stringstream = std::wstringstream;
@@ -23,4 +23,4 @@ namespace utils {
         using stringstream = std::stringstream;
 #endif
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

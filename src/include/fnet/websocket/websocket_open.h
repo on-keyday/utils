@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include "../util/base64.h"
 #include <number/array.h>
 
-namespace utils {
+namespace futils {
     namespace fnet {
         namespace websocket {
 
@@ -32,7 +32,7 @@ namespace utils {
                 error_http_status,
             };
 
-            using ClientKey = number::Array<char, 26 + utils::strlen(websocket_magic_guid), true>;
+            using ClientKey = number::Array<char, 26 + futils::strlen(websocket_magic_guid), true>;
             using SHAHash = number::Array<char, 20>;
 
             Error open(HTTP& http, auto&& path, auto&& header, auto& compare_sec_key) {
@@ -174,4 +174,4 @@ namespace utils {
         }  // namespace websocket
 
     }  // namespace fnet
-}  // namespace utils
+}  // namespace futils

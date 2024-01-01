@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -19,22 +19,22 @@
 #include <map>
 #include <wrap/cout.h>
 
-using namespace utils::fnet::quic::use::smartptr;
+using namespace futils::fnet::quic::use::smartptr;
 
-using path = utils::wrap::path_string;
+using path = futils::wrap::path_string;
 path libssl;
 path libcrypto;
 std::string cert;
 
 void load_env() {
-    auto env = utils::env::sys::env_getter();
+    auto env = futils::env::sys::env_getter();
     env.get_or(libssl, "FNET_LIBSSL", fnet_lazy_dll_path("libssl.dll"));
     env.get_or(libcrypto, "FNET_LIBCRYPTO", fnet_lazy_dll_path("libcrypto.dll"));
     env.get_or(cert, "FNET_PUBLIC_KEY", "cert.pem");
 }
-namespace http3 = utils::fnet::http3;
-namespace tls = utils::fnet::tls;
-using QpackConfig = utils::qpack::TypeConfig<>;
+namespace http3 = futils::fnet::http3;
+namespace tls = futils::fnet::tls;
+using QpackConfig = futils::qpack::TypeConfig<>;
 using H3Config = http3::TypeConfig<QpackConfig, DefaultStreamTypeConfig>;
 using Conn = http3::stream::Connection<H3Config>;
 
@@ -82,7 +82,7 @@ void handler_thread(Data* data) {
     });
     std::multimap<std::string, std::string> headers;
     while (!req->is_closed()) {
-        if (reqs.read_header([&](utils::qpack::DecodeField<std::string>& field) {
+        if (reqs.read_header([&](futils::qpack::DecodeField<std::string>& field) {
                 headers.emplace(field.key, field.value);
             })) {
             break;
@@ -90,12 +90,12 @@ void handler_thread(Data* data) {
         std::this_thread::yield();
     }
     while (!req->is_closed()) {
-        utils::fnet::flex_storage s;
-        reqs.read([&](utils::view::rvec data) {
+        futils::fnet::flex_storage s;
+        reqs.read([&](futils::view::rvec data) {
             s.append(data);
         });
         if (s.size()) {
-            utils::wrap::cout_wrap() << s << "\n";
+            futils::wrap::cout_wrap() << s << "\n";
         }
     }
 }
@@ -109,7 +109,7 @@ int main() {
     conf.set_cacert_file(cert.data());
     auto ctx = make_quic(std::move(conf), [](auto&&) {});
     assert(ctx);
-    auto res = utils::fnet::connect("localhost", "443", utils::fnet::sockattr_udp(), false);
+    auto res = futils::fnet::connect("localhost", "443", futils::fnet::sockattr_udp(), false);
     assert(res);
 
     auto sock = std::move(res->first);
@@ -132,10 +132,10 @@ int main() {
         if (payload.size()) {
             sock.writeto(to.addr, payload);
         }
-        utils::byte data[1500];
+        futils::byte data[1500];
         auto recv = sock.readfrom(data);
         if (!recv) {
-            if (!utils::fnet::isSysBlock(recv.error())) {
+            if (!futils::fnet::isSysBlock(recv.error())) {
                 ctx->request_close(recv.error());
             }
         }

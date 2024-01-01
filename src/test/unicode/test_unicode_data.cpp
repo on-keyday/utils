@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,8 +14,8 @@
 #include <algorithm>
 
 int main() {
-    namespace unicodedata = utils::unicode::data;
-    utils::file::View file, file2, file3;
+    namespace unicodedata = futils::unicode::data;
+    futils::file::View file, file2, file3;
     if (!file.open("ignore/UnicodeData.txt")) {
         return -1;
     }
@@ -25,27 +25,27 @@ int main() {
     if (!file3.open("ignore/emoji-data.txt")) {
         return -1;
     }
-    auto seq = utils::make_ref_seq(file);
+    auto seq = futils::make_ref_seq(file);
     unicodedata::UnicodeData data;
     auto res = unicodedata::text::parse_unicodedata_text(seq, data);
     assert(res == unicodedata::text::ParseError::none);
-    auto seq2 = utils::make_ref_seq(file2);
+    auto seq2 = futils::make_ref_seq(file2);
     res = unicodedata::text::parse_blocks_text(seq2, data);
     assert(res == unicodedata::text::ParseError::none);
-    auto seq3 = utils::make_ref_seq(file3);
+    auto seq3 = futils::make_ref_seq(file3);
     res = unicodedata::text::parse_emoji_data_text(seq3, data);
     assert(res == unicodedata::text::ParseError::none);
     std::string binary;
-    utils::binary::expand_writer<std::string&> w{binary};
+    futils::binary::expand_writer<std::string&> w{binary};
     unicodedata::bin::serialize_unicodedata(w, data);
-    utils::binary::reader r{binary};
-    unicodedata::UnicodeData<utils::view::rvec> red;
+    futils::binary::reader r{binary};
+    unicodedata::UnicodeData<futils::view::rvec> red;
     auto ok = unicodedata::bin::deserialize_unicodedata(r, red);
     assert(ok);
     size_t dec_max = 0;
-    std::set<utils::view::rvec> cmd;
-    std::set<utils::view::rvec> blocks;
-    std::vector<unicodedata::CodeInfo<utils::view::rvec>*> emojis;
+    std::set<futils::view::rvec> cmd;
+    std::set<futils::view::rvec> blocks;
+    std::vector<unicodedata::CodeInfo<futils::view::rvec>*> emojis;
     for (auto& code : red.codes) {
         auto v = code.second.decomposition.to.size();
         if (v) {
@@ -68,7 +68,7 @@ int main() {
             }
         }
     }
-    auto& cout = utils::wrap::cout_wrap();
+    auto& cout = futils::wrap::cout_wrap();
     for (auto& s : emojis) {
         char32_t d[] = {s->codepoint, 0};
         cout << s->block << ":" << s->name << ":" << std::u32string_view(d) << ":" << std::uint32_t(s->codepoint) << "\n";

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include <wrap/cout.h>
 
 struct Input {
-    utils::file::View& file;
+    futils::file::View& file;
     std::string str;
     size_t pos = 0;
 
@@ -32,15 +32,15 @@ struct Input {
 };
 
 int main() {
-    utils::file::View view;
+    futils::file::View view;
     if (!view.open("./ignore/dump0.gz")) {
         return -1;
     }
     Input input{view};
-    utils::file::gzip::GZipHeader head;
-    utils::binary::bit_reader<Input&> bitr{input};
+    futils::file::gzip::GZipHeader head;
+    futils::binary::bit_reader<Input&> bitr{input};
     std::string out;
-    auto err = utils::file::gzip::decode_gzip(out, head, bitr);
-    assert(err == utils::file::gzip::deflate::DeflateError::none);
-    utils::wrap::cout_wrap() << out;
+    auto err = futils::file::gzip::decode_gzip(out, head, bitr);
+    assert(err == futils::file::gzip::deflate::DeflateError::none);
+    futils::wrap::cout_wrap() << out;
 }

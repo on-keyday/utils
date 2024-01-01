@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <fnet/sock_internal.h>
 #include <platform/detect.h>
 
-namespace utils {
+namespace futils {
     namespace fnet {
 
         expected<std::uintptr_t> Socket::get_raw() {
@@ -104,7 +104,7 @@ namespace utils {
         }
 
         expected<void> Socket::set_exclusive_use(bool exclusive) {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             int yes = exclusive ? 1 : 0;
             return set_option(SOL_SOCKET, SO_EXCLUSIVEADDRUSE, yes);
 #else
@@ -115,7 +115,7 @@ namespace utils {
         expected<void> Socket::set_mtu_discover(MTUConfig conf) {
             int val = 0;
             if (conf == mtu_default) {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
                 val = IP_PMTUDISC_NOT_SET;
 #else
                 val = IP_PMTUDISC_WANT;
@@ -139,7 +139,7 @@ namespace utils {
         expected<void> Socket::set_mtu_discover_v6(MTUConfig conf) {
             int val = 0;
             if (conf == mtu_default) {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
                 val = IP_PMTUDISC_NOT_SET;
 #else
                 val = IP_PMTUDISC_WANT;
@@ -172,7 +172,7 @@ namespace utils {
         }
 
         expected<void> Socket::set_dont_fragment_v4(bool df) {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             return set_option(IPPROTO_IP, IP_DONTFRAGMENT, std::uint32_t(df ? 1 : 0));
 #else
             return unexpect(error::Error("IP_DONTFRAGMENT is not supported on linux", error::Category::lib, error::fnet_usage_error));
@@ -184,7 +184,7 @@ namespace utils {
         }
 
         expected<void> Socket::set_connreset(bool enable) {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             return get_raw().and_then([&](std::uintptr_t sock) -> expected<void> {
                 std::int32_t flag = enable ? 1 : 0;
                 DWORD ret = 0;
@@ -200,7 +200,7 @@ namespace utils {
         }
 
         expected<SockAttr> Socket::get_sockattr() {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             WSAPROTOCOL_INFOW info{};
             return get_option(SOL_SOCKET, SO_PROTOCOL_INFOW, info).transform([&] {
                 return SockAttr{
@@ -223,7 +223,7 @@ namespace utils {
         }
 
         expected<void> Socket::set_DF(bool df) {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             auto errv4 = set_dont_fragment_v6(df);
             auto errv6 = set_dont_fragment_v4(df);
 #else
@@ -250,4 +250,4 @@ namespace utils {
             return set_option(IPPROTO_IPV6, IPV6_HDRINCL, on);
         }
     }  // namespace fnet
-}  // namespace utils
+}  // namespace futils

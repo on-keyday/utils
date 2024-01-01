@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <memory>
 #include <string_view>
 
-namespace utils {
+namespace futils {
     namespace code {
         template <class T, class Indent = const char*>
         struct IndentWriter {
@@ -234,4 +234,4 @@ namespace utils {
         };
 
     }  // namespace code
-}  // namespace utils
+}  // namespace futils

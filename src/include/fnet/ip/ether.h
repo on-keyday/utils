@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include "../binary/number.h"
 #include "../util/crc.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::ether {
 
         struct EthernetFrame {
@@ -111,4 +111,4 @@ namespace utils {
             static_assert(check_ether_frame());
         }  // namespace test
     }      // namespace fnet::ether
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,15 +9,15 @@
 #include <fnet/heap.h>
 #include <fnet/dll/glheap.h>
 #include <platform/detect.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <Windows.h>
 #else
 #include <cstdlib>
 #endif
 
-namespace utils {
+namespace futils {
     namespace fnet {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         void* simple_heap_alloc(void*, size_t size, size_t, DebugInfo*) {
             return HeapAlloc(GetProcessHeap(), 0, size);
         }
@@ -124,4 +124,4 @@ namespace utils {
             return nullptr;
         }
     }  // namespace fnet
-}  // namespace utils
+}  // namespace futils

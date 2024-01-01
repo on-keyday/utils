@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include <deprecated/syntax/dispatcher/filter.h>
 
 namespace binred {
-    namespace us = utils::syntax;
+    namespace us = futils::syntax;
     constexpr auto package_def = "PACKAGE";
     constexpr auto struct_def = "STRUCT";
     constexpr auto member_def = "MEMBER";
@@ -26,7 +26,7 @@ namespace binred {
     constexpr auto errtype_def = "ERRTYPE";
     constexpr auto assign_def = "ASSIGN";
     constexpr auto member_as_result = "MEMBER_AS_RESULT";
-    bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
+    bool read_fmt(futils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         constexpr auto is_expr = us::filter::stack_order(1, expr_def);
         if (is_expr(result)) {
             return state.tree(result, false) == us::MatchState::succeed;

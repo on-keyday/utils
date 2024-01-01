@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,56 +14,56 @@
 #include <code/src_location.h>
 #include <escape/escape.h>
 #include <file/file_view.h>
-struct Flags : utils::cmdline::templ::HelpOption {
+struct Flags : futils::cmdline::templ::HelpOption {
     std::vector<std::string_view> args;
     bool print_tokens = false;
-    void bind(utils::cmdline::option::Context& ctx) {
+    void bind(futils::cmdline::option::Context& ctx) {
         bind_help(ctx);
         ctx.VarBool(&print_tokens, "print-tokens", "print tokenized data");
     }
 };
-auto& cout = utils::wrap::cout_wrap();
-auto& cerr = utils::wrap::cerr_wrap();
+auto& cout = futils::wrap::cout_wrap();
+auto& cerr = futils::wrap::cerr_wrap();
 
-int Main(Flags& flags, utils::cmdline::option::Context& ctx) {
+int Main(Flags& flags, futils::cmdline::option::Context& ctx) {
     if (flags.args.size() == 0) {
         cerr << "error: no input file\n";
         return -1;
     }
-    utils::file::View view;
+    futils::file::View view;
     if (!view.open(flags.args[0])) {
         cerr << "error: failed to open file " << flags.args[0] << "\n";
         return -1;
     }
-    auto seq = utils::make_ref_seq(view);
-    auto tokens = utils::langc::tokenize(seq);
-    auto print_err = [&](utils::langc::Error err) {
+    auto seq = futils::make_ref_seq(view);
+    auto tokens = futils::langc::tokenize(seq);
+    auto print_err = [&](futils::langc::Error err) {
         std::string src;
         seq.rptr = err.pos.begin;
-        auto loc = utils::code::write_src_loc(src, seq);
+        auto loc = futils::code::write_src_loc(src, seq);
         cerr << "error: " << err.err << "\n";
         cerr << flags.args[0] << ":" << loc.line + 1 << ":" << loc.pos + 1 << ":\n";
         cerr << src << "\n";
     };
     if (!tokens) {
-        print_err(utils::langc::Error{.err = "expect eof but not", .pos = {seq.rptr, seq.rptr + 1}});
+        print_err(futils::langc::Error{.err = "expect eof but not", .pos = {seq.rptr, seq.rptr + 1}});
         return -1;
     }
     if (flags.print_tokens) {
         for (auto& token : *tokens) {
-            cout << "----------\ntoken: " << utils::escape::escape_str<std::string>(token.token) << "\ntag: " << token.tag << "\npos: {" << token.pos.begin << "," << token.pos.end << "}\n";
+            cout << "----------\ntoken: " << futils::escape::escape_str<std::string>(token.token) << "\ntag: " << token.tag << "\npos: {" << token.pos.begin << "," << token.pos.end << "}\n";
         }
     }
-    utils::langc::Errors errs;
-    auto prog = utils::langc::ast::parse_c(*tokens, errs);
+    futils::langc::Errors errs;
+    auto prog = futils::langc::ast::parse_c(*tokens, errs);
     if (!prog) {
         for (auto& err : errs.errs) {
             print_err(err);
         }
         return -1;
     }
-    utils::langc::gen::Writer w;
-    if (!utils::langc::gen::x64::gen_prog(w, errs, prog)) {
+    futils::langc::gen::Writer w;
+    if (!futils::langc::gen::x64::gen_prog(w, errs, prog)) {
         for (auto& err : errs.errs) {
             print_err(err);
         }
@@ -75,9 +75,9 @@ int Main(Flags& flags, utils::cmdline::option::Context& ctx) {
 
 int main(int argc, char** argv) {
     Flags flags;
-    return utils::cmdline::templ::parse_or_err<std::string>(
+    return futils::cmdline::templ::parse_or_err<std::string>(
         argc, argv, flags, [](auto&& str, bool err) { cout << str; },
-        [](Flags& flags, utils::cmdline::option::Context& ctx) {
+        [](Flags& flags, futils::cmdline::option::Context& ctx) {
             return Main(flags, ctx);
         });
 }

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,7 +14,7 @@
 #include "hpack_huffman_table.h"
 #include <binary/bit.h>
 
-namespace utils {
+namespace futils {
     namespace hpack {
         enum class HpackError {
             none,
@@ -36,7 +36,7 @@ namespace utils {
             size_t ret = 0;
             size_t size = 0;
             if constexpr (std::is_pointer_v<std::decay_t<decltype(str)>>) {
-                size = utils::strlen(str);
+                size = futils::strlen(str);
             }
             else {
                 size = str.size();
@@ -51,7 +51,7 @@ namespace utils {
         constexpr void encode_huffman(binary::basic_bit_writer<T, C>& vec, const String& in) {
             size_t size = 0;
             if constexpr (std::is_pointer_v<std::decay_t<decltype(in)>>) {
-                size = utils::strlen(in);
+                size = futils::strlen(in);
             }
             else {
                 size = in.size();
@@ -169,7 +169,7 @@ namespace utils {
         constexpr HpkErr encode_string(binary::basic_expand_writer<T, C>& w, const String& value, F1 common_prefix = 0, F2 flag_huffman = 0x80) {
             size_t size = 0;
             if constexpr (std::is_pointer_v<std::decay_t<decltype(value)>>) {
-                size = utils::strlen(value);
+                size = futils::strlen(value);
             }
             else {
                 size = value.size();
@@ -228,4 +228,4 @@ namespace utils {
         }
 
     }  // namespace hpack
-}  // namespace utils
+}  // namespace futils

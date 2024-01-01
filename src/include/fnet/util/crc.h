@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #pragma once
 #include <view/iovec.h>
 
-namespace utils {
+namespace futils {
     namespace fnet::crc {
         struct CRC32Table {
             std::uint32_t table[256];
@@ -38,4 +38,4 @@ namespace utils {
         };
 
     }  // namespace fnet::crc
-}  // namespace utils
+}  // namespace futils

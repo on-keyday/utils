@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "../internal/context_fn.h"
 #include <ranges>
 
-namespace utils::comb2 {
+namespace futils::comb2 {
     namespace types {
         template <class Lit>
         struct Literal {
@@ -50,7 +50,7 @@ namespace utils::comb2 {
                     }
                 }
                 else if constexpr (std::is_pointer_v<Lit>) {
-                    auto len = utils::strlen(literal);
+                    auto len = futils::strlen(literal);
                     for (auto i = 0; i < len; i++) {
                         if (seq.consume_if(literal[i])) {
                             return Status::match;
@@ -210,4 +210,4 @@ namespace utils::comb2 {
             return oneof(s);
         }
     }  // namespace ops
-}  // namespace utils::comb2
+}  // namespace futils::comb2

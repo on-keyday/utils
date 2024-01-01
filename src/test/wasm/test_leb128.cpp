@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,6 +9,6 @@
 #include <binary/float.h>
 #include <wasm/module.h>
 int main() {
-    namespace wasm = utils::wasm;
+    namespace wasm = futils::wasm;
     wasm::Module mod;
 }

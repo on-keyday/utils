@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include "../../storage.h"
 #include "keys.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::crypto {
         constexpr auto err_not_installed = error::Error("secret is not installed", error::Category::lib, error::fnet_quic_crypto_op_error);
 
@@ -102,4 +102,4 @@ namespace utils {
         };
 
     }  // namespace fnet::quic::crypto
-}  // namespace utils
+}  // namespace futils

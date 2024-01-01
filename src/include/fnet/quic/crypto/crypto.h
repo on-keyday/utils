@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,7 +14,7 @@
 #include "crypto_tag.h"
 #include "tls_suite.h"
 
-namespace utils {
+namespace futils {
     namespace fnet {
         namespace tls {
             // forward cipher
@@ -50,4 +50,4 @@ namespace utils {
 
         }  // namespace quic::crypto
     }      // namespace fnet
-}  // namespace utils
+}  // namespace futils

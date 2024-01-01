@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,13 +8,13 @@
 #include <platform/windows/dllexport_source.h>
 #include <wrap/argv.h>
 #include <platform/detect.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #endif
 
-namespace utils {
+namespace futils {
     namespace wrap {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 
         static bool get_warg(int* wargc, wchar_t*** wargv) {
             return static_cast<bool>((*wargv = ::CommandLineToArgvW(::GetCommandLineW(), wargc)));
@@ -36,4 +36,4 @@ namespace utils {
         }
 #endif
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

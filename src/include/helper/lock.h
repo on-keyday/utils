@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include "defer.h"
 #include <tuple>
 
-namespace utils {
+namespace futils {
     namespace helper {
 
         [[nodiscard]] constexpr auto lock(auto& l) {
@@ -106,4 +106,4 @@ namespace utils {
             static_assert(check_lock());
         }  // namespace test
     }      // namespace helper
-}  // namespace utils
+}  // namespace futils

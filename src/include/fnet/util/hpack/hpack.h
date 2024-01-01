@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -17,7 +17,7 @@
 #include "hpack_encode.h"
 #include "hpack_header.h"
 
-namespace utils {
+namespace futils {
     namespace hpack {
         enum class Field {
             index,
@@ -361,8 +361,8 @@ namespace utils {
 
     namespace net::hpack {
 
-        using namespace utils::hpack;  // for backwoard compatibility
+        using namespace futils::hpack;  // for backwoard compatibility
 
     }  // namespace net::hpack
 
-}  // namespace utils
+}  // namespace futils

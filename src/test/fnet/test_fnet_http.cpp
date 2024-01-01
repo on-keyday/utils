@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <vector>
 #include <fnet/util/uri.h>
 #include <strutil/equal.h>
-using namespace utils;
+using namespace futils;
 /*
 template <size_t len>
 void test_host(uri::URIFixed<char, len> uri) {
@@ -99,24 +99,24 @@ void test_fnet_http() {
 }
 */
 void test_uri_parse() {
-    constexpr auto test_parse1 = utils::uri::fixed("file:///C:/user/pc/workspace/yes.json");
+    constexpr auto test_parse1 = futils::uri::fixed("file:///C:/user/pc/workspace/yes.json");
     constexpr auto test_ok1 =
-        utils::strutil::equal(test_parse1.scheme, "file:") &&
-        utils::strutil::equal(test_parse1.authority, "") &&
-        utils::strutil::equal(test_parse1.path, "/C:/user/pc/workspace/yes.json");
-    constexpr auto test_parse2 = utils::uri::fixed(u8"https://Go言語.com:443/man?q=fmt.Printf#");
+        futils::strutil::equal(test_parse1.scheme, "file:") &&
+        futils::strutil::equal(test_parse1.authority, "") &&
+        futils::strutil::equal(test_parse1.path, "/C:/user/pc/workspace/yes.json");
+    constexpr auto test_parse2 = futils::uri::fixed(u8"https://Go言語.com:443/man?q=fmt.Printf#");
     constexpr auto test_ok2 =
-        utils::strutil::equal(test_parse2.scheme, "https:") &&
-        utils::strutil::equal(test_parse2.authority, u8"Go言語.com:443") &&
-        utils::strutil::equal(test_parse2.hostname, u8"Go言語.com") &&
-        utils::strutil::equal(test_parse2.port, ":443") &&
-        utils::strutil::equal(test_parse2.path, "/man") &&
-        utils::strutil::equal(test_parse2.query, "?q=fmt.Printf") &&
-        utils::strutil::equal(test_parse2.fragment, "#");
-    constexpr auto test_parse3 = utils::uri::fixed(R"a(javascript:alert("function"))a");
+        futils::strutil::equal(test_parse2.scheme, "https:") &&
+        futils::strutil::equal(test_parse2.authority, u8"Go言語.com:443") &&
+        futils::strutil::equal(test_parse2.hostname, u8"Go言語.com") &&
+        futils::strutil::equal(test_parse2.port, ":443") &&
+        futils::strutil::equal(test_parse2.path, "/man") &&
+        futils::strutil::equal(test_parse2.query, "?q=fmt.Printf") &&
+        futils::strutil::equal(test_parse2.fragment, "#");
+    constexpr auto test_parse3 = futils::uri::fixed(R"a(javascript:alert("function"))a");
     constexpr auto test_ok3 =
-        utils::strutil::equal(test_parse3.scheme, "javascript:") &&
-        utils::strutil::equal(test_parse3.path, R"(alert("function"))");
+        futils::strutil::equal(test_parse3.scheme, "javascript:") &&
+        futils::strutil::equal(test_parse3.path, R"(alert("function"))");
     static_assert(test_ok1 && test_ok2 && test_ok3);
 }
 

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include "../quic/varint.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::http3::unistream {
         enum class Type {
             CONTROL = 0x00,
@@ -50,4 +50,4 @@ namespace utils {
             return w.written();
         }
     }  // namespace fnet::http3::unistream
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -7,9 +7,9 @@
 
 #pragma once
 #include <platform/detect.h>
-namespace utils {
+namespace futils {
     namespace fnet::lazy {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         using dll_path = const wchar_t*;
 #define fnet_lazy_dll_path(path) (L##path)
 #else
@@ -18,4 +18,4 @@ namespace utils {
 #endif
 
     }  // namespace fnet::lazy
-}  // namespace utils
+}  // namespace futils

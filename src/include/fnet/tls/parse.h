@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include "../../binary/number.h"
 #include "../quic/transport_parameter/transport_param.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::tls {
 
         using ProtocolVersion = std::uint16_t;
@@ -1187,4 +1187,4 @@ namespace utils {
         }  // namespace key_schedule
 
     }  // namespace fnet::tls
-}  // namespace utils
+}  // namespace futils

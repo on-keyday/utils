@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include "impl/conn_handler.h"
 #include <memory>
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::stream {
 
         template <class T = std::shared_ptr<void>, class RecvT = T>
@@ -62,4 +62,4 @@ namespace utils {
         };
 
     }  // namespace fnet::quic::stream
-}  // namespace utils
+}  // namespace futils

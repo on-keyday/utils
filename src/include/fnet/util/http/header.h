@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -19,7 +19,7 @@
 #include <wrap/light/enum.h>
 #include <number/array.h>
 
-namespace utils::http::header {
+namespace futils::http::header {
 
     struct StatusCode {
         std::uint16_t code = 0;
@@ -560,4 +560,4 @@ namespace utils::http::header {
         static_assert(test_http_parse());
     }  // namespace test
 
-}  // namespace utils::http::header
+}  // namespace futils::http::header

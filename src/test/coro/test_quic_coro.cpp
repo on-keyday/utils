@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -22,8 +22,8 @@
 #include <testutil/alloc_hook.h>
 #include <env/env_sys.h>
 #include <fnet/connect.h>
-using namespace utils::fnet::quic::use::rawptr;
-namespace quic = utils::fnet::quic;
+using namespace futils::fnet::quic::use::rawptr;
+namespace quic = futils::fnet::quic;
 using TConfig2 = quic::context::TypeConfig<std::mutex, DefaultStreamTypeConfig, quic::connid::TypeConfig<>, quic::status::NewReno, quic::ack::UnackedPackets>;
 // using ContextT = quic::context::Context<TConfig2>;
 using ContextT = Context;
@@ -40,10 +40,10 @@ struct ThreadData {
     size_t transmit = 0;
 };
 
-void recv_stream(utils::coro::C* c, Recvs* s) {
+void recv_stream(futils::coro::C* c, Recvs* s) {
     auto th = static_cast<ThreadData*>(c->get_thread_context());
-    std::vector<utils::fnet::flex_storage> read;
-    const auto d = utils::helper::defer([&] {
+    std::vector<futils::fnet::flex_storage> read;
+    const auto d = futils::helper::defer([&] {
         delete s;
         th->req_count--;
         th->done_count++;
@@ -51,15 +51,15 @@ void recv_stream(utils::coro::C* c, Recvs* s) {
             th->transmit += r.size();
         }
         if (th->total_req == th->done_count) {
-            c->add_coroutine<ContextT>(th->ctx.get(), [](utils::coro::C* c, ContextT* ctx) {
-                ctx->request_close(utils::fnet::quic::QUICError{
+            c->add_coroutine<ContextT>(th->ctx.get(), [](futils::coro::C* c, ContextT* ctx) {
+                ctx->request_close(futils::fnet::quic::QUICError{
                     .msg = "request done",
-                    .transport_error = utils::fnet::quic::TransportError::NO_ERROR,
+                    .transport_error = futils::fnet::quic::TransportError::NO_ERROR,
                 });
                 while (!ctx->is_closed()) {
                     c->suspend();
                 }
-                c->add_coroutine(nullptr, [](utils::coro::C* c, void*) {
+                c->add_coroutine(nullptr, [](futils::coro::C* c, void*) {
                     // auto th = static_cast<ThreadData*>(c->get_common_context());
                     c->suspend();
                 });
@@ -76,7 +76,7 @@ void recv_stream(utils::coro::C* c, Recvs* s) {
         }
         s->s->update_recv_limit([&](FlowLimiter lim, std::uint64_t) {
             if (lim.avail_size() < 5000) {
-                utils::wrap::cout_wrap() << "update max stream data seq: " << s->s->id().seq_count() << "\n";
+                futils::wrap::cout_wrap() << "update max stream data seq: " << s->s->id().seq_count() << "\n";
                 return lim.current_limit() + 100000;
             }
             return lim.current_limit();
@@ -85,7 +85,7 @@ void recv_stream(utils::coro::C* c, Recvs* s) {
     }
 }
 
-void request(utils::coro::C* c, void* p) {
+void request(futils::coro::C* c, void* p) {
     auto n = std::uintptr_t(p);
     auto th = static_cast<ThreadData*>(c->get_thread_context());
     auto streams = th->ctx->get_streams();
@@ -100,7 +100,7 @@ void request(utils::coro::C* c, void* p) {
         stream->add_data(std::format("GET /search?q={} HTTP/1.1\r\nHost: google.com\r\n", n), false);
 #else
         std::string data;
-        data = "GET /search?q=Q" + utils::number::to_string<std::string>(n) + " HTTP/1.1\r\nHost: www.google.com\r\n";
+        data = "GET /search?q=Q" + futils::number::to_string<std::string>(n) + " HTTP/1.1\r\nHost: www.google.com\r\n";
 #endif
         // stream->add_data("Accept-Encoding: gzip\r\n", false, true);
         c->suspend();
@@ -111,23 +111,23 @@ void request(utils::coro::C* c, void* p) {
         stream->add_data({}, true, true);
         break;
     }
-    utils::wrap::cout_wrap() << "request sent " << n << "\n";
+    futils::wrap::cout_wrap() << "request sent " << n << "\n";
     th->req_count++;
     th->total_req++;
-    c->add_coroutine(nullptr, [](utils::coro::C* c, void*) {
-        utils::wrap::cout_wrap() << "sleeping\n";
+    c->add_coroutine(nullptr, [](futils::coro::C* c, void*) {
+        futils::wrap::cout_wrap() << "sleeping\n";
         // std::this_thread::sleep_for(std::chrono::milliseconds(100));
     });
 }
 
-void conn(utils::coro::C* c, std::shared_ptr<ContextT>& ctx, utils::fnet::Socket& sock, utils::fnet::NetAddrPort& addr) {
+void conn(futils::coro::C* c, std::shared_ptr<ContextT>& ctx, futils::fnet::Socket& sock, futils::fnet::NetAddrPort& addr) {
     auto s = ctx->get_streams();
     // s->set_auto_remove(true);
     auto ch = s->get_conn_handler();
     ch->arg = c;
     ch->uni_accept_cb = [](void*& c, std::shared_ptr<RecvStream> in) {
         auto s = set_stream_reader(*in);
-        auto l = static_cast<utils::coro::C*>(c);
+        auto l = static_cast<futils::coro::C*>(c);
         auto r = new Recvs();
         r->r = std::move(s);
         r->s = in;
@@ -139,7 +139,7 @@ void conn(utils::coro::C* c, std::shared_ptr<ContextT>& ctx, utils::fnet::Socket
     /*
     s->set_accept_uni(c, [](void*& c, std::shared_ptr<RecvStream> in) {
         auto s = set_stream_reader(*in);
-        auto l = static_cast<utils::coro::C*>(c);
+        auto l = static_cast<futils::coro::C*>(c);
         auto r = new Recvs();
         r->r = std::move(s);
         r->s = in;
@@ -157,14 +157,14 @@ void conn(utils::coro::C* c, std::shared_ptr<ContextT>& ctx, utils::fnet::Socket
         if (payload.size()) {
             sock.writeto(addr, payload);
         }
-        utils::byte data[1500];
+        futils::byte data[1500];
         auto recv = sock.readfrom(data);
         if (recv && recv->first.size()) {
             ctx->parse_udp_payload(recv->first);
         }
         s->update_max_data([&](FlowLimiter v, std::uint64_t) {
             if (v.avail_size() < 5000) {
-                utils::wrap::cout_wrap() << "update max data\n";
+                futils::wrap::cout_wrap() << "update max data\n";
                 return v.current_limit() + 100000;
             }
             return v.current_limit();
@@ -172,13 +172,13 @@ void conn(utils::coro::C* c, std::shared_ptr<ContextT>& ctx, utils::fnet::Socket
     }
 }
 
-using path = utils::wrap::path_string;
+using path = futils::wrap::path_string;
 path libssl;
 path libcrypto;
 std::string cert;
 
 void load_env() {
-    auto env = utils::env::sys::env_getter();
+    auto env = futils::env::sys::env_getter();
     env.get_or(libssl, "FNET_LIBSSL", fnet_lazy_dll_path("libssl.dll"));
     env.get_or(libcrypto, "FNET_LIBCRYPTO", fnet_lazy_dll_path("libcrypto.dll"));
     env.get_or(cert, "FNET_PUBLIC_KEY", "cert.pem");
@@ -186,16 +186,16 @@ void load_env() {
 
 int main() {
     load_env();
-    // utils::test::set_alloc_hook(true);
-    // utils::test::set_log_file("./ignore/memuse.log");
-    // utils::fnet::debug::allocs();
+    // futils::test::set_alloc_hook(true);
+    // futils::test::set_log_file("./ignore/memuse.log");
+    // futils::fnet::debug::allocs();
 #ifdef _WIN32
-    utils::fnet::tls::set_libcrypto(libcrypto.data());
-    utils::fnet::tls::set_libssl(libssl.data());
+    futils::fnet::tls::set_libcrypto(libcrypto.data());
+    futils::fnet::tls::set_libssl(libssl.data());
 #endif
-    auto [sock, to] = utils::fnet::connect("localhost", "8090", utils::fnet::sockattr_udp(), false).value();
+    auto [sock, to] = futils::fnet::connect("localhost", "8090", futils::fnet::sockattr_udp(), false).value();
     auto ctx = std::make_shared<ContextT>();
-    auto conf = utils::fnet::tls::configure();
+    auto conf = futils::fnet::tls::configure();
     conf.set_alpn("\x04test");
     conf.set_cacert_file(cert.data());
     auto def = use_default_config(std::move(conf));
@@ -203,9 +203,9 @@ int main() {
     ctx->init(std::move(def));
     auto streams = ctx->get_streams();
     ctx->connect_start();
-    std::atomic<utils::coro::C*> ld = nullptr;
+    std::atomic<futils::coro::C*> ld = nullptr;
     std::thread([&, ctx] {
-        auto c = utils::coro::make_coro(10, 300);
+        auto c = futils::coro::make_coro(10, 300);
         ThreadData data;
         data.ctx = ctx;
         data.req_count = 0;

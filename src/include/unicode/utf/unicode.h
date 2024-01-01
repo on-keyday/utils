@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #pragma once
 #include <cstdint>
 
-namespace utils::unicode {
+namespace futils::unicode {
     constexpr std::uint32_t invalid_code = ~std::uint32_t(0);
     constexpr std::uint32_t max_code = 0x10FFFF;
     constexpr std::uint32_t min_code = 0;
@@ -22,4 +22,4 @@ namespace utils::unicode {
     constexpr bool is_valid_range(auto c) noexcept {
         return (min_code <= c && c < surrogate_1) || (surrogate_3 < c && c <= max_code);
     }
-}  // namespace utils::unicode
+}  // namespace futils::unicode

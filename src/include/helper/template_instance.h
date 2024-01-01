@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include <tuple>
 #include <cstddef>
 
-namespace utils {
+namespace futils {
     namespace helper {
         template <class T, template <class...> class Templ>
         struct template_instance_of_t : std::false_type {};
@@ -88,4 +88,4 @@ namespace utils {
         concept is_template = template_of_t<T>::value;
 
     }  // namespace helper
-}  // namespace utils
+}  // namespace futils

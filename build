@@ -1,47 +1,47 @@
 #!/bin/bash
 BUILD_TYPE=$2
-UTILS_BUILD_MODE=$1
+FUTILS_BUILD_MODE=$1
 TARGET=$3
 if [ ! $BUILD_TYPE ]; then
 BUILD_TYPE=Debug
 fi
-if [ ! $UTILS_BUILD_MODE ]; then
-UTILS_BUILD_MODE=shared
+if [ ! $FUTILS_BUILD_MODE ]; then
+FUTILS_BUILD_MODE=shared
 fi
-if [ $UTILS_BUILD_MODE != "shared" ]  &&  [ $UTILS_BUILD_MODE != "static" ] && [ $UTILS_BUILD_MODE != "wasm-rt" ] && [ $UTILS_BUILD_MODE != "wasm-em" ] && [ $UTILS_BUILD_MODE != "gcc-static" ] && [ $UTILS_BUILD_MODE != "gcc-shared" ]; then
-echo "Invalid build type: $UTILS_BUILD_MODE"
+if [ $FUTILS_BUILD_MODE != "shared" ]  &&  [ $FUTILS_BUILD_MODE != "static" ] && [ $FUTILS_BUILD_MODE != "wasm-rt" ] && [ $FUTILS_BUILD_MODE != "wasm-em" ] && [ $FUTILS_BUILD_MODE != "gcc-static" ] && [ $FUTILS_BUILD_MODE != "gcc-shared" ]; then
+echo "Invalid build type: $FUTILS_BUILD_MODE"
 return 1
 fi
 
-OUTPUT_DIR=built/$UTILS_BUILD_MODE/$BUILD_TYPE
+OUTPUT_DIR=built/$FUTILS_BUILD_MODE/$BUILD_TYPE
 C_COMPILER=clang
 CXX_COMPILER=clang++
 
-if [ $UTILS_BUILD_MODE == "gcc-static" ] || [ $UTILS_BUILD_MODE == "gcc-shared" ]; then
+if [ $FUTILS_BUILD_MODE == "gcc-static" ] || [ $FUTILS_BUILD_MODE == "gcc-shared" ]; then
 C_COMPILER=gcc
 CXX_COMPILER=g++
-UTILS_BUILD_MODE=${UTILS_BUILD_MODE#gcc-}
+FUTILS_BUILD_MODE=${FUTILS_BUILD_MODE#gcc-}
 fi
 
 # override compiler if specified
-if [ $UTILS_CXX_COMPILER ]; then
-CXX_COMPILER=$UTILS_CXX_COMPILER
+if [ $FUTILS_CXX_COMPILER ]; then
+CXX_COMPILER=$FUTILS_CXX_COMPILER
 fi
-if [ $UTILS_C_COMPILER ]; then
-C_COMPILER=$UTILS_C_COMPILER
+if [ $FUTILS_C_COMPILER ]; then
+C_COMPILER=$FUTILS_C_COMPILER
 fi
 
 
 
 INSTALL_PREFIX=$(pwd)
-if [ $UTILS_BUILD_MODE = "wasm-rt" ]; then
+if [ $FUTILS_BUILD_MODE = "wasm-rt" ]; then
 # wasimake must be enabled on this context
-cmake -D CMAKE_TOOLCHAIN_FILE=$WASI_SDK_PREFIX/share/cmake/wasi-sdk-pthread.cmake -D WASI_SDK_PREFIX=$WASI_SDK_PREFIX -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -D UTILS_BUILD_MODE=static -S . -B $OUTPUT_DIR
-elif [ $UTILS_BUILD_MODE = "wasm-em" ]; then
+cmake -D CMAKE_TOOLCHAIN_FILE=$WASI_SDK_PREFIX/share/cmake/wasi-sdk-pthread.cmake -D WASI_SDK_PREFIX=$WASI_SDK_PREFIX -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -D FUTILS_BUILD_MODE=static -S . -B $OUTPUT_DIR
+elif [ $FUTILS_BUILD_MODE = "wasm-em" ]; then
 # emcmake must be enabled on this context
-emcmake cmake -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D UTILS_BUILD_MODE=static -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -S . -B $OUTPUT_DIR
+emcmake cmake -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D FUTILS_BUILD_MODE=static -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -S . -B $OUTPUT_DIR
 else
-cmake -D CMAKE_C_COMPILER=$C_COMPILER -D CMAKE_CXX_COMPILER=$CXX_COMPILER -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D UTILS_BUILD_MODE=$UTILS_BUILD_MODE -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -S . -B $OUTPUT_DIR
+cmake -D CMAKE_C_COMPILER=$C_COMPILER -D CMAKE_CXX_COMPILER=$CXX_COMPILER -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D FUTILS_BUILD_MODE=$FUTILS_BUILD_MODE -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -S . -B $OUTPUT_DIR
 fi
 ninja -C $OUTPUT_DIR $TARGET
 if [ $? -ne  0 ]; then

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -17,7 +17,7 @@
 #include <wrap/light/vector.h>
 #include <ctime>
 
-namespace utils {
+namespace futils {
     namespace http {
         namespace date {
             enum class DayName : std::uint8_t {
@@ -238,7 +238,7 @@ namespace utils {
                         }
                         return true;
                     }
-#ifndef UTILS_PLATFORM_WINDOWS
+#ifndef FUTILS_PLATFORM_WINDOWS
 #define gettime_s(tm, time) (*tm = gmtime(time))
 #define gmtime_s(info, time) gmtime_r(time, info)
 #endif
@@ -406,4 +406,4 @@ namespace utils {
         }  // namespace date
 
     }  // namespace http
-}  // namespace utils
+}  // namespace futils

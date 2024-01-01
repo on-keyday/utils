@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include "../connid/typeconfig.h"
 #include "../dgram/datagram.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::context {
         template <class CtxLock,
                   class StreamTypeConfig = stream::TypeConfig<CtxLock>,
@@ -39,4 +39,4 @@ namespace utils {
             using versions_vec = VersionsVec<T>;
         };
     }  // namespace fnet::quic::context
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,9 +10,9 @@
 #include "lazy.h"
 #include "../../plthead.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::lazy {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         extern DLL ws2_32;
         extern DLL kernel32;
 
@@ -45,7 +45,7 @@ namespace utils {
         LAZY(getsockname)
         LAZY(getpeername)
 
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         LAZY(closesocket)
         LAZY(ioctlsocket)
         LAZY(WSAStartup)
@@ -76,7 +76,7 @@ namespace utils {
         LAZY(close)
         LAZY(ioctl)
         LAZY(getaddrinfo)
-#ifdef UTILS_PLATFORM_LINUX
+#ifdef FUTILS_PLATFORM_LINUX
         LAZY(epoll_create1)
         LAZY(epoll_ctl)
         LAZY(epoll_pwait)
@@ -104,4 +104,4 @@ namespace utils {
 
 #undef LAZY
     }  // namespace fnet::lazy
-}  // namespace utils
+}  // namespace futils

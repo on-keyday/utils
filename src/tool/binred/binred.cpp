@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -23,12 +23,12 @@
 int main(int argc, char** argv) {
     auto f = std::bind([](int) {}, 2);
     f();
-    namespace us = utils::syntax;
-    namespace uc = utils::cmdline;
-    namespace utw = utils::wrap;
+    namespace us = futils::syntax;
+    namespace uc = futils::cmdline;
+    namespace utw = futils::wrap;
     int idx = 1;
-    auto& cout = utils::wrap::cout_wrap();
-    auto& cerr = utils::wrap::cerr_wrap();
+    auto& cout = futils::wrap::cout_wrap();
+    auto& cerr = futils::wrap::cerr_wrap();
     auto devbug = [&] {
         cerr << "this is library bug\n"
              << "please report bug to "
@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
         return -1;
     }*/
     auto parse_mode = uc::option::ParseFlag::assignable_mode | uc::option::ParseFlag::assign_anyway_val;
-    auto err = uc::option::parse(argc, argv, opt, utils::helper::nop, parse_mode);
+    auto err = uc::option::parse(argc, argv, opt, futils::helper::nop, parse_mode);
     if (auto msg = error_msg(err)) {
         cout << "binred: error: " << opt.erropt() << ": " << msg << "\n";
         return -1;
@@ -132,7 +132,7 @@ int main(int argc, char** argv) {
     )a";
     auto c = us::make_syntaxc();
     auto s = us::make_tokenizer();
-    auto seq = utils::make_ref_seq(def);
+    auto seq = futils::make_ref_seq(def);
 
     if (!c->make_tokenizer(seq, s)) {
         cout << "binred: " << c->error();
@@ -148,12 +148,12 @@ int main(int argc, char** argv) {
         return -1;
     }
     {
-        utils::file::View view;
+        futils::file::View view;
         if (!view.open(*infile)) {
             cerr << "binred: error: file `" << *infile << "` couldn't open\n";
             return -1;
         }
-        auto sv = utils::make_ref_seq(view);
+        auto sv = futils::make_ref_seq(view);
         if (!s.tokenize(sv, tok)) {
             cerr << "binred: fatal error: failed to tokenize\n";
             devbug();
@@ -163,9 +163,9 @@ int main(int argc, char** argv) {
 
     {
         const char* errmsg = nullptr;
-        if (!utils::tokenize::merge(errmsg, tok,
-                                    utils::tokenize::line_comment<utw::string>("#"),
-                                    utils::tokenize::escaped_comment<utw::string>("\"", "\\"))) {
+        if (!futils::tokenize::merge(errmsg, tok,
+                                    futils::tokenize::line_comment<utw::string>("#"),
+                                    futils::tokenize::escaped_comment<utw::string>("\"", "\\"))) {
             cerr << "binred: error: " << errmsg << "\n";
             return -1;
         }

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace utils {
+namespace futils {
     namespace helper {
 
         template <class Fn>
@@ -59,4 +59,4 @@ namespace utils {
         }
 
     }  // namespace helper
-}  // namespace utils
+}  // namespace futils

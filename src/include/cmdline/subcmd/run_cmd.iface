@@ -1,10 +1,10 @@
-#    utils - utility library
+#    futils - utility library
 #    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
 
 # run_cmd - command callback
-package utils::cmdline::subcmd
+package futils::cmdline::subcmd
 #generate code
 # tool\ifacegen -i src/include/cmdline/subcmd/run_cmd.iface -o src/include/cmdline/subcmd/cmdrunner.h -VSen --license --helper-deref "\"../../helper/deref.h\""
 

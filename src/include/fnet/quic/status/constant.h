@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #pragma once
 #include "../time.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::status {
         constexpr auto default_initial_rtt = 333;  // 333ms
         constexpr auto default_packet_threshold = 3;
@@ -44,4 +44,4 @@ namespace utils {
         constexpr auto default_persistent_congestion_threshold = 3;
 
     }  // namespace fnet::quic::status
-}  // namespace utils
+}  // namespace futils

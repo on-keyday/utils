@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -19,9 +19,9 @@
 #define Sleep sleep
 #endif
 
-auto& cout = utils::wrap::cout_wrap();
+auto& cout = futils::wrap::cout_wrap();
 
-void write_thread(utils::thread::SendChan<int> w) {
+void write_thread(futils::thread::SendChan<int> w) {
     for (auto i = 0; i < 10000; i++) {
         w << std::move(i);
         //_sleep(5);
@@ -29,24 +29,24 @@ void write_thread(utils::thread::SendChan<int> w) {
     w.close();
 }
 
-void recv_thread(size_t index, utils::thread::RecvChan<int> r, utils::wrap::shared_ptr<utils::thread::Subscriber<int>> ptr) {
+void recv_thread(size_t index, futils::thread::RecvChan<int> r, futils::wrap::shared_ptr<futils::thread::Subscriber<int>> ptr) {
     r.set_blocking(true);
     int v;
     while (r >> v) {
-        cout << utils::wrap::pack(std::this_thread::get_id(), ":", index, ":", v, "\n");
+        cout << futils::wrap::pack(std::this_thread::get_id(), ":", index, ":", v, "\n");
     }
 }
 
-void dummmy_message(utils::thread::ForkChan<int> fork) {
-    //fork.set_blocking(utils::thread::BlockLevel::mustnot);
+void dummmy_message(futils::thread::ForkChan<int> fork) {
+    //fork.set_blocking(futils::thread::BlockLevel::mustnot);
     while (!fork.is_closed()) {
-        cout << utils::wrap::pack(std::this_thread::get_id(), ":dummy\n");
+        cout << futils::wrap::pack(std::this_thread::get_id(), ":dummy\n");
     }
 }
 
 void test_channecl() {
     {
-        auto [w, r] = utils::thread::make_chan<int>(5);
+        auto [w, r] = futils::thread::make_chan<int>(5);
         w << 32;
         int result = 0;
         r >> result;
@@ -57,22 +57,22 @@ void test_channecl() {
         w << 4;
         w << 5;
         auto result2 = w << 6;
-        assert(result2 == utils::thread::ChanStateValue::full && "expect full but not");
+        assert(result2 == futils::thread::ChanStateValue::full && "expect full but not");
     }
     {
-        auto [w, r] = utils::thread::make_chan<int>(6);
+        auto [w, r] = futils::thread::make_chan<int>(6);
         r.set_blocking(true);
         w.set_blocking(true);
         std::thread(write_thread, w).detach();
         int v;
         while (r >> v) {
-            cout << utils::wrap::pack(v, "\n");
+            cout << futils::wrap::pack(v, "\n");
         }
     }
     {
-        auto fork = utils::thread::make_forkchan<int>();
+        auto fork = futils::thread::make_forkchan<int>();
         for (auto i = 0; i < 5; i++) {
-            auto [w, r] = utils::thread::make_chan<int>(5);
+            auto [w, r] = futils::thread::make_chan<int>(5);
             auto sub = fork.subscribe(std::move(w));
             std::thread(recv_thread, i, r, sub).detach();
         }

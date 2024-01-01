@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include "long_packet.h"
 #include "../test.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::packet {
         template <template <class...> class Vec>
         struct VersionNegotiationPacket : LongPacketBase {
@@ -85,4 +85,4 @@ namespace utils {
             static_assert(check_version_negotiation());
         }  // namespace test
     }      // namespace fnet::quic::packet
-}  // namespace utils
+}  // namespace futils

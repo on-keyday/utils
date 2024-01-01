@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include "expected.h"
 #include "template_instance.h"
 
-namespace utils::helper::either {
+namespace futils::helper::either {
 #define apply_none(value) value
 #define apply_move(value) std::move(value)
 #define apply_rval(...) __VA_ARGS__&&
@@ -65,4 +65,4 @@ namespace utils::helper::either {
 #undef apply_lval
 #undef apply_const
 
-}  // namespace utils::helper::either
+}  // namespace futils::helper::either

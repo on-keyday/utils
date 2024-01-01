@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include <number/to_string.h>
 
 int main() {
-    namespace huf = utils::file::gzip::huffman;
+    namespace huf = futils::file::gzip::huffman;
     constexpr auto text = R"(<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
@@ -277,18 +277,18 @@ changeButtonView();
     // huf::tree_to_table(tree, table);
     size_t add = 0;
 
-    for (auto c : utils::view::rvec(text)) {
+    for (auto c : futils::view::rvec(text)) {
         add += table.map(c)->code.bits;
     }
     double mean = 0;
-    auto txt = utils::view::rvec(text);
+    auto txt = futils::view::rvec(text);
 
     auto print = [&](huf::Code code) {
         auto c = code.literal;
         std::string str;
-        utils::number::to_string(str, code.literal);
+        futils::number::to_string(str, code.literal);
         str.push_back(' ');
-        auto& cout = utils::wrap::cout_wrap();
+        auto& cout = futils::wrap::cout_wrap();
         cout << str;
         if (code.bits < 10) {
             cout << " ";
@@ -303,10 +303,10 @@ changeButtonView();
         mean += table.codes[i].code.bits * double(table.codes[i].appear) / txt.size();
     }
     const auto base_bit = txt.size() * 8;
-    utils::wrap::cout_wrap() << "base: " << base_bit << " encoded: " << add << " enc/base: " << double(add) / base_bit
+    futils::wrap::cout_wrap() << "base: " << base_bit << " encoded: " << add << " enc/base: " << double(add) / base_bit
                              << " mean: " << mean << "\n";
 
-    auto [h, d] = utils::file::gzip::deflate::make_deflate_fixed_huffman();
+    auto [h, d] = futils::file::gzip::deflate::make_deflate_fixed_huffman();
     for (auto i = 0; i < h.index; i++) {
         print(h.codes[i]);
     }

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #pragma once
 #include <cstddef>
 
-namespace utils {
+namespace futils {
     namespace fnet::slib {
         template <class T, size_t n>
         struct array {
@@ -43,4 +43,4 @@ namespace utils {
         };
 
     }  // namespace fnet::slib
-}  // namespace utils
+}  // namespace futils

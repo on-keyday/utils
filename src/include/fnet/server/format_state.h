@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include "../../json/to_string.h"
 #include "state.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::server {
         template <class String, class JSON>
         String format_state(const Counter& servstate, JSON& js) {
@@ -32,4 +32,4 @@ namespace utils {
             return json::to_string<String>(js, json::FmtFlag::last_line);
         }
     }  // namespace fnet::server
-}  // namespace utils
+}  // namespace futils

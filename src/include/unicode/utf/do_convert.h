@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include "convert_one.h"
 
-namespace utils::unicode::utf {
+namespace futils::unicode::utf {
 
     constexpr std::pair<size_t, UTFError> do_convert_one(
         auto&& input, size_t offset, size_t size, auto&& output, bool replace, size_t from, size_t to) {
@@ -175,4 +175,4 @@ namespace utils::unicode::utf {
         return {i, 0, UTFError::none};
     }
 
-}  // namespace utils::unicode::utf
+}  // namespace futils::unicode::utf

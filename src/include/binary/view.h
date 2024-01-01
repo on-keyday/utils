@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "buf.h"
 #include "../core/buffer.h"
 
-namespace utils {
+namespace futils {
     namespace binary {
         template <class T, class Char>
         struct EndianView {
@@ -57,4 +57,4 @@ namespace utils {
         };
 
     }  // namespace binary
-}  // namespace utils
+}  // namespace futils

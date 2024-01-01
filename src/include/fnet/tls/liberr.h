@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include "../../helper/pushbacker.h"
 #include "../error.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::tls {
 
         struct fnet_class_export LibSubError {
@@ -57,4 +57,4 @@ namespace utils {
         // if ssl is not nullptr, LibError::ssl_code also set
         error::Error libError(const char* method, const char* msg, void* ssl = nullptr, int res = 1);
     }  // namespace fnet::tls
-}  // namespace utils
+}  // namespace futils

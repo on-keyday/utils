@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "../../core/sequencer.h"
 #include "../../wrap/light/enum.h"
 
-namespace utils {
+namespace futils {
     namespace unicode::utf {
         namespace internal {
             template <class U, size_t val>
@@ -110,4 +110,4 @@ namespace utils {
         }
     }  // namespace unicode::utf
     namespace utf = unicode::utf;
-}  // namespace utils
+}  // namespace futils

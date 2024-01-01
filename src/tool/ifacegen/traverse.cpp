@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include "interface_list.h"
 
 namespace ifacegen {
-    namespace node = utils::comb2::tree::node;
+    namespace node = futils::comb2::tree::node;
 
     bool is_tok(const std::shared_ptr<node::Node>& node, const char* tok) {
         auto t = node::as_tok(node);

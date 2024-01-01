@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 // #include <deprecated/syntax/matching/matching.h>
 
 namespace ifacegen {
-    namespace utw = utils::wrap;
+    namespace utw = futils::wrap;
 
     enum class Language {
         cpp,
@@ -107,6 +107,6 @@ namespace ifacegen {
 
     DEFINE_ENUM_FLAGOP(GenFlag)
 
-    // bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
+    // bool read_callback(futils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
     bool generate(FileData& data, utw::string& str, Language lang, GenFlag flag);
 }  // namespace ifacegen

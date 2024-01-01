@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include <memory>
 #include "../error.h"
 
-namespace utils::fnet::event {
+namespace futils::fnet::event {
 
     constexpr static std::uintptr_t invalid_handle = -1;
 
@@ -57,4 +57,4 @@ namespace utils::fnet::event {
     // rt is pointer to runtime if specified by rt
     fnet_dll_export(expected<IOEvent>) make_io_event(void (*)(void* ptr, void* rt), void* rt);
 
-}  // namespace utils::fnet::event
+}  // namespace futils::fnet::event

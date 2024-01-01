@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "../basic/peek.h"
 #include "../../number/radix.h"
 
-namespace utils::comb2::composite {
+namespace futils::comb2::composite {
 
     using namespace ops;
 
@@ -89,4 +89,4 @@ namespace utils::comb2::composite {
         static_assert(check_number());
     }  // namespace test
 
-}  // namespace utils::comb2::composite
+}  // namespace futils::comb2::composite

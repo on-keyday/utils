@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <filesystem>
 
 void test_file_view() {
-    utils::file::View file;
+    futils::file::View file;
     // Assum:
     // current directry is ${workspaceRoot}/
     // target file ${workspaceRoot}/src/test/file/test.txt is exists
@@ -21,7 +21,7 @@ void test_file_view() {
 
     file.open("src/test/file/test.txt");
     assert(file.is_open() && "file not opened");
-    utils::Sequencer<utils::file::View&> view(file);
+    futils::Sequencer<futils::file::View&> view(file);
 
     assert(view.seek_if(u8"𠮷野家") && "file seek failed");
     assert(view.match("\r\n") && "expect to open on binary mode but not");

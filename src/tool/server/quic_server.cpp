@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,8 +12,8 @@
 #include <thread>
 #include <wrap/cout.h>
 #include <env/env_sys.h>
-namespace fnet = utils::fnet;
-namespace quic = utils::fnet::quic;
+namespace fnet = futils::fnet;
+namespace quic = futils::fnet::quic;
 using HandlerMap = quic::server::HandlerMap<quic::use::rawptr::DefaultTypeConfig>;
 
 struct ServerContext {
@@ -25,7 +25,7 @@ struct ServerContext {
 
 void recv_packets(std::shared_ptr<ServerContext> ctx) {
     while (!ctx->end) {
-        utils::byte data[2000];
+        futils::byte data[2000];
         auto payload = ctx->sock.readfrom(data);
         if (!payload) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -55,31 +55,31 @@ void send_packets(std::shared_ptr<ServerContext> ctx) {
         }
     }
 }
-using path = utils::wrap::path_string;
+using path = futils::wrap::path_string;
 path libssl;
 path libcrypto;
 
 void load_env(std::string& cert, std::string& prv) {
-    auto env = utils::env::sys::env_getter();
+    auto env = futils::env::sys::env_getter();
     env.get_or(libssl, "FNET_LIBSSL", fnet_lazy_dll_path("libssl.dll"));
     env.get_or(libcrypto, "FNET_LIBCRYPTO", fnet_lazy_dll_path("libcrypto.dll"));
     env.get_or(cert, "FNET_PUBLIC_KEY", "cert.pem");
     env.get_or(prv, "FNET_PRIVATE_KEY", "private.pem");
-    utils::fnet::tls::set_libcrypto(libcrypto.data());
-    utils::fnet::tls::set_libssl(libssl.data());
+    futils::fnet::tls::set_libcrypto(libcrypto.data());
+    futils::fnet::tls::set_libssl(libssl.data());
 }
 
 int quic_server() {
     std::string cert, prv;
     load_env(cert, prv);
-    auto& cout = utils::wrap::cout_wrap();
+    auto& cout = futils::wrap::cout_wrap();
     auto ctx = std::make_shared<ServerContext>();
     ctx->hm = std::make_shared<HandlerMap>();
-    auto tls_conf = utils::fnet::tls::configure();
+    auto tls_conf = futils::fnet::tls::configure();
     tls_conf.set_cert_chain(cert.c_str(), prv.c_str());
-    utils::fnet::tls::ALPNCallback cb;
-    cb.select = [](utils::fnet::tls::ALPNSelector& selector, void*) {
-        utils::view::rvec name;
+    futils::fnet::tls::ALPNCallback cb;
+    cb.select = [](futils::fnet::tls::ALPNSelector& selector, void*) {
+        futils::view::rvec name;
         while (selector.next(name)) {
             if (name == "test") {
                 selector.select(name);
@@ -91,7 +91,7 @@ int quic_server() {
     ctx->sock.set_DF(true);
     tls_conf.set_alpn_select_callback(&cb);
     // tls_conf.set_cert_chain();
-    ctx->hm->set_config(utils::fnet::quic::use::use_default_config(std::move(tls_conf)));
+    ctx->hm->set_config(futils::fnet::quic::use::use_default_config(std::move(tls_conf)));
     auto list = fnet::get_self_server_address("8090", fnet::sockattr_udp(fnet::ip::Version::ipv6))
                     .and_then([&](fnet::WaitAddrInfo&& info) {
                         return info.wait();

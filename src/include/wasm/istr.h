@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include "value.h"
 #include <helper/expected_op.h>
 
-namespace utils::wasm::code {
+namespace futils::wasm::code {
     enum class Instruction {
         unreachable = 0x00,
         nop = 0x01,
@@ -936,4 +936,4 @@ namespace utils::wasm::code {
 #undef BLOCK_ARG_CASE
 #undef MEMORY_RESERVED_CASE
 #undef LITERAL_ARG_CASE
-}  // namespace utils::wasm::code
+}  // namespace futils::wasm::code

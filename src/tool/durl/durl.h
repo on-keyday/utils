@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,10 +13,10 @@
 #include <fnet/util/uri.h>
 
 namespace durl {
-    namespace subcmd = utils::cmdline::subcmd;
-    namespace opt = utils::cmdline::option;
-    extern utils::wrap::UtfOut& cout;
-    extern utils::wrap::UtfOut& cerr;
+    namespace subcmd = futils::cmdline::subcmd;
+    namespace opt = futils::cmdline::option;
+    extern futils::wrap::UtfOut& cout;
+    extern futils::wrap::UtfOut& cerr;
     struct URIOption {
         bool punycode = false;
         bool path_urlenc = false;
@@ -115,7 +115,7 @@ namespace durl {
     };
 
     extern GlobalOption global;
-    namespace uri = utils::uri;
+    namespace uri = futils::uri;
     using URI = uri::URI<std::string>;
     struct URIToJSON {
         URI uri;

@@ -1,17 +1,17 @@
-#    utils - utility library
+#    futils - utility library
 #    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
 cmake_minimum_required(VERSION 3.26)
-project(utils)
+project(futils)
 include_directories("src/include")
 
 set(CMAKE_CXX_STANDARD 20)
 
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  if(NOT "$ENV{UTILS_TARGET_TRIPLE}" STREQUAL "")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target $ENV{UTILS_TARGET_TRIPLE}")
+  if(NOT "$ENV{FUTILS_TARGET_TRIPLE}" STREQUAL "")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target $ENV{FUTILS_TARGET_TRIPLE}")
   endif()
 endif()
 
@@ -62,7 +62,7 @@ endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "test")
 
-# tests(utils)
+# tests(futils)
 add_executable(core "src/test/core/test_core.cpp")
 add_executable(utfconvert "src/test/utf/test_utfconvert.cpp")
 add_executable(retreat "src/test/utf/test_retreat.cpp")
@@ -201,30 +201,30 @@ if(WIN32)
   set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 endif()
 
-if(NOT UTILS_BUILD_MODE)
-set(UTILS_BUILD_MODE "shared")
+if(NOT FUTILS_BUILD_MODE)
+set(FUTILS_BUILD_MODE "shared")
 endif()
 
 # libraries
-if(UTILS_BUILD_MODE STREQUAL "shared")
-add_library(utils SHARED)
+if(FUTILS_BUILD_MODE STREQUAL "shared")
+add_library(futils SHARED)
 add_library(fnet SHARED)
 add_library(fnetserv SHARED)
 add_library(coro SHARED)
 add_library(low SHARED)
-elseif(UTILS_BUILD_MODE STREQUAL "static")
-add_library(utils STATIC)
+elseif(FUTILS_BUILD_MODE STREQUAL "static")
+add_library(futils STATIC)
 add_library(fnet STATIC)
 add_library(fnetserv STATIC)
 add_library(coro STATIC)
 add_Library(low STATIC)
-add_compile_definitions(UTILS_AS_STATIC)
+add_compile_definitions(FUTILS_AS_STATIC)
 else()
-message(FATAL_ERROR "UTILS_BUILD_MODE must be shared or static")
+message(FATAL_ERROR "FUTILS_BUILD_MODE must be shared or static")
 endif()
 
-# libutils
-target_sources(utils
+# libfutils
+target_sources(futils
   PRIVATE
   # "src/lib/file/platform.cpp"
   # "src/lib/file/file_view.cpp"
@@ -306,80 +306,80 @@ target_sources(low PRIVATE
 )
 
 
-# test (utils)
-target_link_libraries(fileview utils)
-target_link_libraries(cout utils)
-target_link_libraries(channel utils Threads::Threads)
-#[[ target_link_libraries(worker utils)
-target_link_libraries(coroutine utils)
-target_link_libraries(run_on_single_thread utils)
-target_link_libraries(shared_context utils)
-target_link_libraries(taskpool2 utils)
+# test (futils)
+target_link_libraries(fileview futils)
+target_link_libraries(cout futils)
+target_link_libraries(channel futils Threads::Threads)
+#[[ target_link_libraries(worker futils)
+target_link_libraries(coroutine futils)
+target_link_libraries(run_on_single_thread futils)
+target_link_libraries(shared_context futils)
+target_link_libraries(taskpool2 futils)
 ]]
-target_link_libraries(json utils)
-target_link_libraries(cin utils)
-target_link_libraries(to_json utils)
-target_link_libraries(jsonpath utils)
-target_link_libraries(digitcount utils)
-target_link_libraries(optparse utils)
-target_link_libraries(optctx utils)
-target_link_libraries(subcmd utils)
-target_link_libraries(env_expand utils)
+target_link_libraries(json futils)
+target_link_libraries(cin futils)
+target_link_libraries(to_json futils)
+target_link_libraries(jsonpath futils)
+target_link_libraries(digitcount futils)
+target_link_libraries(optparse futils)
+target_link_libraries(optctx futils)
+target_link_libraries(subcmd futils)
+target_link_libraries(env_expand futils)
 
-target_link_libraries(expand_iovec utils)
-# target_link_libraries(comb utils)
-target_link_libraries(huffman utils)
-target_link_libraries(deflate utils)
-target_link_libraries(qpack utils)
-target_link_libraries(unicode_data utils)
-target_link_libraries(exepath utils)
-target_link_libraries(derive utils)
-target_link_libraries(stack_trace utils)
-target_link_libraries(derive2 utils)
-target_link_libraries(fft utils)
+target_link_libraries(expand_iovec futils)
+# target_link_libraries(comb futils)
+target_link_libraries(huffman futils)
+target_link_libraries(deflate futils)
+target_link_libraries(qpack futils)
+target_link_libraries(unicode_data futils)
+target_link_libraries(exepath futils)
+target_link_libraries(derive futils)
+target_link_libraries(stack_trace futils)
+target_link_libraries(derive2 futils)
+target_link_libraries(fft futils)
 
 # test(libfnet)
 target_link_libraries(fnet_socket fnet)
 target_link_libraries(fnet_tls fnet)
-target_link_libraries(fnet_http fnet utils)
+target_link_libraries(fnet_http fnet futils)
 # target_link_libraries(fnet_http2 fnet)
 # target_link_libraries(fnetquic_initial fnet)
 target_link_libraries(fnetquic_context fnet)
 target_link_libraries(fnet_error fnet)
 target_link_libraries(fnet_stun fnet)
-target_link_libraries(fnetquic_frame utils fnet)
-target_link_libraries(fnetquic_stream utils fnet)
-target_link_libraries(fnetquic_multi_thread utils fnet)
+target_link_libraries(fnetquic_frame futils fnet)
+target_link_libraries(fnetquic_stream futils fnet)
+target_link_libraries(fnetquic_multi_thread futils fnet)
 target_link_libraries(fnet_dns fnet)
-target_link_libraries(fnetquic_0rtt fnet utils)
-target_link_libraries(fnetquic_internet fnet utils)
+target_link_libraries(fnetquic_0rtt fnet futils)
+target_link_libraries(fnetquic_internet fnet futils)
 target_link_libraries(fnet_telnet fnet)
-target_link_libraries(fnetquic_http3 fnet utils)
+target_link_libraries(fnetquic_http3 fnet futils)
 
 # test(libfnetserv)
 target_link_libraries(fnetserv fnet)
 
 # test(libcoro)
-target_link_libraries(quic_coro coro fnet utils)
-target_link_libraries(coro_nest coro utils)
+target_link_libraries(quic_coro coro fnet futils)
+target_link_libraries(coro_nest coro futils)
 
 # test(liblow)
 target_link_libraries(callstack low)
 
 # tools
-target_link_libraries(ifacegen utils)
-# target_link_libraries(binred utils)
-# target_link_libraries(minilang utils)
-target_link_libraries(durl utils fnet)
-target_link_libraries(server utils fnet fnetserv)
+target_link_libraries(ifacegen futils)
+# target_link_libraries(binred futils)
+# target_link_libraries(minilang futils)
+target_link_libraries(durl futils fnet)
+target_link_libraries(server futils fnet fnetserv)
 if(LLVM_FOUND)
-target_link_libraries(combl utils)
+target_link_libraries(combl futils)
 endif()
-# target_link_libraries(binp utils)
-target_link_libraries(unidump utils)
-target_link_libraries(oslbgen utils)
-target_link_libraries(langc utils)
-target_link_libraries(ping utils fnet coro)
+# target_link_libraries(binp futils)
+target_link_libraries(unidump futils)
+target_link_libraries(oslbgen futils)
+target_link_libraries(langc futils)
+target_link_libraries(ping futils fnet coro)
 
 if(LLVM_FOUND)
 message(STATUS "LLVM found")
@@ -392,10 +392,10 @@ endif()
 
 #[[
 if(WIN32)
-  if(UTILS_BUILD_SHARED_LIBS)
+  if(FUTILS_BUILD_SHARED_LIBS)
     add_custom_command(
-      TARGET utils POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "test/libutils.dll"
+      TARGET futils POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libfutils.dll" "test/libfutils.dll"
     )
     add_custom_command(
       TARGET fnet POST_BUILD
@@ -407,8 +407,8 @@ if(WIN32)
     )
    
     add_custom_command(
-      TARGET utils POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libutils.dll" "tool/libutils.dll"
+      TARGET futils POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy "lib/libfutils.dll" "tool/libfutils.dll"
     )
     add_custom_command(
       TARGET fnet POST_BUILD
@@ -433,6 +433,6 @@ set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXE
 install(DIRECTORY "${CMAKE_BINARY_DIR}/tool" DESTINATION "." OPTIONAL USE_SOURCE_PERMISSIONS )
 install(DIRECTORY "${CMAKE_BINARY_DIR}/lib" DESTINATION "." OPTIONAL USE_SOURCE_PERMISSIONS )
 install(DIRECTORY "${CMAKE_BINARY_DIR}/test" DESTINATION "." OPTIONAL USE_SOURCE_PERMISSIONS )
-install(TARGETS utils coro fnet fnetserv low DESTINATION "lib"  OPTIONAL)
-install(TARGETS utils coro fnet fnetserv low DESTINATION "test" OPTIONAL)
-install(TARGETS utils coro fnet fnetserv low DESTINATION "tool" OPTIONAL)
+install(TARGETS futils coro fnet fnetserv low DESTINATION "lib"  OPTIONAL)
+install(TARGETS futils coro fnet fnetserv low DESTINATION "test" OPTIONAL)
+install(TARGETS futils coro fnet fnetserv low DESTINATION "tool" OPTIONAL)

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #pragma once
 #include "../../binary/number.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::asn1 {
         enum class Tag : byte {
             RESERVED = 0x0,
@@ -406,4 +406,4 @@ namespace utils {
             }
         };
     }  // namespace fnet::asn1
-}  // namespace utils
+}  // namespace futils

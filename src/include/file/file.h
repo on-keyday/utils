@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -16,7 +16,7 @@
 #include <helper/expected.h>
 #include <unicode/utf/convert.h>
 
-namespace utils::file {
+namespace futils::file {
 
     enum class IOMode : std::uint8_t {
         read = 0,
@@ -288,12 +288,12 @@ namespace utils::file {
     constexpr auto O_READ_DEFAULT = Flag(O_READ | O_SHARE_READ | O_SHARE_WRITE | O_CLOSE_ON_EXEC);
     constexpr auto O_WRITE_DEFAULT = Flag(O_WRITE | O_SHARE_WRITE | O_SHARE_READ | O_CLOSE_ON_EXEC);
 
-    utils_DLL_EXPORT void STDCALL format_os_error(helper::IPushBacker<> pb, std::int64_t code);
+    futils_DLL_EXPORT void STDCALL format_os_error(helper::IPushBacker<> pb, std::int64_t code);
     enum class ErrorCode {
         already_open,
     };
 
-    utils_DLL_EXPORT std::int64_t STDCALL map_os_error_code(ErrorCode code);
+    futils_DLL_EXPORT std::int64_t STDCALL map_os_error_code(ErrorCode code);
 
     struct FileError {
         const char* method = nullptr;
@@ -332,13 +332,13 @@ namespace utils::file {
     template <class T>
     using file_result = helper::either::expected<T, FileError>;
 
-    struct utils_DLL_EXPORT MMap {
+    struct futils_DLL_EXPORT MMap {
        private:
         byte* ptr = nullptr;
         std::uintptr_t os_spec = 0;
         std::size_t file_len = 0;
         Mode mode;
-        friend struct utils_DLL_EXPORT File;
+        friend struct futils_DLL_EXPORT File;
         constexpr MMap(byte* ptr, std::uintptr_t spec, std::size_t f_len, Mode m)
             : ptr(ptr), os_spec(spec), file_len(f_len), mode(m) {}
 
@@ -396,7 +396,7 @@ namespace utils::file {
 
     // NOTE(on-keyday): this is reinterpreted as OVERLAPPED if windows
     //                  on linux, this is not used yet
-    struct utils_DLL_EXPORT NonBlockContext {
+    struct futils_DLL_EXPORT NonBlockContext {
        private:
         alignas(alignof(std::uintptr_t)) byte data[sizeof(std::uintptr_t) * 4]{};
 
@@ -405,11 +405,11 @@ namespace utils::file {
         size_t transferred() const;
     };
 
-    struct utils_DLL_EXPORT ConsoleBuffer {
+    struct futils_DLL_EXPORT ConsoleBuffer {
        private:
         std::uintptr_t handle = ~0;
 
-        friend struct utils_DLL_EXPORT File;
+        friend struct futils_DLL_EXPORT File;
         std::uint64_t base_flag = 0;
         byte rec[2]{};  // for linux
         bool zero_input = false;
@@ -446,7 +446,7 @@ namespace utils::file {
         ~ConsoleBuffer();
     };
 
-    struct utils_DLL_EXPORT File {
+    struct futils_DLL_EXPORT File {
        private:
         std::uintptr_t handle = ~0;
 
@@ -536,4 +536,4 @@ namespace utils::file {
         file_result<void> set_virtual_terminal_input(bool flag = true) const;
     };
 
-}  // namespace utils::file
+}  // namespace futils::file

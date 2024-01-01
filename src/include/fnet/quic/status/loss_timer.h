@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "rtt.h"
 #include "pn_manage.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::status {
         enum class LossTimerState {
             no_timer,
@@ -196,4 +196,4 @@ namespace utils {
             }
         };
     }  // namespace fnet::quic::status
-}  // namespace utils
+}  // namespace futils

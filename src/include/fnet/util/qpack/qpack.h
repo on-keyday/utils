@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <wrap/light/enum.h>
 #include "../http/header.h"
 
-namespace utils {
+namespace futils {
     namespace qpack {
         enum class FieldPolicy {
             prior_static = 0x01,
@@ -448,4 +448,4 @@ namespace utils {
             };
         }
     }  // namespace qpack
-}  // namespace utils
+}  // namespace futils

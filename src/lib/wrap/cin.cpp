@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -16,12 +16,12 @@
 #include "../../include/wrap/cout.h"
 #include <unicode/utf/minibuffer.h>
 
-namespace utils {
+namespace futils {
     namespace wrap {
         ::FILE* is_std(std::ios_base&);
 
         static path_string glbuf;
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 /*
         void echo_back(auto&& buf) {
             if (cout_wrap().is_tty()) {
@@ -222,4 +222,4 @@ namespace utils {
         }
 
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

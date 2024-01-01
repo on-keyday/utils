@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,12 +13,12 @@
 #include "flags.h"
 #if __has_include(<stdfloat>)
 #include <stdfloat>
-#define UTILS_BINARY_SUPPORT_STDFLOAT 1
+#define FUTILS_BINARY_SUPPORT_STDFLOAT 1
 #endif
 
-namespace utils {
+namespace futils {
     namespace binary {
-#ifdef UTILS_BINARY_SUPPORT_STDFLOAT
+#ifdef FUTILS_BINARY_SUPPORT_STDFLOAT
         using bfloat16_t = std::bfloat16_t;
         using float16_t = std::float16_t;
         using float32_t = std::float32_t;
@@ -184,7 +184,7 @@ namespace utils {
         using BrainHalfFloat = Float<std::uint16_t, bfloat16_t, 8, 127>;
         using SingleFloat = Float<std::uint32_t, float32_t, 8, 127>;
         using DoubleFloat = Float<std::uint64_t, float64_t, 11, 1023>;
-#ifdef UTILS_BINARY_SUPPORT_INT128
+#ifdef FUTILS_BINARY_SUPPORT_INT128
         using ExtDoubleFloat = Float<uint128_t, float128_t, 15, 16383>;
 #endif
 
@@ -216,7 +216,7 @@ namespace utils {
             else if constexpr (sizeof(T) == sizeof(DoubleFloat)) {
                 return DoubleFloat(t);
             }
-#ifdef UTILS_BINARY_SUPPORT_INT128
+#ifdef FUTILS_BINARY_SUPPORT_INT128
             else if constexpr (sizeof(T) == sizeof(ExtDoubleFloat)) {
                 return ExtDoubleFloat(t);
             }
@@ -314,4 +314,4 @@ namespace utils {
         }  // namespace test
 
     }  // namespace binary
-}  // namespace utils
+}  // namespace futils

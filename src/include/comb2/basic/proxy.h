@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include "../status.h"
 #include "../internal/context_fn.h"
 
-namespace utils::comb2 {
+namespace futils::comb2 {
     namespace types {
 
         struct MustMatchErrorFn {
@@ -54,9 +54,9 @@ namespace utils::comb2 {
         */
 
 #define method_proxy(method)                                                                                      \
-    proxy([](auto&& seq, auto&& ctx, auto&& rec) -> ::utils::comb2::Status { return rec.method(seq, ctx, rec); }, \
-          [](auto&& seq, auto&& ctx, auto&& rec) { ::utils::comb2::ctxs::context_call_must_match_error(seq, ctx, rec.method, rec); })
+    proxy([](auto&& seq, auto&& ctx, auto&& rec) -> ::futils::comb2::Status { return rec.method(seq, ctx, rec); }, \
+          [](auto&& seq, auto&& ctx, auto&& rec) { ::futils::comb2::ctxs::context_call_must_match_error(seq, ctx, rec.method, rec); })
 
 #define decl_method_proxy(method) decltype(method##_) method
     }  // namespace ops
-}  // namespace utils::comb2
+}  // namespace futils::comb2

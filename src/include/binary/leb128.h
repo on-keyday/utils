@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include "writer.h"
 #include "signint.h"
 
-namespace utils::binary {
+namespace futils::binary {
     template <class T, class C>
     constexpr bool read_leb128_uint(basic_reader<C>& r, T& result) {
         using U = uns_t<T>;
@@ -185,4 +185,4 @@ namespace utils::binary {
 
         static_assert(check_leb128());
     }  // namespace test
-}  // namespace utils::binary
+}  // namespace futils::binary

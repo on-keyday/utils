@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include <cassert>
 #include <cstddef>
 
-namespace utils {
+namespace futils {
     template <class C>
     constexpr size_t strlen(C* ptr) {
         assert(ptr != nullptr);
@@ -19,4 +19,4 @@ namespace utils {
             ;
         return length;
     }
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <string>
 
-namespace utils {
+namespace futils {
     namespace qpack {
         template <class String = std::string,
                   template <class...> class RefMap = std::unordered_map,
@@ -27,4 +27,4 @@ namespace utils {
             using string = String;
         };
     }  // namespace qpack
-}  // namespace utils
+}  // namespace futils

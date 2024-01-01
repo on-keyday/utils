@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,7 +14,7 @@
 #include "channel.h"
 #include <algorithm>
 
-namespace utils {
+namespace futils {
     namespace thread {
 
         template <class T, template <class...> class Que = wrap::queue, template <class...> class Map = wrap::map>
@@ -201,4 +201,4 @@ namespace utils {
             return ForkChan<T, Que, Map>(buf);
         }
     }  // namespace thread
-}  // namespace utils
+}  // namespace futils

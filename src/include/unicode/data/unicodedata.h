@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,7 +14,7 @@
 #include <vector>
 #include "../../strutil/strutil.h"
 
-namespace utils {
+namespace futils {
     namespace unicode::data {
         template <class String = std::string>
         struct Decomposition {
@@ -194,4 +194,4 @@ namespace utils {
 
         }  // namespace internal
     }      // namespace unicode::data
-}  // namespace utils
+}  // namespace futils

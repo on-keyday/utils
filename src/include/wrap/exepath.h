@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,9 +10,9 @@
 #include <helper/pushbacker.h>
 #include <wrap/light/string.h>
 
-namespace utils {
+namespace futils {
     namespace wrap {
-        utils_DLL_EXPORT void STDCALL get_exepath(helper::IPushBacker<> pb);
+        futils_DLL_EXPORT void STDCALL get_exepath(helper::IPushBacker<> pb);
 
         template <class Out = wrap::string>
         Out get_exepath() {
@@ -21,4 +21,4 @@ namespace utils {
             return out;
         }
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

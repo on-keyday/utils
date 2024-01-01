@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,40 +10,40 @@
 
 constexpr bool test_retreat_utf8() {
     char8_t testword[] = u8"𠮷野家𠮷";
-    utils::Sequencer seq(testword);
+    futils::Sequencer seq(testword);
     seq.seekend();
-    utils::utf::internal::retreat(seq);
-    utils::utf::internal::retreat(seq);
-    utils::utf::internal::retreat(seq);
+    futils::utf::internal::retreat(seq);
+    futils::utf::internal::retreat(seq);
+    futils::utf::internal::retreat(seq);
     return seq.match(u8"野家𠮷");
 }
 
 constexpr bool test_retreat_utf16() {
     char16_t testword[] = u"𠮷野家𠮷";
-    utils::Sequencer seq(testword);
+    futils::Sequencer seq(testword);
     seq.seekend();
-    utils::utf::internal::retreat(seq);
-    utils::utf::internal::retreat(seq);
-    utils::utf::internal::retreat(seq);
+    futils::utf::internal::retreat(seq);
+    futils::utf::internal::retreat(seq);
+    futils::utf::internal::retreat(seq);
     return seq.match(u"野家𠮷");
 }
 
 constexpr bool test_retreat_utf32() {
     char32_t testword[] = U"𠮷野家𠮷";
-    utils::Sequencer seq(testword);
+    futils::Sequencer seq(testword);
     seq.seekend();
-    utils::utf::internal::retreat(seq);
-    utils::utf::internal::retreat(seq);
-    utils::utf::internal::retreat(seq);
+    futils::utf::internal::retreat(seq);
+    futils::utf::internal::retreat(seq);
+    futils::utf::internal::retreat(seq);
     return seq.match(U"野家𠮷");
 }
 
 constexpr bool test_retreat_edge_case() {
     auto test = u8" # 本当はこっちが正しいのですがΩ、現状のジェネレータの限界で、下を使っています\n";
-    utils::Sequencer s(test);
+    futils::Sequencer s(test);
     s.rptr = 117;
     for (auto i = 0; i < 41; i++) {
-        utils::utf::internal::retreat(s);
+        futils::utf::internal::retreat(s);
     }
     return s.match(u8"# 本当はこっちが正しいのですがΩ、現状のジェネレータの限界で、下を使っています\n");
 }

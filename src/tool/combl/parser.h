@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -17,7 +17,7 @@
 #include <minilang/comb/unicode.h>
 
 namespace combl::parser {
-    using namespace utils::minilang::comb;
+    using namespace futils::minilang::comb;
     constexpr auto spaces = COMB_PROXY(spaces);
 
     constexpr auto get_expr() {
@@ -204,7 +204,7 @@ namespace combl::parser {
 
     constexpr auto parse = make_parser();
     constexpr bool comptime_check(auto&& ctx) {
-        auto seq = utils::make_ref_seq(R"(
+        auto seq = futils::make_ref_seq(R"(
             /*/*ok bokujo*/*/
             // compiletime parser check
             fnc()

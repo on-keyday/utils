@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include "expandable_writer.h"
 #include "expandable_reader.h"
 
-namespace utils {
+namespace futils {
     namespace binary {
 
         template <class T, class C>
@@ -182,4 +182,4 @@ namespace utils {
         using bit_writer = basic_bit_writer<T, byte>;
 
     }  // namespace binary
-}  // namespace utils
+}  // namespace futils

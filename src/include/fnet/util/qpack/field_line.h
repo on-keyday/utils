@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include "common.h"
 #include "qpack_header.h"
 
-namespace utils {
+namespace futils {
     namespace qpack::fields {
         constexpr std::uint64_t max_entries(std::uint64_t max_capacity) {
             // floor(max_capacity / 5)
@@ -392,4 +392,4 @@ namespace utils {
         }
 
     }  // namespace qpack::fields
-}  // namespace utils
+}  // namespace futils

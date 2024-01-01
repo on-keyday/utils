@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,32 +14,32 @@
 #include <memory>
 #include <map>
 #include <deque>
-using string = utils::number::Array<char, 100>;
-using rvec = utils::view::basic_rvec<char>;
+using string = futils::number::Array<char, 100>;
+using rvec = futils::view::basic_rvec<char>;
 
 constexpr bool encode_decode(const char* base) {
     auto in = rvec(base);
-    utils::binary::basic_bit_writer<string, char> w{};
-    utils::hpack::encode_huffman(w, in);
+    futils::binary::basic_bit_writer<string, char> w{};
+    futils::hpack::encode_huffman(w, in);
     auto encoded = w.get_base().written();
-    utils::binary::basic_bit_reader<rvec, char> d{encoded};
+    futils::binary::basic_bit_reader<rvec, char> d{encoded};
     string val;
-    return utils::hpack::decode_huffman(val, d) && val == in;
+    return futils::hpack::decode_huffman(val, d) && val == in;
 }
 
 template <size_t s>
-constexpr bool decode(utils::fnet::quic::crypto::KeyMaterial<s> data, const char* expect) {
-    auto v = utils::view::wvec(data.material);
-    utils::binary::bit_reader<utils::view::wvec> d{v};
+constexpr bool decode(futils::fnet::quic::crypto::KeyMaterial<s> data, const char* expect) {
+    auto v = futils::view::wvec(data.material);
+    futils::binary::bit_reader<futils::view::wvec> d{v};
     string val;
-    return utils::hpack::decode_huffman(val, d) && val == rvec(expect);
+    return futils::hpack::decode_huffman(val, d) && val == rvec(expect);
 }
 
 void check_string_encoding() {
     static_assert(encode_decode("object identifier z"));
     static_assert(encode_decode("\x32\x44\xff"));
     bool d = encode_decode("object identifierz");
-    static_assert(decode(utils::fnet::quic::crypto::make_material_from_bintext("d07abe941054d444a8200595040b8166e082a62d1bff"), "Mon, 21 Oct 2013 20:13:21 GMT"));
+    static_assert(decode(futils::fnet::quic::crypto::make_material_from_bintext("d07abe941054d444a8200595040b8166e082a62d1bff"), "Mon, 21 Oct 2013 20:13:21 GMT"));
 }
 
 using Header = std::map<std::string, std::string>;
@@ -65,10 +65,10 @@ void check_header_compression_part(Header& encode_header, Tables& table) {
     auto on_modify = [](auto&& key, auto&& value, bool insert) {
         ;
     };
-    auto err = utils::hpack::encode(payload, table.encode_table, encode_header, table.encode_size_limit, true, on_modify);
-    assert(err == utils::hpack::HpackError::none);
-    err = utils::hpack::decode<std::string>(payload, table.decode_table, utils::hpack::emplacer(decode_header), table.decode_size_limit, table.max_size_limit, on_modify);
-    assert(err == utils::hpack::HpackError::none);
+    auto err = futils::hpack::encode(payload, table.encode_table, encode_header, table.encode_size_limit, true, on_modify);
+    assert(err == futils::hpack::HpackError::none);
+    err = futils::hpack::decode<std::string>(payload, table.decode_table, futils::hpack::emplacer(decode_header), table.decode_size_limit, table.max_size_limit, on_modify);
+    assert(err == futils::hpack::HpackError::none);
     assert(encode_header == decode_header);
     assert(table.encode_table == table.decode_table);
 }
@@ -80,12 +80,12 @@ void check_header_compression_resize(std::uint32_t new_size, Tables& table) {
         ;
     };
     table.encode_size_limit = new_size;
-    utils::binary::expand_writer<std::string&> w{payload};
-    auto err = utils::hpack::encode_table_size_update(w, new_size, table.encode_table, on_modify);
-    assert(err == utils::hpack::HpackError::none);
-    err = utils::hpack::decode<std::string>(
+    futils::binary::expand_writer<std::string&> w{payload};
+    auto err = futils::hpack::encode_table_size_update(w, new_size, table.encode_table, on_modify);
+    assert(err == futils::hpack::HpackError::none);
+    err = futils::hpack::decode<std::string>(
         payload, table.decode_table, [](auto&&...) {}, table.decode_size_limit, table.max_size_limit, on_modify);
-    assert(err == utils::hpack::HpackError::none);
+    assert(err == futils::hpack::HpackError::none);
     assert(table.encode_table == table.decode_table);
 }
 
@@ -117,7 +117,7 @@ void check_header_compression() {
     encode_header[":authority"] = "www.google.com";
     encode_header[":scheme"] = "https";
     for (auto i = 0; i < 20; i++) {
-        encode_header["abstract" + utils::number::to_string<std::string>(i)] = "object";
+        encode_header["abstract" + futils::number::to_string<std::string>(i)] = "object";
     }
     check_header_compression_part(encode_header, tables);
 }

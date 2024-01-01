@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -16,7 +16,7 @@
 #include "../../helper/defer.h"
 #include <cassert>
 
-namespace utils::comb2::tree {
+namespace futils::comb2::tree {
     enum class ElmType {
         branch,
         token,
@@ -213,7 +213,7 @@ namespace utils::comb2::tree {
         }
         else if (auto v = comb2::tree::is_Group<GroupTag>(elm)) {
             cb(*v, true);
-            const auto d = utils::helper::defer([&] {
+            const auto d = futils::helper::defer([&] {
                 cb(*v, false);
             });
             for (auto& e : v->child) {
@@ -234,7 +234,7 @@ namespace utils::comb2::tree {
         }
         else if (auto v = comb2::tree::is_Group<GroupTag>(elm)) {
             cb(*v, true);
-            const auto d = utils::helper::defer([&] {
+            const auto d = futils::helper::defer([&] {
                 cb(*v, false);
             });
             for (auto& e : v->child) {
@@ -243,7 +243,7 @@ namespace utils::comb2::tree {
         }
         else if (auto v = comb2::tree::is_Branch(elm)) {
             cb(*v, true);
-            const auto d = utils::helper::defer([&] {
+            const auto d = futils::helper::defer([&] {
                 cb(*v, false);
             });
             for (auto& e : v->child) {
@@ -252,4 +252,4 @@ namespace utils::comb2::tree {
         }
     }
 
-}  // namespace utils::comb2::tree
+}  // namespace futils::comb2::tree

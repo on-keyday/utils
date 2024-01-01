@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -24,16 +24,16 @@
 #include <comb2/tree/branch_table.h>
 #include <comb2/tree/simple_node.h>
 
-struct Ctx : utils::comb2::tree::BranchTable {
+struct Ctx : futils::comb2::tree::BranchTable {
     void error(auto&&... arg) {
-        utils::wrap::cerr_wrap() << "ifacegen: error: ";
-        (utils::wrap::cerr_wrap() << ... << arg) << "\n";
+        futils::wrap::cerr_wrap() << "ifacegen: error: ";
+        (futils::wrap::cerr_wrap() << ... << arg) << "\n";
     }
 };
 
 int main(int argc, char** argv) {
-    using namespace utils;
-    using namespace utils::cmdline;
+    using namespace futils;
+    using namespace futils::cmdline;
     auto& cout = wrap::cout_wrap();
     auto& cerr = wrap::cerr_wrap();
     auto dev_bug = [&] {
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
     opt.VarString(&data.helper_deref, "helper-deref", "helper deref location", "FILE", cu);
     opt.VarFlagSet(flag, "use-dynamic-cast,d", GF::use_dyn_cast, "use dynamic cast for type assert", cu);
     opt.VarFlagSet(flag, "separate,S", GF::sep_namespace, "separate namespace by ::", cu);
-    opt.VarFlagSet(flag, "independent,D", GF::not_depend_lib, "insert deref code not to depend utils", cu);
+    opt.VarFlagSet(flag, "independent,D", GF::not_depend_lib, "insert deref code not to depend futils", cu);
     /*
     DefaultDesc desc;
     desc.set("output-file,o", str_option(""), "set output file", OptFlag::need_value, "filename")
@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
         .set("helper-deref", str_option("<helper/deref>"), "helper deref location", OptFlag::once_in_cmd)
         .set("use-dynamic-cast,d", bool_option(true), "use dynamic cast for type assert", OptFlag::once_in_cmd)
         .set("separate,S", bool_option(true), "separate namespace by ::", OptFlag::once_in_cmd)
-        .set("independent,D", bool_option(true), "insert deref code not to depend utils", OptFlag::once_in_cmd);
+        .set("independent,D", bool_option(true), "insert deref code not to depend futils", OptFlag::once_in_cmd);
     int index = 1;
     DefaultSet result;
     auto err = parse(index, argc, argv, desc, result, ParseFlag::optget_mode, &arg);
@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
              << "try `ifacegen -h` for more info\n";
         return -1;
     }*/
-    utils::wrap::vector<wrap::string> arg;
+    futils::wrap::vector<wrap::string> arg;
     auto mode = option::ParseFlag::assignable_mode;
     auto err = option::parse(argc, argv, opt, helper::nop, mode);
     if (auto msg = error_msg(err)) {
@@ -283,14 +283,14 @@ Special Value:
     }
     auto sv = make_ref_seq(view);
     Ctx table;
-    if (ifacegen::parser::parse(sv, table) != utils::comb2::Status::match) {
+    if (ifacegen::parser::parse(sv, table) != futils::comb2::Status::match) {
         std::string err;
-        utils::code::write_src_loc(err, sv);
+        futils::code::write_src_loc(err, sv);
         cerr << err << "\n";
         cerr << "parse error\n";
         return -1;
     }
-    auto r = utils::comb2::tree::node::collect(table.root_branch);
+    auto r = futils::comb2::tree::node::collect(table.root_branch);
     if (!ifacegen::traverse(data, r)) {
         cerr << "parse error";
         return -1;

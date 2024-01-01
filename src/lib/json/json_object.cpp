@@ -1,20 +1,20 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
 */
 
 
-#define UTILS_JSON_NO_EXTERN_TEMPLATE
+#define FUTILS_JSON_NO_EXTERN_TEMPLATE
 #include "../../include/platform/windows/dllexport_source.h"
 #include "../../include/json/json_export.h"
-namespace utils::json {
-}  // namespace utils::json
+namespace futils::json {
+}  // namespace futils::json
 
 template <class String, template <class...> class Vec, template <class...> class Object>
-void instantiate_json(utils::json::JSONBase<String, Vec, Object>& obj) {
-    using self_t = utils::json::JSONBase<String, Vec, Object>;
+void instantiate_json(futils::json::JSONBase<String, Vec, Object>& obj) {
+    using self_t = futils::json::JSONBase<String, Vec, Object>;
     obj = nullptr;
     obj = true;
     obj = 0;
@@ -48,8 +48,8 @@ void instantiate_json(utils::json::JSONBase<String, Vec, Object>& obj) {
 }
 
 void instantiate() {
-    using namespace utils::json;
-    using namespace utils::json::literals;
+    using namespace futils::json;
+    using namespace futils::json::literals;
     JSON json;
     instantiate_json(json);
     OrderedJSON ojson;

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include "../../tls/x509.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::log {
         void format_certificate(auto& out, view::rvec data, bool omit_data, bool data_as_hex) {
             x509::parser::Certificate cert;
@@ -89,4 +89,4 @@ namespace utils {
             });
         }
     }  // namespace fnet::quic::log
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -19,7 +19,7 @@
 #include "to_string.h"
 #include "ordered_map.h"
 
-namespace utils {
+namespace futils {
 
     namespace json {
         using JSON = JSONBase<wrap::string, wrap::vector, wrap::map>;
@@ -27,4 +27,4 @@ namespace utils {
         using OrderedJSON = JSONBase<wrap::string, wrap::vector, ordered_map>;
 
     }  // namespace json
-}  // namespace utils
+}  // namespace futils

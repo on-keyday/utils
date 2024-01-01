@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include <binary/flags.h>
 
-namespace utils::platform::windows {
+namespace futils::platform::windows {
     struct HResult {
        private:
         binary::flags_t<std::uint32_t, 1, 1, 1, 1, 1, 11, 16> val;
@@ -35,4 +35,4 @@ namespace utils::platform::windows {
             return val.as_value();
         }
     };
-}  // namespace utils::platform::windows
+}  // namespace futils::platform::windows

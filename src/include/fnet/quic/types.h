@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <type_traits>
 #include "version.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic {
         enum class PacketType : byte {
             Initial,
@@ -544,4 +544,4 @@ namespace utils {
         }
 
     }  // namespace fnet::quic
-}  // namespace utils
+}  // namespace futils

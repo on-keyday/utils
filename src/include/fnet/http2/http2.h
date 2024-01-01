@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include "h2stream.h"
 #include <unordered_map>
 
-namespace utils {
+namespace futils {
     namespace fnet::http2 {
         struct FrameHandler : std::enable_shared_from_this<FrameHandler> {
             stream::Conn conn;
@@ -113,4 +113,4 @@ namespace utils {
             }
         };
     }  // namespace fnet::http2
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include "../view/iovec.h"
 
-namespace utils {
+namespace futils {
     namespace binary {
         template <class C>
         struct basic_reader {
@@ -108,4 +108,4 @@ namespace utils {
 
         using reader = basic_reader<byte>;
     }  // namespace binary
-}  // namespace utils
+}  // namespace futils

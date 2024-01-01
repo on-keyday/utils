@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include <utility>
 #include <array>
 
-namespace utils {
+namespace futils {
     namespace hpack {
 
         using sheader_t = std::pair<const char*, const char*>;
@@ -83,4 +83,4 @@ namespace utils {
         };
         // clang-format on
     }  // namespace hpack
-}  // namespace utils
+}  // namespace futils

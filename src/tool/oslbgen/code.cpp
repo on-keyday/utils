@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -34,7 +34,7 @@ namespace oslbgen {
         auto base = it;
         out.line();
         out.writeln("namespace ", db.ns, " {");
-        const auto d = utils::helper::defer([&] {
+        const auto d = futils::helper::defer([&] {
             out.writeln("} // namespace ", db.ns);
         });
         const auto sc = out.indent_scope();

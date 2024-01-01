@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace utils::helper {
+namespace futils::helper {
 
     template <class T>
     struct omit_empty {
@@ -47,4 +47,4 @@ namespace utils::helper {
         constexpr void move_om_value(T&&) noexcept {}
         constexpr void copy_om_value(const T&) noexcept {}
     };
-}  // namespace utils::helper
+}  // namespace futils::helper

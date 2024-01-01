@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -17,7 +17,7 @@
 #include "event/io.h"
 #include <platform/detect.h>
 
-namespace utils::fnet {
+namespace futils::fnet {
     struct SockTable;
     void destroy_platform(SockTable*);
     void sockclose(std::uintptr_t sock);
@@ -109,7 +109,7 @@ namespace utils::fnet {
         }
     };
 
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 
     struct WinSockTable;
 
@@ -142,7 +142,7 @@ namespace utils::fnet {
         WinSockWriteTable w;
         bool skip_notif = false;
     };
-#elif defined(UTILS_PLATFORM_LINUX)
+#elif defined(FUTILS_PLATFORM_LINUX)
     struct EpollTable;
     struct EpollIOTableHeader {
         NotifyCallback cb;
@@ -165,4 +165,4 @@ namespace utils::fnet {
 
     std::pair<sockaddr*, int> NetAddrPort_to_sockaddr(sockaddr_storage* addr, const NetAddrPort&);
 
-}  // namespace utils::fnet
+}  // namespace futils::fnet

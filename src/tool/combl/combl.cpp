@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -18,26 +18,26 @@
 #include "ipret.h"
 #include "compile.h"
 
-namespace json = utils::json;
-struct Flags : utils::cmdline::templ::HelpOption {
+namespace json = futils::json;
+struct Flags : futils::cmdline::templ::HelpOption {
     std::string input;
     bool parse_js = false;
     json::FmtFlag fmt_html = {};
     bool escape_more = false;
     std::string mode = "ipret";
-    void bind(utils::cmdline::option::Context& ctx) {
+    void bind(futils::cmdline::option::Context& ctx) {
         bind_help(ctx);
-        ctx.VarString(&input, "i,input", "input file", "FILE", utils::cmdline::option::CustomFlag::required);
+        ctx.VarString(&input, "i,input", "input file", "FILE", futils::cmdline::option::CustomFlag::required);
         ctx.VarBool(&parse_js, "j,print-json", "print json");
         ctx.VarFlagSet(&fmt_html, "f,format-html", json::FmtFlag::html, "format json with html escape");
         ctx.VarBool(&escape_more, "e,escape-more", "escape json as string literal");
         ctx.VarString(&mode, "mode", "runner mode. ipret,compile,none. default: ipret", "MODE");
     }
 };
-auto& cout = utils::wrap::cout_wrap();
-auto& cerr = utils::wrap::cerr_wrap();
+auto& cout = futils::wrap::cout_wrap();
+auto& cerr = futils::wrap::cerr_wrap();
 
-namespace br = utils::minilang::comb::branch;
+namespace br = futils::minilang::comb::branch;
 
 int run_interpreter(std::shared_ptr<combl::trvs::Scope>& global_scope, auto&& print_err) {
     combl::ipret::InEnv env;
@@ -70,13 +70,13 @@ int run_compiler(std::shared_ptr<combl::trvs::Scope>& global_scope) {
     return combl::bin::compile(cm) ? 0 : -1;
 }
 
-int run_main(Flags& flags, utils::cmdline::option::Context& ctx) {
-    utils::file::View view;
+int run_main(Flags& flags, futils::cmdline::option::Context& ctx) {
+    futils::file::View view;
     if (!view.open(flags.input)) {
         cerr << "combl: error: failed to open file " << flags.input << "\n";
         return -1;
     }
-    auto seq = utils::make_ref_seq(view);
+    auto seq = futils::make_ref_seq(view);
     combl::parser::PrintCtx<decltype(cout)> p{cout};
     p.br.discard_not_match = true;
     p.set = combl::parser::print_none;
@@ -86,7 +86,7 @@ int run_main(Flags& flags, utils::cmdline::option::Context& ctx) {
         seq.rptr = pos.begin;
         cerr << (as_note ? "note: " : "combl: error: ") << msg << "\n";
         out.clear();
-        auto loc = utils::space::write_src_loc(out, seq, pos.end - pos.begin);
+        auto loc = futils::space::write_src_loc(out, seq, pos.end - pos.begin);
         cerr << flags.input << ":" << loc.line + 1 << ":" << loc.pos + 1 << "\n";
         cerr << out << "\n";
     };
@@ -97,18 +97,18 @@ int run_main(Flags& flags, utils::cmdline::option::Context& ctx) {
     p.br.iterate(br::make_json(out));
     out.pop_back();
     auto global_scope = std::make_shared<combl::trvs::Scope>();
-    auto node = utils::json::parse<utils::json::JSON>(out);
+    auto node = futils::json::parse<futils::json::JSON>(out);
     if (node.is_undef()) {
         cerr << "combl: error: unstructured data. BUG!!\n";
         cerr << out;
         return -1;
     }
     if (flags.parse_js) {
-        auto js = utils::json::parse<utils::json::OrderedJSON>(out);
-        auto str = utils::json::to_string<std::string>(js, flags.fmt_html | utils::json::FmtFlag::no_line | utils::json::FmtFlag::unescape_slash | utils::json::FmtFlag::last_line);
+        auto js = futils::json::parse<futils::json::OrderedJSON>(out);
+        auto str = futils::json::to_string<std::string>(js, flags.fmt_html | futils::json::FmtFlag::no_line | futils::json::FmtFlag::unescape_slash | futils::json::FmtFlag::last_line);
         if (flags.escape_more) {
             std::string more;
-            utils::escape::escape_str(str, more);
+            futils::escape::escape_str(str, more);
             str = "\'" + std::move(more) + "\'";
         }
         cout << str;
@@ -132,9 +132,9 @@ int run_main(Flags& flags, utils::cmdline::option::Context& ctx) {
 
 int main(int argc, char** argv) {
     Flags flags;
-    return utils::cmdline::templ::parse_or_err<std::string>(
+    return futils::cmdline::templ::parse_or_err<std::string>(
         argc, argv, flags, [](auto&& str) { cerr << "combl: " << str; },
-        [](Flags& flags, utils::cmdline::option::Context& ctx) {
+        [](Flags& flags, futils::cmdline::option::Context& ctx) {
             return run_main(flags, ctx);
         });
 }

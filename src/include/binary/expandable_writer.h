@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include "writer.h"
 
-namespace utils {
+namespace futils {
     namespace binary {
         template <class T>
         concept has_resize = requires(T t) {
@@ -101,4 +101,4 @@ namespace utils {
         template <class T>
         using expand_writer = basic_expand_writer<T, byte>;
     }  // namespace binary
-}  // namespace utils
+}  // namespace futils

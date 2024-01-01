@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,11 +8,11 @@
 #include <testutil/alloc_hook.h>
 #include <view/expand_iovec.h>
 
-void arg_test(utils::view::rvec d) {}
+void arg_test(futils::view::rvec d) {}
 
 int main() {
-    utils::test::set_alloc_hook(true);
-    utils::view::expand_storage_vec<std::allocator<utils::byte>> data;
+    futils::test::set_alloc_hook(true);
+    futils::view::expand_storage_vec<std::allocator<futils::byte>> data;
     data.reserve(17);
     data.push_back('h');
     data.shrink_to_fit();

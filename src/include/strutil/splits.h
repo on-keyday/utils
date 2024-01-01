@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,7 +14,7 @@
 #include "../wrap/light/string.h"
 #include "../wrap/light/vector.h"
 
-namespace utils {
+namespace futils {
     namespace strutil {
         template <class T, class String, class Sep, template <class...> class Vec>
         void split(Vec<String>& result, Sequencer<T>& input, Sep&& sep, size_t n = ~0, bool igafter = false) {
@@ -86,4 +86,4 @@ namespace utils {
             return result;
         }
     }  // namespace strutil
-}  // namespace utils
+}  // namespace futils

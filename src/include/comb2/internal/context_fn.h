@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include "../cbtype.h"
 #include "../status.h"
 
-namespace utils::comb2 {
+namespace futils::comb2 {
     namespace ctxs {
 #define HAS(method) template <class T, class... A>                 \
                     concept has_##method = requires(T t, A... a) { \
@@ -126,4 +126,4 @@ namespace utils::comb2 {
 #undef HAS
 #undef CALL_IF
 #undef DEF
-}  // namespace utils::comb2
+}  // namespace futils::comb2

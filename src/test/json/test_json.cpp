@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,9 +13,9 @@
 #include "../../include/wrap/cout.h"
 
 void test_json() {
-    namespace utw = utils::wrap;
-    utils::json::JSON json;
-    auto e = utils::json::parse(
+    namespace utw = futils::wrap;
+    futils::json::JSON json;
+    auto e = futils::json::parse(
         R"({
             "json": [
                 "is",
@@ -33,11 +33,11 @@ void test_json() {
         })",
         json);
     json["handle"] = 0;
-    using namespace utils;
+    using namespace futils;
     json::Stringer<> s;
     s.set_indent("    ");
     json::to_string(json, s);
-    auto& cout = utils::wrap::cout_wrap();
+    auto& cout = futils::wrap::cout_wrap();
     cout << s.out() << "\n";
     using namespace json::literals;
     auto js = R"({
@@ -62,7 +62,7 @@ void test_json() {
   }
 })"_ojson;
     js["url"] = "https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify";
-    cout << json::to_string<utils::wrap::string>(js, json::FmtFlag::no_line | json::FmtFlag::unescape_slash)
+    cout << json::to_string<futils::wrap::string>(js, json::FmtFlag::no_line | json::FmtFlag::unescape_slash)
          << "\n";
 }
 

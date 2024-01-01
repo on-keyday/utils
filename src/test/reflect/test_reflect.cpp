@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -7,7 +7,7 @@
 
 #include <reflect/reflect.h>
 #include <string>
-namespace reflect = utils::reflect;
+namespace reflect = futils::reflect;
 void test_basic() {
     reflect::test::Test4 test4;
     reflect::test::Test3& test3 = test4;
@@ -24,7 +24,7 @@ void test_basic() {
     refl2.scan(test4);
     refl2.set(std::uintptr_t(56), offsetof(reflect::test::Test3, val));
     refl2.set(std::uintptr_t(32), offsetof(reflect::test::Test4, val2));
-    utils::byte data[10]{1, 2};
+    futils::byte data[10]{1, 2};
     refl2.scan(data);
     auto total_size = refl2.size();
     auto is_array = refl2.traits(reflect::Traits::is_array);
@@ -55,8 +55,8 @@ void test_complex() {
 }
 
 void test_vtable_ptr() {
-    utils::reflect::test::Test4 t;
-    utils::reflect::Reflect r{t};
+    futils::reflect::test::Test4 t;
+    futils::reflect::Reflect r{t};
 
     auto table = r.get_vtable_ptr();
     table[2] = [](auto a) {

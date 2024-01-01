@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include <helper/defer.h>
 #include <math/derive.h>
 
-namespace utils::math::fft {
+namespace futils::math::fft {
 
     template <class T>
     struct complex {
@@ -202,7 +202,7 @@ namespace utils::math::fft {
             size_t n_div2 = n >> 1;
             auto tmp1 = complex_vec<T>{new complex<T>[n_div2], n_div2};
             auto tmp2 = complex_vec<T>{new complex<T>[n_div2], n_div2};
-            const auto d = utils::helper::defer([&] {
+            const auto d = futils::helper::defer([&] {
                 delete[] tmp1.data;
                 delete[] tmp2.data;
             });
@@ -296,4 +296,4 @@ namespace utils::math::fft {
         // static_assert(test_dft());
     }  // namespace test
 
-}  // namespace utils::math::fft
+}  // namespace futils::math::fft

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include <tuple>
 #include <cmath>
 
-namespace utils::math {
+namespace futils::math {
 
     template <size_t m, size_t n, class Type = double>
     struct Matrix {
@@ -526,4 +526,4 @@ namespace utils::math {
 
         static_assert(check_matrix());
     }  // namespace test
-}  // namespace utils::math
+}  // namespace futils::math

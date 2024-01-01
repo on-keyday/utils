@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <fnet/connect.h>
 
 namespace durl {
-    namespace fnet = utils::fnet;
+    namespace fnet = futils::fnet;
     struct AddrWait {
         URIToJSON uri;
         fnet::WaitAddrInfo wait;

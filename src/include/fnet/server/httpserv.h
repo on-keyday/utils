@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,7 +15,7 @@
 #include "state.h"
 #include "../tls/tls.h"
 
-namespace utils {
+namespace futils {
     namespace fnet {
         namespace server {
             constexpr auto start_timing = "[hs]";
@@ -165,7 +165,7 @@ namespace utils {
                                     keep_alive = true;
                                 }
                             }
-                            return utils::http::header::apply_call_or_emplace(header, std::move(key), std::move(value));
+                            return futils::http::header::apply_call_or_emplace(header, std::move(key), std::move(value));
                         },
                         nullptr, false, version)) {
                     return false;  // no keep alive
@@ -187,4 +187,4 @@ namespace utils {
 
         }  // namespace server
     }      // namespace fnet
-}  // namespace utils
+}  // namespace futils

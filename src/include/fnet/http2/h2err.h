@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 // h2err - http2 error
 #pragma once
 
-namespace utils {
+namespace futils {
     namespace fnet {
         enum HTTP2Error {
             http2_error_none,
@@ -35,4 +35,4 @@ namespace utils {
             http2_user_error,
         };
     }
-}  // namespace utils
+}  // namespace futils

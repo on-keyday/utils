@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <memory>
 #include "../helper/defer.h"
 
-namespace utils {
+namespace futils {
     namespace view {
         namespace internal {
             template <class T, class U>
@@ -532,4 +532,4 @@ namespace utils {
             static_assert(check_span());
         }  // namespace test
     }      // namespace view
-}  // namespace utils
+}  // namespace futils

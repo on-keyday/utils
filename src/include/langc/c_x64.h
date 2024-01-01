@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <platform/detect.h>
 
 // see also https://www.sigbus.info/compilerbook
-namespace utils::langc::gen {
+namespace futils::langc::gen {
     using Writer = code::CodeWriter<std::string>;
     namespace x64 {
 
@@ -363,9 +363,9 @@ namespace utils::langc::gen {
             }
 
             Platform platform =
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
                 Platform::win_x64;
-#elif defined(UTILS_PLATFORM_LINUX)
+#elif defined(FUTILS_PLATFORM_LINUX)
                 Platform::linux_x64;
 #else
                 Platform::linux_x64;
@@ -377,7 +377,7 @@ namespace utils::langc::gen {
                 const auto d = helper::defer([&] {
                     label++;
                 });
-                return ".L." + (prefix + ("." + utils::number::to_string<std::string>(label)));
+                return ".L." + (prefix + ("." + futils::number::to_string<std::string>(label)));
             }
 
            private:
@@ -533,12 +533,12 @@ namespace utils::langc::gen {
             }
 
             void reserve_stack(size_t offset) {
-                writeln("sub rsp, ", utils::number::to_string<std::string>(offset));
+                writeln("sub rsp, ", futils::number::to_string<std::string>(offset));
                 stack_offset += offset;
             }
 
             void discard_stack(size_t offset) {
-                writeln("add rsp, ", utils::number::to_string<std::string>(offset));
+                writeln("add rsp, ", futils::number::to_string<std::string>(offset));
                 stack_offset -= offset;
             }
 
@@ -687,14 +687,14 @@ namespace utils::langc::gen {
                     rty->type == ast::ObjectType::int_type) {
                     auto pointee = ast::deref(lty.get());
                     // multiply right operand
-                    ctx.writeln("imul ", reg_list[int(right)], ", ", utils::number::to_string<std::string>(pointee->size));
+                    ctx.writeln("imul ", reg_list[int(right)], ", ", futils::number::to_string<std::string>(pointee->size));
                 }
                 else if (op != ast::BinaryOp::sub &&
                          rty->type == ast::ObjectType::pointer_type &&
                          lty->type == ast::ObjectType::int_type) {
                     auto pointee = ast::deref(rty.get());
                     // multiply left operand
-                    ctx.writeln("imul ", reg_list[int(left)], ", ", utils::number::to_string<std::string>(pointee->size));
+                    ctx.writeln("imul ", reg_list[int(left)], ", ", futils::number::to_string<std::string>(pointee->size));
                 }
             }
         }
@@ -764,7 +764,7 @@ namespace utils::langc::gen {
                 ctx.writeln("lea rax, [rip + ", ident->ident, "]");
             }
             else {
-                ctx.writeln("lea rax, [rbp - ", utils::number::to_string<std::string>(ident->belong->offset), "]");
+                ctx.writeln("lea rax, [rbp - ", futils::number::to_string<std::string>(ident->belong->offset), "]");
             }
             ctx.push_rax();
             return true;
@@ -798,7 +798,7 @@ namespace utils::langc::gen {
             auto get_args = [&] {
                 for (size_t i = 0; i < args.size(); i++) {
                     auto arg = args[i];
-                    auto n = utils::number::to_string<std::string>(args.size() - 1 - i);
+                    auto n = futils::number::to_string<std::string>(args.size() - 1 - i);
                     ctx.write_comment(n, " argument-->");
                     if (!gen_expr(ctx, arg)) {
                         return false;
@@ -813,7 +813,7 @@ namespace utils::langc::gen {
             auto set_args = [&] {
                 auto regs = ctx.get_arg_regs();
                 for (auto i = 0; i < reg_len; i++) {
-                    ctx.write_comment("set ", utils::number::to_string<std::string>(i), " argument");
+                    ctx.write_comment("set ", futils::number::to_string<std::string>(i), " argument");
                     ctx.pop(regs[i]);
                 }
                 if (stack_arg) {
@@ -1130,7 +1130,7 @@ namespace utils::langc::gen {
                         break;
                     }
                     case ast::UnaryOp::size: {
-                        ctx.push_imm(utils::number::to_string<std::string>(u->target->expr_type->size));
+                        ctx.push_imm(futils::number::to_string<std::string>(u->target->expr_type->size));
                         break;
                     }
                     case ast::UnaryOp::increment:
@@ -1347,8 +1347,8 @@ namespace utils::langc::gen {
             ctx.set_section(".data");
             ctx.write_label(f->ident);
             auto n = ctx.w.indent_scope();
-            ctx.writeln(".zero ", utils::number::to_string<std::string>(f->type_->size));
-            ctx.writeln(".align ", utils::number::to_string<std::string>(f->type_->align));
+            ctx.writeln(".zero ", futils::number::to_string<std::string>(f->type_->size));
+            ctx.writeln(".align ", futils::number::to_string<std::string>(f->type_->align));
             return true;
         }
 
@@ -1379,7 +1379,7 @@ namespace utils::langc::gen {
             ctx.reserve_stack(f->variables.max_offset + align16);
             size_t i = 0;
             if (f->params.size() > ctx.get_arg_reg_len()) {
-                ctx.errs.push(Error{"currently, more than " + utils::number::to_string<std::string>(ctx.get_arg_reg_len()) + " parameters are not supported", f->pos});
+                ctx.errs.push(Error{"currently, more than " + futils::number::to_string<std::string>(ctx.get_arg_reg_len()) + " parameters are not supported", f->pos});
                 return false;
             }
             for (auto& param : f->params) {
@@ -1387,7 +1387,7 @@ namespace utils::langc::gen {
                 if (p.offset != 0) {
                     ctx.write_comment(param->ident, "-->");
                     auto offset = p.offset;
-                    ctx.writeln("lea rax, [rbp - ", utils::number::to_string<std::string>(offset), "]");
+                    ctx.writeln("lea rax, [rbp - ", futils::number::to_string<std::string>(offset), "]");
                     auto ptr = ptr_access("rax", p.def->type_);
                     auto arg_reg = ctx.get_arg_regs()[i];
                     if (!ctx.store(Register::rax, arg_reg, p.def->type_)) {
@@ -1441,4 +1441,4 @@ namespace utils::langc::gen {
             return true;
         }
     }  // namespace x64
-}  // namespace utils::langc::gen
+}  // namespace futils::langc::gen

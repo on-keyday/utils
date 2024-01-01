@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include "expandable_reader.h"
 #include "expandable_writer.h"
 
-namespace utils {
+namespace futils {
     namespace binary {
         template <class V, class T, class C>
         constexpr bool read_num(basic_expand_reader<T, C>& r, V& val, bool be = true) {
@@ -66,4 +66,4 @@ namespace utils {
         }
 
     }  // namespace binary
-}  // namespace utils
+}  // namespace futils

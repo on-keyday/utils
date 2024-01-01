@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include <number/to_string.h>
 #include <core/byte.h>
 
-namespace utils {
+namespace futils {
     namespace console::escape {
         enum class CursorMove : byte {
             up,
@@ -354,4 +354,4 @@ namespace utils {
         }
 
     }  // namespace console::escape
-}  // namespace utils
+}  // namespace futils

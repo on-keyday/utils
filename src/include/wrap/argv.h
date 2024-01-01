@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -7,7 +7,7 @@
 
 
 // argv - wrap argv to utf8
-// need to link libutils
+// need to link libfutils
 #pragma once
 #include "../platform/windows/dllexport_header.h"
 #include "../unicode/utf/convert.h"
@@ -15,7 +15,7 @@
 #include "light/vector.h"
 #include <platform/detect.h>
 
-namespace utils {
+namespace futils {
     namespace wrap {
         template <class Char = char, class String = wrap::string, template <class...> class Vector = wrap::vector>
         struct ArgvVector {
@@ -74,8 +74,8 @@ namespace utils {
             }
         };
 
-        struct utils_DLL_EXPORT U8Arg {
-#ifdef UTILS_PLATFORM_WINDOWS
+        struct futils_DLL_EXPORT U8Arg {
+#ifdef FUTILS_PLATFORM_WINDOWS
            private:
             ArgvVector<> replaced;
             int* argcplace = nullptr;
@@ -94,4 +94,4 @@ namespace utils {
         };
 
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

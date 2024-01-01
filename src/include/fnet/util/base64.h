@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <helper/pushbacker.h>
 #include <binary/buf.h>
 
-namespace utils {
+namespace futils {
     namespace base64 {
 
         constexpr std::uint8_t get_char(std::uint8_t num, std::uint8_t c62 = '+', std::uint8_t c63 = '/') {
@@ -129,4 +129,4 @@ namespace utils {
             return res;
         }
     }  // namespace base64
-}  // namespace utils
+}  // namespace futils

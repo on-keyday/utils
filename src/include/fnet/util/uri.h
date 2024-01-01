@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -16,7 +16,7 @@
 #include <strutil/equal.h>
 #include <strutil/append.h>
 
-namespace utils {
+namespace futils {
     namespace uri {
         enum class ParseError {
             none,
@@ -451,4 +451,4 @@ namespace utils {
         }
 
     }  // namespace uri
-}  // namespace utils
+}  // namespace futils

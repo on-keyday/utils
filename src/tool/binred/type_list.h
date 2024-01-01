@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,8 +15,8 @@
 #include <deprecated/syntax/tree/parse_tree.h>
 
 namespace binred {
-    namespace utw = utils::wrap;
-    namespace us = utils::syntax;
+    namespace utw = futils::wrap;
+    namespace us = futils::syntax;
     enum class FlagType {
         none,
         eq,
@@ -32,7 +32,7 @@ namespace binred {
 
     struct Val {
         utw::string val;
-        utils::syntax::KeyWord kind = {};
+        futils::syntax::KeyWord kind = {};
     };
 
     enum class Op {
@@ -81,7 +81,7 @@ namespace binred {
         utw::string name;
         Type type;
         utw::string defval;
-        utils::syntax::KeyWord kind = {};
+        futils::syntax::KeyWord kind = {};
         utw::string errvalue;
     };
 
@@ -127,7 +127,7 @@ namespace binred {
     struct State {
         FileData data;
         utw::string cuurent_struct;
-        utils::syntax::tree::TreeMatcher<utw::string, utw::vector, Manager> tree;
+        futils::syntax::tree::TreeMatcher<utw::string, utw::vector, Manager> tree;
     };
 
     enum class GenFlag {
@@ -138,7 +138,7 @@ namespace binred {
 
     DEFINE_ENUM_FLAGOP(GenFlag)
 
-    bool read_fmt(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
+    bool read_fmt(futils::syntax::MatchContext<utw::string, utw::vector>& result, State& state);
     void generate_cpp(utw::string& str, FileData& data, GenFlag flag);
 
 }  // namespace binred

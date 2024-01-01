@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,14 +8,14 @@
 #include <platform/detect.h>
 #include <low/low_dllcpp.h>
 #include <low/stack.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #include <winternl.h>
 #endif
 
-namespace utils::low {
+namespace futils::low {
 
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
     auto set_teb(StackRange range) noexcept {
         NT_TIB* tib;
         asm volatile("mov %%gs:0x30, %0\n" : "=r"(tib));
@@ -36,7 +36,7 @@ namespace utils::low {
         this->cb.f = f;
         this->cb.c = c;
 #ifdef __x86_64__
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         auto teb = set_teb(this->range);
 #endif
         // save stack pointer to this->origin
@@ -49,7 +49,7 @@ namespace utils::low {
             "mov %%rsp, %%rbp\n"
             : : "r"(this), "r"(this->range.top));
         static_assert(offsetof(Stack, resume_ptr) == 16);
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         // set r8 as arg
         // and call Stack::call
         asm volatile(
@@ -61,7 +61,7 @@ namespace utils::low {
             ".L.SUSPEND:\n"
             : : "r"(Stack::call) : "rcx");
 
-#elif defined(UTILS_PLATFORM_LINUX)
+#elif defined(FUTILS_PLATFORM_LINUX)
         // set r8 as arg
         // and call Stack::call
         asm volatile(
@@ -88,7 +88,7 @@ namespace utils::low {
 
     void Stack::suspend_platform() noexcept {
 #ifdef __x86_64__
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         auto teb = set_teb(this->range);
 #endif
         // save stack pointer to this->suspended
@@ -121,7 +121,7 @@ namespace utils::low {
 
     void Stack::resume_platform() noexcept {
 #ifdef __x86_64__
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         auto teb = set_teb(this->range);
 #endif
         // save stack pointer to this->origin
@@ -175,4 +175,4 @@ namespace utils::low {
         }
         return {};  // end_call; not available
     }
-}  // namespace utils::low
+}  // namespace futils::low

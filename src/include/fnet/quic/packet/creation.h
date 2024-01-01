@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #pragma once
 #include "wire.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::packet {
 
         // render_payload is bool(io::writer&,packetnum::WireVal)
@@ -113,4 +113,4 @@ namespace utils {
             static_assert(check_packet_creation());
         }  // namespace test
     }      // namespace fnet::quic::packet
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "error.h"
 #include "../quic/transport_error.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::http3::stream {
         enum class SettingID {
             qpack_max_table_capacity = 0x01,
@@ -288,4 +288,4 @@ namespace utils {
             }
         };
     }  // namespace fnet::http3::stream
-}  // namespace utils
+}  // namespace futils

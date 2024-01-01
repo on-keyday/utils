@@ -1,4 +1,4 @@
-#    utils - utility library
+#    futils - utility library
 #    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
@@ -6,19 +6,19 @@
 this list shows wrap macros
 
 macro                                default
-UTILS_WRAP_STRING_TYPE               std::string
-UTILS_WRAP_U16STRING_TYPE            std::u16string
-UTILS_WRAP_U32STRING_TYPE            std::u32string
-UTILS_WRAP_PATHSTRING_TYPE           (windows) std::wstring (other) std::string
-UTILS_WRAP_VECTOR_TEMPLATE           std::vector
-UTILS_WRAP_QUEUE_TEMPLATE            std::deque
-UTILS_WRAP_SHARED_PTR_TEMPLATE       std::shared_ptr
-UTILS_WRAP_WEAK_PTR_TEMPLATE         std::weak_ptr
-UTILS_WRAP_MAKE_SHARED_PTR_FUNC      std::make_shared
-UTILS_WRAP_MAP_TEMPLATE              std::map
-UTILS_WRAP_MULTIMAP_TEMPLATE         std::multimap
-UTILS_WRAP_SET_TEMPLATE              std::set
-UTILS_WRAP_HASH_MAP_TEMPLATE         std::unordered_map
-UTILS_WRAP_HASH_MULTIMAP_TEMPLATE    std::unordered_multimap
-UTILS_WRAP_UNIQUE_PTR_TEMPLATE       std::unique_ptr
-UTILS_WRAP_MAKE_UNIQUE_PTR_FUNC      std::make_unique
+FUTILS_WRAP_STRING_TYPE               std::string
+FUTILS_WRAP_U16STRING_TYPE            std::u16string
+FUTILS_WRAP_U32STRING_TYPE            std::u32string
+FUTILS_WRAP_PATHSTRING_TYPE           (windows) std::wstring (other) std::string
+FUTILS_WRAP_VECTOR_TEMPLATE           std::vector
+FUTILS_WRAP_QUEUE_TEMPLATE            std::deque
+FUTILS_WRAP_SHARED_PTR_TEMPLATE       std::shared_ptr
+FUTILS_WRAP_WEAK_PTR_TEMPLATE         std::weak_ptr
+FUTILS_WRAP_MAKE_SHARED_PTR_FUNC      std::make_shared
+FUTILS_WRAP_MAP_TEMPLATE              std::map
+FUTILS_WRAP_MULTIMAP_TEMPLATE         std::multimap
+FUTILS_WRAP_SET_TEMPLATE              std::set
+FUTILS_WRAP_HASH_MAP_TEMPLATE         std::unordered_map
+FUTILS_WRAP_HASH_MULTIMAP_TEMPLATE    std::unordered_multimap
+FUTILS_WRAP_UNIQUE_PTR_TEMPLATE       std::unique_ptr
+FUTILS_WRAP_MAKE_UNIQUE_PTR_FUNC      std::make_unique

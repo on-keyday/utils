@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "../number/to_string.h"
 #include "../strutil/append.h"
 
-namespace utils::math {
+namespace futils::math {
 
     struct NumericXPrint {
         constexpr auto operator()(auto&& out, size_t i) const {
@@ -614,4 +614,4 @@ namespace utils::math {
         return Pow<decltype(c_e), A>{};
     }
 
-}  // namespace utils::math
+}  // namespace futils::math

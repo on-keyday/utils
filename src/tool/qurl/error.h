@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,6 +12,6 @@
 namespace qurl {
     struct Error {
         std::string msg;
-        utils::comb2::Pos pos;
+        futils::comb2::Pos pos;
     };
 }  // namespace qurl

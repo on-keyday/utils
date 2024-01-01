@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include "output.h"
 #include "error.h"
 
-namespace utils::unicode::utf16 {
+namespace futils::unicode::utf16 {
 
     constexpr bool in_word_range(auto c) noexcept {
         return 0 <= c && c <= 0xff;
@@ -155,4 +155,4 @@ namespace utils::unicode::utf16 {
                          : utf::UTFError::utf16_output_limit};
     }
 
-}  // namespace utils::unicode::utf16
+}  // namespace futils::unicode::utf16

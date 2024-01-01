@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "../../std/hash_map.h"
 #include "../../../view/iovec.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::path::ip {
         struct RawPathKey {
             byte data[36]{};
@@ -22,18 +22,18 @@ namespace utils {
             }
         };
     }  // namespace fnet::quic::path::ip
-}  // namespace utils
+}  // namespace futils
 
 namespace std {
     template <>
-    struct hash<utils::fnet::quic::path::ip::RawPathKey> {
+    struct hash<futils::fnet::quic::path::ip::RawPathKey> {
         constexpr auto operator()(auto&& d) const {
-            return utils::view::hash(d.data);
+            return futils::view::hash(d.data);
         }
     };
 
     template <>
-    struct hash<utils::fnet::quic::path::PathID> {
+    struct hash<futils::fnet::quic::path::PathID> {
         constexpr auto operator()(auto&& d) const {
             return std::hash<std::uint32_t>{}(d.id);
         }
@@ -41,7 +41,7 @@ namespace std {
 
 }  // namespace std
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::path::ip {
 
         enum class MigrateMode {
@@ -121,4 +121,4 @@ namespace utils {
         };
 
     }  // namespace fnet::quic::path::ip
-}  // namespace utils
+}  // namespace futils

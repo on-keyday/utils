@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -7,7 +7,7 @@
 
 
 // cout - wrapper of cout
-// need to link libutils
+// need to link libfutils
 #pragma once
 #include "../platform/windows/dllexport_header.h"
 #include <iosfwd>
@@ -18,10 +18,10 @@
 #include "light/stream.h"
 #include <file/file.h>
 
-namespace utils {
+namespace futils {
     namespace wrap {
 
-        struct utils_DLL_EXPORT UtfOut {
+        struct futils_DLL_EXPORT UtfOut {
            private:
             stringstream ss;
             thread::LiteLock lock;
@@ -77,8 +77,8 @@ namespace utils {
             }
         };
 
-        utils_DLL_EXPORT UtfOut& STDCALL cout_wrap();
-        utils_DLL_EXPORT UtfOut& STDCALL cerr_wrap();
+        futils_DLL_EXPORT UtfOut& STDCALL cout_wrap();
+        futils_DLL_EXPORT UtfOut& STDCALL cerr_wrap();
 
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

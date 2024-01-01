@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,7 +14,7 @@
 #include <code/code_writer.h>
 
 namespace oslbgen {
-    using Pos = utils::comb2::Pos;
+    using Pos = futils::comb2::Pos;
 
     struct Spec {
         Pos pos;
@@ -74,10 +74,10 @@ namespace oslbgen {
         std::string ns;
     };
 
-    namespace node = utils::comb2::tree::node;
-    constexpr auto npos = utils::comb2::npos;
+    namespace node = futils::comb2::tree::node;
+    constexpr auto npos = futils::comb2::npos;
     Pos node_root(DataSet& db, std::shared_ptr<node::Node> tok);
-    using Out = utils::code::CodeWriter<std::string>;
+    using Out = futils::code::CodeWriter<std::string>;
 
     Pos write_code(Out& out, DataSet& db);
 }  // namespace oslbgen

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include <cstdint>
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::path {
         // PathID is unique id for each path
         // this type is library sepecific type so that not explained in RFC
@@ -50,4 +50,4 @@ namespace utils {
         constexpr PathID unknown_path = 0xffffffff;
 
     }  // namespace fnet::quic::path
-}  // namespace utils
+}  // namespace futils

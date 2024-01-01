@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include <core/byte.h>
 
-namespace utils::fnet::ip {
+namespace futils::fnet::ip {
     enum class Version {
         unspec,
         ipv4,
@@ -989,4 +989,4 @@ namespace utils::fnet::ip {
                 return "UNKNOWN_PROTOCOL";
         }
     }
-}  // namespace utils::fnet::ip
+}  // namespace futils::fnet::ip

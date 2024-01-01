@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -20,7 +20,7 @@ enum class Output {
     like_hex_dump,
 };
 
-struct Flags : utils::cmdline::templ::HelpOption {
+struct Flags : futils::cmdline::templ::HelpOption {
     std::string unicode_data;
     std::string blocks_data;
     std::string east_asian_width_data;
@@ -28,13 +28,13 @@ struct Flags : utils::cmdline::templ::HelpOption {
     std::string output;
     Output mode = Output::dec_array;
 
-    void bind(utils::cmdline::option::Context& ctx) {
+    void bind(futils::cmdline::option::Context& ctx) {
         bind_help(ctx);
-        ctx.VarString(&unicode_data, "u,unicode-data", "set unicodedata.txt location", "FILE", utils::cmdline::option::CustomFlag::required);
+        ctx.VarString(&unicode_data, "u,unicode-data", "set unicodedata.txt location", "FILE", futils::cmdline::option::CustomFlag::required);
         ctx.VarString(&blocks_data, "b,blocks", "set Blocks.txt location", "FILE");
         ctx.VarString(&east_asian_width_data, "a,east-asian", "set EastAsianWIdth.txt location", "FILE");
         ctx.VarString(&emoji_data, "e,emoji", "set emoji-data.txt location", "FILE");
-        ctx.Option("m,output-mode", &mode, utils::cmdline::option::MappingParser<std::string, Output, std::map>{
+        ctx.Option("m,output-mode", &mode, futils::cmdline::option::MappingParser<std::string, Output, std::map>{
                                                .mapping = {
                                                    {"array", Output::dec_array},
                                                    {"visible", Output::like_hex_dump},
@@ -45,17 +45,17 @@ struct Flags : utils::cmdline::templ::HelpOption {
         ctx.VarString(&output, "o,output", "output file", "FILE");
     }
 };
-auto& cout = utils::wrap::cout_wrap();
-auto& cerr = utils::wrap::cerr_wrap();
-namespace unicodedata = utils::unicode::data;
+auto& cout = futils::wrap::cout_wrap();
+auto& cerr = futils::wrap::cerr_wrap();
+namespace unicodedata = futils::unicode::data;
 
-int Main(Flags& flags, utils::cmdline::option::Context& ctx) {
-    utils::file::View file;
+int Main(Flags& flags, futils::cmdline::option::Context& ctx) {
+    futils::file::View file;
     if (!file.open(flags.unicode_data)) {
         cerr << "cannnot open file: " << flags.unicode_data << "\n";
         return -1;
     }
-    auto seq = utils::make_ref_seq(file);
+    auto seq = futils::make_ref_seq(file);
     unicodedata::UnicodeData data;
     auto err = unicodedata::text::parse_unicodedata_text(seq, data);
     if (err != unicodedata::text::ParseError::none) {
@@ -102,7 +102,7 @@ int Main(Flags& flags, utils::cmdline::option::Context& ctx) {
         }
     }
     std::string out;
-    utils::binary::expand_writer<std::string&> w{out};
+    futils::binary::expand_writer<std::string&> w{out};
     if (!unicodedata::bin::serialize_unicodedata(w, data)) {
         cerr << "failed to serialize unicode data\n";
         return -1;
@@ -122,7 +122,7 @@ int Main(Flags& flags, utils::cmdline::option::Context& ctx) {
         }
         else {
             for (auto& c : out) {
-                fs << utils::number::to_string<std::string>(utils::byte(c)) << ",";
+                fs << futils::number::to_string<std::string>(futils::byte(c)) << ",";
             }
         }
         return 0;
@@ -143,18 +143,18 @@ int Main(Flags& flags, utils::cmdline::option::Context& ctx) {
     }
     else {
         for (auto& c : out) {
-            cout << utils::number::to_string<std::string>(utils::byte(c)) << ",";
+            cout << futils::number::to_string<std::string>(futils::byte(c)) << ",";
         }
     }
     return 0;
 }
 
 int main(int argc, char** argv) {
-    utils::wrap::U8Arg _(argc, argv);
+    futils::wrap::U8Arg _(argc, argv);
     Flags flags;
-    return utils::cmdline::templ::parse_or_err<std::string>(
+    return futils::cmdline::templ::parse_or_err<std::string>(
         argc, argv, flags, [](auto&& str, bool) { cout << str; },
-        [](Flags& flags, utils::cmdline::option::Context& ctx) {
+        [](Flags& flags, futils::cmdline::option::Context& ctx) {
             return Main(flags, ctx);
         });
 }

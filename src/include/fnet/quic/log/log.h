@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,7 +15,7 @@
 #include "../status/pn_space.h"
 #include "../status/loss_timer.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::log {
         struct ConnLogCallbacks {
             void (*drop_packet)(std::shared_ptr<void>&, PacketType, packetnum::Value, error::Error, view::rvec raw_packet, bool is_decrypted) = nullptr;
@@ -81,4 +81,4 @@ namespace utils {
             }
         };
     }  // namespace fnet::quic::log
-}  // namespace utils
+}  // namespace futils

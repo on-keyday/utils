@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include "ip.h"
 
-namespace utils::fnet::icmp {
+namespace futils::fnet::icmp {
     enum class Type : byte {
         echo_reply,
         reserved_1,
@@ -343,4 +343,4 @@ namespace utils::fnet::icmp {
                    w.write(data);
         }
     };
-}  // namespace utils::fnet::icmp
+}  // namespace futils::fnet::icmp

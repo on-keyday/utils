@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,13 +14,13 @@
 #include <fnet/connect.h>
 #include <map>
 
-using namespace utils;
+using namespace futils;
 struct SockHolder {
     fnet::Socket sock;
     // fnet::Socket::completion_recv_t comp;
     bool end;
     std::string str;
-    utils::http::header::StatusCode code;
+    futils::http::header::StatusCode code;
     std::string body;
     std::multimap<std::string, std::string> header;
 };
@@ -49,7 +49,7 @@ int main() {
         if (len == bufmax) {
             read();
         }
-        utils::http::header::read_response<std::string>(h->str, h->code, h->header, h->body, [&](auto& seq, size_t expect, bool end_call) {
+        futils::http::header::read_response<std::string>(h->str, h->code, h->header, h->body, [&](auto& seq, size_t expect, bool end_call) {
             read();
             return true;
         });

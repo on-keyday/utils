@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -7,7 +7,7 @@
 
 #pragma once
 
-namespace utils {
+namespace futils {
     namespace qpack {
         enum class QpackError {
             none,
@@ -33,4 +33,4 @@ namespace utils {
             head_of_blocking,
         };
     }
-}  // namespace utils
+}  // namespace futils

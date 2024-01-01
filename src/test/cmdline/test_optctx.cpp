@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,24 +9,24 @@
 #include <cmdline/option/optcontext.h>
 #include <wrap/cout.h>
 #include <wrap/argv.h>
-using namespace utils::cmdline;
+using namespace futils::cmdline;
 void test_optctx(int argc, char** argv, option::ParseFlag flag) {
     option::Context ctx;
 
     auto flagset = ctx.FlagSet("long,l", option::ParseFlag::pf_long, "long flag");
     ctx.VarFlagSet(flagset, "short,S", option::ParseFlag::pf_short, "short flag");
     auto test = ctx.Bool("test,t", false, "test flag");
-    auto str = ctx.String<utils::wrap::string>("str,s", "default", "help", "VALUE");
+    auto str = ctx.String<futils::wrap::string>("str,s", "default", "help", "VALUE");
     bool test2 = false;
     ctx.VarBool(&test2, "test2,2", "test flag 2");
     auto vec = ctx.VecString("vector,v", 2, "vector", "STR1 STR2");
     auto veci = ctx.VecInt("int,i", 2, "int vector", "INT1 INT2");
     ctx.UnboundBool("unbound,u", "unbound option");
     ctx.UnboundInt("int-unbound,B", "unbound int", "INT");
-    ctx.UnboundString<utils::wrap::string>("str-unbound,b", "unbound string", "STRING");
-    auto& cout = utils::wrap::cout_wrap();
-    cout << ctx.help<utils::wrap::string>(flag);
-    auto err = option::parse(argc, argv, ctx, utils::helper::nop, flag);
+    ctx.UnboundString<futils::wrap::string>("str-unbound,b", "unbound string", "STRING");
+    auto& cout = futils::wrap::cout_wrap();
+    cout << ctx.help<futils::wrap::string>(flag);
+    auto err = option::parse(argc, argv, ctx, futils::helper::nop, flag);
     if (auto val = error_msg(err)) {
         cout << "error: " << ctx.erropt() << ": " << val << "\n";
     }
@@ -43,7 +43,7 @@ void test_optctx(int argc, char** argv, option::ParseFlag flag) {
         for (auto& i : *veci) {
             cout << i << "\n";
         }
-        cout << "long and short: " << option::get_flag_state<utils::wrap::string>(*flagset)
+        cout << "long and short: " << option::get_flag_state<futils::wrap::string>(*flagset)
              << "\n";
         auto unbound = ctx.find("unbound");
         cout << "unbound:\n";
@@ -70,7 +70,7 @@ void test_optctx(int argc, char** argv, option::ParseFlag flag) {
         auto str_unbound = ctx.find("str-unbound");
         cout << "str-unbound:\n";
         for (auto& it : str_unbound) {
-            auto v = it.value.get_ptr<utils::wrap::string>();
+            auto v = it.value.get_ptr<futils::wrap::string>();
             if (!v) {
                 cout << "(not string value)\n";
             }
@@ -82,7 +82,7 @@ void test_optctx(int argc, char** argv, option::ParseFlag flag) {
 }
 
 int main(int argc, char** argv) {
-    utils::wrap::U8Arg _(argc, argv);
+    futils::wrap::U8Arg _(argc, argv);
     test_optctx(argc, argv, option::ParseFlag::golang_mode);
     test_optctx(argc, argv, option::ParseFlag::optget_ext_mode);
     test_optctx(argc, argv, option::ParseFlag::assignable_mode);

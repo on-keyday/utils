@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,14 +12,14 @@
 #include <platform/detect.h>
 
 #ifndef NOVTABLE__
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #define NOVTABLE__ __declspec(novtable)
 #else
 #define NOVTABLE__
 #endif
 #endif
 
-namespace utils {
+namespace futils {
     namespace cmdline {
         namespace subcmd {
             template <typename Ctx>
@@ -40,7 +40,7 @@ namespace utils {
                         : t_holder_(std::forward<V__>(args)) {}
 
                     int operator()(Ctx& ctx) override {
-                        auto t_ptr_ = utils::helper::deref(this->t_holder_);
+                        auto t_ptr_ = futils::helper::deref(this->t_holder_);
                         if (!t_ptr_) {
                             return int{};
                         }
@@ -58,7 +58,7 @@ namespace utils {
                 template <class T__>
                 CommandRunner(T__&& t) {
                     static_assert(!std::is_same<std::decay_t<T__>, CommandRunner>::value, "can't accept same type");
-                    if (!utils::helper::deref(t)) {
+                    if (!futils::helper::deref(t)) {
                         return;
                     }
                     iface = new implements__<std::decay_t<T__>>(std::forward<T__>(t));
@@ -104,4 +104,4 @@ namespace utils {
 
         }  // namespace subcmd
     }      // namespace cmdline
-}  // namespace utils
+}  // namespace futils

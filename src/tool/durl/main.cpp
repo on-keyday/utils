@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -17,22 +17,22 @@ namespace durl {
 
     bool loadjson(fs::path& path) {
         path.append("durl_config.json");
-        utils::file::View view;
+        futils::file::View view;
         if (view.open(path.c_str())) {
-            auto js = utils::json::parse<utils::json::JSON>(view);
+            auto js = futils::json::parse<futils::json::JSON>(view);
             if (!js) {
                 return false;
             }
             auto glob = js.at("global");
             if (glob) {
-                if (!utils::json::convert_from_json(*glob, global, utils::json::FromFlag::force_element)) {
+                if (!futils::json::convert_from_json(*glob, global, futils::json::FromFlag::force_element)) {
                     global = {};
                     return false;
                 }
             }
             auto uri = js.at("uri");
             if (uri) {
-                if (!utils::json::convert_from_json(*uri, uriopt, utils::json::FromFlag::force_element)) {
+                if (!futils::json::convert_from_json(*uri, uriopt, futils::json::FromFlag::force_element)) {
                     global = {};
                     uriopt = {};
                     return false;
@@ -45,7 +45,7 @@ namespace durl {
     }
 
     void loadConfig() {
-        if (auto path = utils::wrap::get_exepath(); path != "") {
+        if (auto path = futils::wrap::get_exepath(); path != "") {
             auto dir = fs::path((const char8_t*)path.c_str()).parent_path();
             if (loadjson(dir)) {
                 return;
@@ -59,8 +59,8 @@ namespace durl {
         loadjson(cd);
     }
 
-    auto& cout = utils::wrap::cout_wrap();
-    auto& cerr = utils::wrap::cerr_wrap();
+    auto& cout = futils::wrap::cout_wrap();
+    auto& cerr = futils::wrap::cerr_wrap();
 
     int durl_main(int argc, char** argv) {
         subcmd::RunContext ctx;
@@ -82,6 +82,6 @@ namespace durl {
 }  // namespace durl
 
 int main(int argc, char** argv) {
-    utils::wrap::U8Arg _(argc, argv);
+    futils::wrap::U8Arg _(argc, argv);
     return durl::durl_main(argc, argv);
 }

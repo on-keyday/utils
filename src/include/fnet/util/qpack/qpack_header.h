@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <utility>
 #include <view/iovec.h>
 
-namespace utils {
+namespace futils {
     namespace qpack {
         namespace header {
             namespace internal {
@@ -213,4 +213,4 @@ x-frame-options$deny$sameorigin
             }  // namespace internal
         }      // namespace header
     }          // namespace qpack
-}  // namespace utils
+}  // namespace futils

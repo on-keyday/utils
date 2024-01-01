@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 // error
 #pragma once
 
-namespace utils::unicode::utf {
+namespace futils::unicode::utf {
     enum class UTFError {
         none,
         utf8_input_range,    // input<0||0xff<input
@@ -27,4 +27,4 @@ namespace utils::unicode::utf {
         utf_no_input,
     };
 
-}  // namespace utils::unicode::utf
+}  // namespace futils::unicode::utf

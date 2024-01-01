@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <cstdint>
 #include "protocol.h"
 
-namespace utils::fnet::ip {
+namespace futils::fnet::ip {
 
     constexpr expected<std::uint16_t> checksum(view::rvec data, std::uint16_t initial = 0, bool fill_zero_if_non_2 = false) {
         if (!fill_zero_if_non_2 && data.size() & 0x1) {
@@ -338,4 +338,4 @@ namespace utils::fnet::ip {
         static_assert(check_checksum());
     }  // namespace test
 
-}  // namespace utils::fnet::ip
+}  // namespace futils::fnet::ip

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -16,24 +16,24 @@
 #include <fnet/debug.h>
 
 void make_and_parse(auto&& st) {
-    utils::fnet::quic::frame::DynFramePtr dyn = makeDynFrame(std::move(st));
-    utils::byte data[100]{};
-    utils::binary::writer w{data};
+    futils::fnet::quic::frame::DynFramePtr dyn = makeDynFrame(std::move(st));
+    futils::byte data[100]{};
+    futils::binary::writer w{data};
     dyn->render(w);
-    utils::binary::reader r{w.written()};
+    futils::binary::reader r{w.written()};
     st.parse(r);
 }
 
 int main() {
-    using namespace utils::fnet::quic::frame;
-    auto allocs = utils::fnet::debug::allocs();
-    utils::fnet::set_normal_allocs(allocs);
-    utils::test::set_alloc_hook(true);
+    using namespace futils::fnet::quic::frame;
+    auto allocs = futils::fnet::debug::allocs();
+    futils::fnet::set_normal_allocs(allocs);
+    futils::test::set_alloc_hook(true);
     StreamFrame st;
     st.stream_data = "Hello World! but this is ...";
     make_and_parse(st);
     DataBlockedFrame data;
     make_and_parse(data);
     auto val = test::check_stream_range();
-    val = utils::fnet::quic::stream::core::test::check_stream_send();
+    val = futils::fnet::quic::stream::core::test::check_stream_send();
 }

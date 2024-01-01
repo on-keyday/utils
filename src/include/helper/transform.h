@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include <type_traits>
 
-namespace utils::helper::either {
+namespace futils::helper::either {
     constexpr auto push_back_to(auto& vec) {
         return [&](auto&& v) {
             vec.push_back(std::move(v));
@@ -37,4 +37,4 @@ namespace utils::helper::either {
         };
     }
 
-}  // namespace utils::helper::either
+}  // namespace futils::helper::either

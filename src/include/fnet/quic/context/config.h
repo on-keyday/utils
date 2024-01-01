@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -18,7 +18,7 @@
 #include "../token/token.h"
 #include "../../tls/session.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::context {
 
         struct Config {
@@ -36,4 +36,4 @@ namespace utils {
         };
 
     }  // namespace fnet::quic::context
-}  // namespace utils
+}  // namespace futils

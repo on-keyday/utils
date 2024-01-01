@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include <concepts>
 #include <cstddef>
 
-namespace utils::unicode::internal {
+namespace futils::unicode::internal {
     template <class T>
     concept pointer = std::is_pointer_v<T> && std::is_arithmetic_v<std::remove_pointer_t<T>>;
 
@@ -70,4 +70,4 @@ namespace utils::unicode::internal {
         }
         return true;
     }
-}  // namespace utils::unicode::internal
+}  // namespace futils::unicode::internal

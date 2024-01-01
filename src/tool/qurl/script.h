@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -26,8 +26,8 @@ namespace qurl {
         constexpr auto g_if = "if";
 
         constexpr auto get_parser() {
-            using namespace utils::comb2::ops;
-            namespace cps = utils::comb2::composite;
+            using namespace futils::comb2::ops;
+            namespace cps = futils::comb2::composite;
             auto tok = [&](auto val) {
                 return str(k_token, val);
             };

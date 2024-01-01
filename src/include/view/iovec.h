@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -17,7 +17,7 @@
 #include <utility>
 #include <helper/omit_empty.h>
 
-namespace utils {
+namespace futils {
     namespace view {
 
         namespace internal {
@@ -78,7 +78,7 @@ namespace utils {
                 : data_(d), size_(d ? s : 0) {}
 
             constexpr explicit basic_rvec(const C* d) noexcept
-                : data_(d), size_(d ? utils::strlen(d) : 0) {}
+                : data_(d), size_(d ? futils::strlen(d) : 0) {}
 
             template <class End, std::enable_if_t<std::is_same_v<End, const C*> || std::is_same_v<End, C*>, int> = 0>
             constexpr basic_rvec(const C* begin, End end) noexcept
@@ -480,4 +480,4 @@ namespace utils {
         }  // namespace test
 
     }  // namespace view
-}  // namespace utils
+}  // namespace futils

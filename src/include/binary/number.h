@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "../binary/buf.h"
 #include <utility>
 
-namespace utils {
+namespace futils {
     namespace binary {
         template <class T, class C>
         constexpr bool read_num(basic_reader<C>& r, T& val, bool be = true) {
@@ -217,4 +217,4 @@ namespace utils {
             static_assert(check_bulk());
         }  // namespace test
     }      // namespace binary
-}  // namespace utils
+}  // namespace futils

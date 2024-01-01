@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include "option_set.h"
 #include "../../helper/pushbacker.h"
 
-namespace utils {
+namespace futils {
     namespace cmdline {
         namespace option {
             auto opts_write(auto& result) {
@@ -116,4 +116,4 @@ namespace utils {
             }
         }  // namespace option
     }      // namespace cmdline
-}  // namespace utils
+}  // namespace futils

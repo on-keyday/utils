@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -17,7 +17,7 @@
 #include <deprecated/stream/string_stream.h>
 
 namespace minilang {
-    namespace st = utils::parser::stream;
+    namespace st = futils::parser::stream;
 
     struct Identifier {
         bool ok(st::UTFStat* stat, auto& str) {
@@ -95,7 +95,7 @@ namespace minilang {
         }
     };
 
-    static auto& cout = utils::wrap::cout_wrap();
+    static auto& cout = futils::wrap::cout_wrap();
     template <class T>
     void walk(st::Token& tok, Sequencer<T>& seq) {
         cout << tok.stoken() << "\n";
@@ -162,7 +162,7 @@ namespace minilang {
         st = st::make_default_string<wrap::string>(U"\"", U"\"");
         constexpr auto stringtest = R"("test\"\n\u2342\x73\0")";
         mock.raw = stringtest;
-        mock.len = utils::strlen(stringtest);
+        mock.len = futils::strlen(stringtest);
         mock.pos = 0;
         tok = st.parse(mock);
         assert(!has_err(tok));

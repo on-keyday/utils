@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,20 +8,20 @@
 #include <platform/windows/dllexport_source.h>
 #include <platform/detect.h>
 #include <wrap/trace.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #include <ImageHlp.h>
 #include <helper/lock.h>
 #pragma comment(lib, "imagehlp.lib")
-#elif __has_include(<execinfo.h>) && (!defined(UTILS_PLATFORM_ANDROID) || __ANDROID_API__ >= 33)
+#elif __has_include(<execinfo.h>) && (!defined(FUTILS_PLATFORM_ANDROID) || __ANDROID_API__ >= 33)
 #include <execinfo.h>
 #else
 #define NO_TRACE_LIB
 #endif
 #include <strutil/append.h>
 
-namespace utils::wrap {
-#ifdef UTILS_PLATFORM_WINDOWS
+namespace futils::wrap {
+#ifdef FUTILS_PLATFORM_WINDOWS
 
     struct CriticalSection {
         CRITICAL_SECTION cs;
@@ -42,7 +42,7 @@ namespace utils::wrap {
     static CriticalSection m;
 
     static auto lock() {
-        return utils::helper::lock(m);
+        return futils::helper::lock(m);
     }
 
     union SymInfo {
@@ -74,7 +74,7 @@ namespace utils::wrap {
 #endif
 
     void stack_trace_entry::get_symbol(helper::IPushBacker<> pb) const {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         SymInfo info;
         get_with_syminfo(info, addr);
         strutil::append(pb, info.info.Name);
@@ -94,7 +94,7 @@ namespace utils::wrap {
         if (!maybe_init() || entry.size() == 0) {
             return {};
         }
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         auto len = RtlCaptureStackBackTrace(0, entry.size(), (void**)entry.data(), 0);
 #elif defined(NO_TRACE_LIB)
         auto len = 0;
@@ -106,7 +106,7 @@ namespace utils::wrap {
     }
 
     void STDCALL get_symbols(view::rspan<stack_trace_entry> entry, void* p, void (*cb)(void* p, const char* info), bool native) {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         for (auto ent : entry) {
             auto addr = ent.address();
             if (!addr) {
@@ -136,4 +136,4 @@ namespace utils::wrap {
 #endif
     }
 
-}  // namespace utils::wrap
+}  // namespace futils::wrap

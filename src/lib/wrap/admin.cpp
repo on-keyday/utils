@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include <wrap/admin.h>
 #include <wrap/exepath.h>
 #include <platform/detect.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <Windows.h>
 #include <ShlObj.h>
 #else
@@ -19,13 +19,13 @@
 #include <helper/defer.h>
 #endif
 
-namespace utils::wrap {
-#ifdef UTILS_PLATFORM_WINDOWS
+namespace futils::wrap {
+#ifdef FUTILS_PLATFORM_WINDOWS
     RunResult run_this_as_admin() {
         if (IsUserAnAdmin()) {
             return RunResult::already_admin;
         }
-        auto path = get_exepath<utils::wrap::path_string>();
+        auto path = get_exepath<futils::wrap::path_string>();
         auto cmdline = GetCommandLineW();
         SHELLEXECUTEINFOW info{};
         info.lpVerb = L"runas";
@@ -50,4 +50,4 @@ namespace utils::wrap {
         return RunResult::failed;
     }
 #endif
-}  // namespace utils::wrap
+}  // namespace futils::wrap

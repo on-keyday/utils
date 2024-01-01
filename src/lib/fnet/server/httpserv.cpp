@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include <fnet/server/httpserv.h>
 #include <wrap/cout.h>
 
-namespace utils {
+namespace futils {
     namespace fnet {
         namespace server {
 
@@ -117,4 +117,4 @@ namespace utils {
             }
         }  // namespace server
     }      // namespace fnet
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include "../pos.h"
 #include "../lexctx.h"
 
-namespace utils::comb2 {
+namespace futils::comb2 {
     namespace test {
         constexpr void error_if_constexpr(auto... arg) {
             if (std::is_constant_evaluated()) {
@@ -30,4 +30,4 @@ namespace utils::comb2 {
         };
 
     }  // namespace test
-}  // namespace utils::comb2
+}  // namespace futils::comb2

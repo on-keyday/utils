@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <cstdint>
 #include "../wrap/light/enum.h"
 
-namespace utils {
+namespace futils {
     namespace number {
         // clang-format off
         constexpr std::int8_t number_transform[] = {
@@ -152,4 +152,4 @@ namespace utils {
         }  // namespace internal
 
     }  // namespace number
-}  // namespace utils
+}  // namespace futils

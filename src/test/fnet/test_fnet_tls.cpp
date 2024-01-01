@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <thread>
 #include <fnet/connect.h>
 
-using namespace utils;
+using namespace futils;
 
 int main() {
     fnet::SockAddr addr{};

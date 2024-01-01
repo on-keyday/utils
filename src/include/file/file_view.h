@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -7,11 +7,11 @@
 
 
 // file_view - file view
-// need to link libutils
+// need to link libfutils
 #pragma once
 #include "file.h"
 
-namespace utils {
+namespace futils {
     namespace file {
         class View {
             File f;
@@ -97,4 +97,4 @@ namespace utils {
             }
         };
     }  // namespace file
-}  // namespace utils
+}  // namespace futils

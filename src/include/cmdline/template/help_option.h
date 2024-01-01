@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include "../option/optcontext.h"
 #include "../subcmd/cmdcontext.h"
 
-namespace utils {
+namespace futils {
     namespace cmdline {
         namespace templ {
             struct HelpOption {
@@ -34,4 +34,4 @@ namespace utils {
             };
         }  // namespace templ
     }      // namespace cmdline
-}  // namespace utils
+}  // namespace futils

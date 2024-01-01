@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,8 +15,8 @@
 #include <deprecated/stream/stream.h>
 
 namespace minilang {
-    using namespace utils;
-    namespace expr = utils::parser::expr;
+    using namespace futils;
+    namespace expr = futils::parser::expr;
 
     enum class TypeKind {
         primitive,
@@ -648,7 +648,7 @@ namespace minilang {
 
     }  // namespace assembly
 
-    utils::parser::stream::Stream make_stream();
+    futils::parser::stream::Stream make_stream();
 
     void test_code();
 }  // namespace minilang

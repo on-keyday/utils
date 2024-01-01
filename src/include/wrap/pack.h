@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -17,7 +17,7 @@
 #include "light/stream.h"
 #include <concepts>
 
-namespace utils {
+namespace futils {
     namespace wrap {
 
         template <class T>
@@ -138,4 +138,4 @@ namespace utils {
             return internal::Pack(std::forward<Args>(args)..., "\n");
         }
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

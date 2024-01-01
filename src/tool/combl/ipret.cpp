@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -87,7 +87,7 @@ namespace combl::ipret {
         else if (expr->type == trvs::ExprType::integer) {
             auto num = static_cast<trvs::Integer*>(expr.get());
             std::uint64_t value = 0;
-            if (!utils::number::parse_integer(num->num, value)) {
+            if (!futils::number::parse_integer(num->num, value)) {
                 env.err.push_back({"integer like `" + num->num + "` is not parsable. maybe too large", num->pos});
                 return false;
             }
@@ -102,7 +102,7 @@ namespace combl::ipret {
             value.pop_back();
             if (str->str_type != trvs::StrType::raw) {
                 std::string tmp;
-                if (!utils::escape::unescape_str(value, tmp)) {
+                if (!futils::escape::unescape_str(value, tmp)) {
                     env.err.push_back({"string like " + str->literal + " cannot unescape. maybe invalid escape sequence", str->pos});
                 }
                 value = std::move(tmp);
@@ -215,8 +215,8 @@ namespace combl::ipret {
             return Ops::fail;
         }
         if (func_callee->args.size() != call.args.size()) {
-            std::string str = "expect " + utils::number::to_string<std::string>(func_callee->args.size()) +
-                              " but " + utils::number::to_string<std::string>(call.args.size()) + " passed.";
+            std::string str = "expect " + futils::number::to_string<std::string>(func_callee->args.size()) +
+                              " but " + futils::number::to_string<std::string>(call.args.size()) + " passed.";
             env.err.push_back({"arguments count is not matched to parameters count. " + str,
                                trvs::Pos{call.node->begin_pos.begin, call.node->end_pos.end}});
             env.err.push_back({"callee is defined here", func_callee->fn_pos});
@@ -288,7 +288,7 @@ namespace combl::ipret {
 
     bool eval_bin_op(InEnv& env, std::shared_ptr<trvs::Binary>& bin, std::vector<istr::Value>& stack) {
         if (stack.size() < 2) {
-            env.err.push_back({"expect least 2 stack value but only " + utils::number::to_string<std::string>(stack.size()) + " value exists. BUG!", bin->op_pos});
+            env.err.push_back({"expect least 2 stack value but only " + futils::number::to_string<std::string>(stack.size()) + " value exists. BUG!", bin->op_pos});
             return false;
         }
         auto right = std::move(stack.back());

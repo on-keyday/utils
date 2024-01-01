@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include "reader.h"
 #include "writer.h"
 
-namespace utils {
+namespace futils {
     namespace binary {
 
         // read_terminated reads null or single char terminated string
@@ -77,4 +77,4 @@ namespace utils {
                    w.write(term, 1);
         }
     }  // namespace binary
-}  // namespace utils
+}  // namespace futils

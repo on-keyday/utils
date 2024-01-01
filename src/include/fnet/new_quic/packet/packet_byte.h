@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <binary/reader.h>
 #include <binary/writer.h>
 
-namespace utils::fnet::quic::packet {
+namespace futils::fnet::quic::packet {
 
     struct ShortPacketByte {
        private:
@@ -146,4 +146,4 @@ namespace utils::fnet::quic::packet {
             }
         }
     };
-}  // namespace utils::fnet::quic::packet
+}  // namespace futils::fnet::quic::packet

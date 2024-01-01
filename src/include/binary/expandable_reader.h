@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include "reader.h"
 
-namespace utils {
+namespace futils {
     namespace binary {
         template <class T, class V>
         concept has_append = requires(T t, V v) {
@@ -212,4 +212,4 @@ namespace utils {
         template <class T>
         using expand_reader = basic_expand_reader<T, byte>;
     }  // namespace binary
-}  // namespace utils
+}  // namespace futils

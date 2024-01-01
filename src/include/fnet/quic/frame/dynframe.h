@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include "../../storage.h"
 #include <memory>
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::frame {
         struct DynFrame {
             virtual FrameType type(bool on_cast) const = 0;
@@ -94,4 +94,4 @@ namespace utils {
         }
 
     }  // namespace fnet::quic::frame
-}  // namespace utils
+}  // namespace futils

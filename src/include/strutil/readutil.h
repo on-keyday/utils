@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "compare_type.h"
 #include "../core/sequencer.h"
 
-namespace utils {
+namespace futils {
     namespace strutil {
         template <bool consume = true, class Result, class T, class Cmp, class Compare = decltype(default_compare())>
         constexpr bool read_until(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare()) {
@@ -104,4 +104,4 @@ namespace utils {
         }
 
     }  // namespace strutil
-}  // namespace utils
+}  // namespace futils

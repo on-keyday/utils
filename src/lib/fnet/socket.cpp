@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -16,7 +16,7 @@
 #include <fnet/event/io.h>
 #include <platform/detect.h>
 
-namespace utils {
+namespace futils {
     namespace fnet {
         void decr_table(void*);
 
@@ -27,7 +27,7 @@ namespace utils {
             if (err.type() != error::ErrorType::number) {
                 return false;
             }
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             return err.code() == WSAEMSGSIZE;
 #else
             return err.code() == EMSGSIZE;
@@ -44,7 +44,7 @@ namespace utils {
             if (err.type() != error::ErrorType::number) {
                 return false;
             }
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             return err.code() == WSAEWOULDBLOCK;
 #else
             return err.code() == EINPROGRESS || err.code() == EWOULDBLOCK;
@@ -96,7 +96,7 @@ namespace utils {
             if (res == -1) {
                 return unexpect(error::Errno());
             }
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             if (lazy::__WSAFDIsSet_(sock, &excset)) {
                 return unexpect(SelectError{error::Errno()});
             }
@@ -186,7 +186,7 @@ namespace utils {
             });
         }
 
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         constexpr auto shutdown_recv = SD_RECEIVE;
         constexpr auto shutdown_send = SD_SEND;
         constexpr auto shutdown_both = SD_BOTH;
@@ -304,7 +304,7 @@ namespace utils {
                 }
                 event = events.value_ptr();
             }
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             auto sock = lazy::WSASocketW_(attr.address_family, attr.socket_type, attr.protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
 #else
             auto sock = lazy::socket_(attr.address_family, attr.socket_type, attr.protocol);
@@ -316,4 +316,4 @@ namespace utils {
         }
 
     }  // namespace fnet
-}  // namespace utils
+}  // namespace futils

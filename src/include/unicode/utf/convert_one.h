@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include "utf16.h"
 #include <tuple>
 
-namespace utils::unicode::utf {
+namespace futils::unicode::utf {
 
     constexpr std::pair<size_t, UTFError> utf8_to_utf32_one(auto&& input, size_t offset, size_t size, auto&& output, bool replace) {
         auto [code, len, ok] = utf8::to_utf32(input, offset, size, replace);
@@ -108,4 +108,4 @@ namespace utils::unicode::utf {
                        : UTFError::utf32_output_limit};
     }
 
-}  // namespace utils::unicode::utf
+}  // namespace futils::unicode::utf

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 // #include "sfinae.h"
 #include <type_traits>
 
-namespace utils {
+namespace futils {
     namespace strutil {
         namespace internal {
 
@@ -95,4 +95,4 @@ namespace utils {
         constexpr bool is_utf_convertable = append_size_v<T> <= 4;
 
     }  // namespace strutil
-}  // namespace utils
+}  // namespace futils

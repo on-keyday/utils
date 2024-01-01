@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include <cstring>
 #include <binary/buf.h>
 
-namespace utils {
+namespace futils {
     namespace fnet {
 
         NetAddrPort sockaddr_to_NetAddrPort(sockaddr* addr, size_t len) {
@@ -30,7 +30,7 @@ namespace utils {
             }
             else if (addr->sa_family == AF_UNIX) {
                 auto p = reinterpret_cast<sockaddr_un*>(addr);
-                auto len = utils::strlen(p->sun_path) + 1;
+                auto len = futils::strlen(p->sun_path) + 1;
                 naddr.addr = internal::make_netaddr(NetAddrType::unix_path, view::rvec(p->sun_path, len));
                 naddr.port() = {};
             }
@@ -79,4 +79,4 @@ namespace utils {
             return {reinterpret_cast<sockaddr*>(addr), addrlen};
         }
     }  // namespace fnet
-}  // namespace utils
+}  // namespace futils

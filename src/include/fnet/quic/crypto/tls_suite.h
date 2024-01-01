@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include <cstddef>
 #include "../../../view/iovec.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::tls {
         // TLSSuite which is supprted by QUIC
         enum class QUICCipherSuite {
@@ -60,4 +60,4 @@ namespace utils {
             return suite == QUICCipherSuite::CHACHA20_POLY1305_SHA256;
         }
     }  // namespace fnet::tls
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,7 +15,7 @@
 #include "error.h"
 #include "../../core/sequencer.h"
 
-namespace utils::unicode::utf8 {
+namespace futils::unicode::utf8 {
 
     constexpr byte utf8_first_byte_mask[5]{
         0x80,  // 0xxx-xxxx  1000-0000
@@ -285,4 +285,4 @@ namespace utils::unicode::utf8 {
                          : utf::UTFError::utf8_output_limit};
     }
 
-}  // namespace utils::unicode::utf8
+}  // namespace futils::unicode::utf8

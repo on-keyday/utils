@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,7 +14,7 @@
 #include "error.h"
 #include "value.h"
 
-namespace utils::wasm::type {
+namespace futils::wasm::type {
 
     enum class Type : byte {
         i32 = 0x7f,
@@ -294,4 +294,4 @@ namespace utils::wasm::type {
         return BlockType{std::uint32_t(*val)};
     }
 
-}  // namespace utils::wasm::type
+}  // namespace futils::wasm::type

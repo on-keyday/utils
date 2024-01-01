@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -23,7 +23,7 @@
 #include <chrono>
 #include <format>
 
-struct Flags : utils::cmdline::templ::HelpOption {
+struct Flags : futils::cmdline::templ::HelpOption {
     std::string port = "8091";
     bool quic = false;
     bool single_thread = false;
@@ -31,10 +31,10 @@ struct Flags : utils::cmdline::templ::HelpOption {
     bool verbose = false;
     std::string public_key;
     std::string private_key;
-    utils::wrap::path_string libssl;
-    utils::wrap::path_string libcrypto;
+    futils::wrap::path_string libssl;
+    futils::wrap::path_string libcrypto;
     bool ssl = false;
-    void bind(utils::cmdline::option::Context& ctx) {
+    void bind(futils::cmdline::option::Context& ctx) {
         bind_help(ctx);
         load_env();
         ctx.VarString(&port, "port", "port number (default:8091)", "PORT");
@@ -50,17 +50,17 @@ struct Flags : utils::cmdline::templ::HelpOption {
     }
 
     void load_env() {
-        auto env = utils::env::sys::env_getter();
-        libssl = env.get_or<utils::wrap::path_string>("FNET_LIBSSL", "");
-        libcrypto = env.get_or<utils::wrap::path_string>("FNET_LIBCRYPTO", "");
+        auto env = futils::env::sys::env_getter();
+        libssl = env.get_or<futils::wrap::path_string>("FNET_LIBSSL", "");
+        libcrypto = env.get_or<futils::wrap::path_string>("FNET_LIBCRYPTO", "");
         public_key = env.get_or<std::string>("FNET_PUBLIC_KEY", "");
         private_key = env.get_or<std::string>("FNET_PRIVATE_KEY", "");
     }
 };
-namespace serv = utils::fnet::server;
-auto& cout = utils::wrap::cout_wrap();
+namespace serv = futils::fnet::server;
+auto& cout = futils::wrap::cout_wrap();
 
-void http_serve(void*, utils::fnet::server::Requester req, utils::fnet::server::StateContext s) {
+void http_serve(void*, futils::fnet::server::Requester req, futils::fnet::server::StateContext s) {
     bool keep_alive;
     std::string method, path;
     req.http.peek_request_line(method, path);
@@ -82,9 +82,9 @@ void http_serve(void*, utils::fnet::server::Requester req, utils::fnet::server::
 }
 
 std::mutex m;
-std::deque<utils::wrap::path_string> ac;
+std::deque<futils::wrap::path_string> ac;
 std::mutex l;
-std::deque<utils::wrap::path_string> lg;
+std::deque<futils::wrap::path_string> lg;
 
 void log_thread() {
     for (;;) {
@@ -104,14 +104,14 @@ void log_thread() {
 }
 
 void log(auto&&... msg) {
-    auto r = utils::wrap::packln(std::format("{} ", std::chrono::system_clock::now()), msg...).raw();
+    auto r = futils::wrap::packln(std::format("{} ", std::chrono::system_clock::now()), msg...).raw();
     m.lock();
     ac.push_back(std::move(r));
     m.unlock();
 }
 
 void log_internal(auto&&... msg) {
-    auto r = utils::wrap::packln(std::format("{} ", std::chrono::system_clock::now()), msg...).raw();
+    auto r = futils::wrap::packln(std::format("{} ", std::chrono::system_clock::now()), msg...).raw();
     cout << r;
 }
 
@@ -123,10 +123,10 @@ void server_entry(void* p, serv::Client&& cl, serv::StateContext ctx) {
 int quic_server();
 bool verbose = false;
 
-int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
+int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
     if (flag.memory_debug) {
-        utils::fnet::debug::allocs();
-        utils::test::set_alloc_hook(true);
+        futils::fnet::debug::allocs();
+        futils::test::set_alloc_hook(true);
     }
     if (flag.quic) {
         return quic_server();
@@ -134,13 +134,13 @@ int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
     serv::HTTPServ serv;
     if (flag.ssl) {
         if (flag.libssl.size()) {
-            utils::fnet::tls::set_libssl(flag.libssl.c_str());
+            futils::fnet::tls::set_libssl(flag.libssl.c_str());
         }
         if (flag.libcrypto.size()) {
-            utils::fnet::tls::set_libcrypto(flag.libcrypto.c_str());
+            futils::fnet::tls::set_libcrypto(flag.libcrypto.c_str());
         }
         if (flag.public_key.size() && flag.private_key.size()) {
-            auto conf = utils::fnet::tls::configure_with_error();
+            auto conf = futils::fnet::tls::configure_with_error();
             if (!conf) {
                 cout << "failed to configure tls " << conf.error().error<std::string>();
                 return -1;
@@ -160,7 +160,7 @@ int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
     serv.next = http_serve;
     verbose = flag.verbose;
     auto s = std::make_shared<serv::State>(&serv, server_entry);
-    s->set_log([](serv::log_level level, utils::fnet::NetAddrPort* addr, utils::fnet::error::Error& err) {
+    s->set_log([](serv::log_level level, futils::fnet::NetAddrPort* addr, futils::fnet::error::Error& err) {
         if (!verbose && level < serv::log_level::info) {
             return;
         }
@@ -171,17 +171,17 @@ int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
     s->set_reduce_skip(10);
     auto server = serv::prepare_listener(flag.port, 10000);
     if (!server) {
-        utils::wrap::cout_wrap() << "failed to create server " << server.error().error<std::string>();
+        futils::wrap::cout_wrap() << "failed to create server " << server.error().error<std::string>();
         return -1;
     }
     auto& servstate = s->state();
-    utils::wrap::path_string str;
-    auto _ = utils::file::File::stdin_file().interactive_console_read();
+    futils::wrap::path_string str;
+    auto _ = futils::file::File::stdin_file().interactive_console_read();
     auto input_callback = [&] {
         if (!servstate.busy() && m.try_lock()) {
             if (ac.size()) {
                 std::thread([ac = std::move(ac)] {
-                    utils::wrap::path_string p;
+                    futils::wrap::path_string p;
                     for (auto it = ac.begin(); it != ac.end(); it++) {
                         p += *it;
                     }
@@ -192,14 +192,14 @@ int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
             }
             m.unlock();
         }
-        utils::wrap::input(str, true);
+        futils::wrap::input(str, true);
         if (!str.size()) {
             return true;
         }
         if (str.back() == '\n') {
             str.pop_back();
-            if (str == utils::utf::convert<utils::wrap::path_string>("status")) {
-                utils::json::JSON js;
+            if (str == futils::utf::convert<futils::wrap::path_string>("status")) {
+                futils::json::JSON js;
                 cout << serv::format_state<std::string>(servstate, js);
             }
             str.clear();
@@ -228,9 +228,9 @@ int server_main(Flags& flag, utils::cmdline::option::Context& ctx) {
 
 int main(int argc, char** argv) {
     Flags flags;
-    return utils::cmdline::templ::parse_or_err<std::string>(
+    return futils::cmdline::templ::parse_or_err<std::string>(
         argc, argv, flags, [](auto&& str, bool) { cout << str; },
-        [](Flags& flags, utils::cmdline::option::Context& ctx) {
+        [](Flags& flags, futils::cmdline::option::Context& ctx) {
             return server_main(flags, ctx);
         });
 }

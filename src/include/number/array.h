@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 // array -  easy array class
 #pragma once
 
-namespace utils {
+namespace futils {
     namespace number {
         template <class T, size_t size_, bool strmode = false>
         struct Array {
@@ -61,4 +61,4 @@ namespace utils {
             }
         };
     }  // namespace number
-}  // namespace utils
+}  // namespace futils

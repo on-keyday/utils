@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "../resend/ack_handler.h"
 #include <binary/flags.h>
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::path {
         enum class State : byte {
             disabled,
@@ -223,4 +223,4 @@ namespace utils {
             static_assert(check_binary_search());
         }  // namespace test
     }      // namespace fnet::quic::path
-}  // namespace utils
+}  // namespace futils

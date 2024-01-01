@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -20,8 +20,8 @@ struct Frame {
 };
 
 int main() {
-    utils::reflect::test::check_name();
-    utils::reflect::Layout<FrameBuilder, 1> layout;
+    futils::reflect::test::check_name();
+    futils::reflect::Layout<FrameBuilder, 1> layout;
     constexpr auto name = layout.nameof<0>();
     constexpr auto offset = layout.offset<2>();
     constexpr auto size = layout.size;
@@ -34,7 +34,7 @@ int main() {
     },
                  true);
 
-    utils::reflect::Layout<FrameBuilder> compat;
+    futils::reflect::Layout<FrameBuilder> compat;
     constexpr auto ofs = compat.offset<0>();
     constexpr auto size2 = compat.size;
     auto fr = compat.cast<Frame>();

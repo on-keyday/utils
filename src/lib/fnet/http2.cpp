@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -23,15 +23,15 @@
 
 namespace std {
     template <>
-    struct hash<utils::fnet::flex_storage> {
-        auto operator()(const utils::fnet::flex_storage& str) const {
+    struct hash<futils::fnet::flex_storage> {
+        auto operator()(const futils::fnet::flex_storage& str) const {
             constexpr auto hash = std::hash<std::string_view>{};
             return hash(std::string_view(str.as_char(), str.size()));
         }
     };
 }  // namespace std
 
-namespace utils {
+namespace futils {
     namespace fnet::http2 {
         /*
         quic::allocate::Alloc alloc_init{
@@ -768,4 +768,4 @@ namespace utils {
             return HTTP2(c);
         }
     }  // namespace fnet::http2
-}  // namespace utils
+}  // namespace futils

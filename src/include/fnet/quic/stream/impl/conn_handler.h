@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include "stream.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::stream::impl {
 
         // this is helper to bind ConnHandler implementation to ConnHandler<TConfig>
@@ -214,4 +214,4 @@ namespace utils {
             }
         };
     }  // namespace fnet::quic::stream::impl
-}  // namespace utils
+}  // namespace futils

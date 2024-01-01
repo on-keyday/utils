@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -7,7 +7,7 @@
 
 #pragma once
 
-namespace utils {
+namespace futils {
     namespace fnet::http3 {
         template <class QpackConfig, class QuicConfig>
         struct TypeConfig {
@@ -17,4 +17,4 @@ namespace utils {
             using reader_lock = typename QuicConfig::recv_stream_lock;
         };
     }  // namespace fnet::http3
-}  // namespace utils
+}  // namespace futils

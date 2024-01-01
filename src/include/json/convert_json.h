@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 // #include "../helper/sfinae.h"
 #include "iterator.h"
 
-namespace utils {
+namespace futils {
     namespace json {
         enum class FromFlag {
             none = 0x0,
@@ -374,4 +374,4 @@ namespace utils {
     }
 
     }  // namespace json
-}  // namespace utils
+}  // namespace futils

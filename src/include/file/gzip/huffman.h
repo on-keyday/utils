@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,7 +15,7 @@
 #include "../../view/iovec.h"
 #include "../../helper/defer.h"
 
-namespace utils {
+namespace futils {
     namespace file::gzip::huffman {
 
         struct Code {
@@ -527,7 +527,7 @@ namespace utils {
                 [](EncodeTable& table, EncodeTree* space, size_t size) {
                     table.set_space(space, size);
                     byte lit[] = "<doctype html><html></html>";
-                    table.add_bytes(view::rvec(lit, utils::strlen(lit)));
+                    table.add_bytes(view::rvec(lit, futils::strlen(lit)));
                     std::uint16_t calc[14]{};
                     if (!table.merge_in_space(calc, 14)) {
                         table = {};
@@ -641,4 +641,4 @@ namespace utils {
         }  // namespace test
 
     }  // namespace file::gzip::huffman
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 // predefined - http predefined value
 #pragma once
 
-namespace utils {
+namespace futils {
     namespace http {
         namespace value {
             constexpr const char* reason_phrase(unsigned short status, bool dav = false) {
@@ -160,4 +160,4 @@ namespace utils {
             };
         }  // namespace value
     }      // namespace http
-}  // namespace utils
+}  // namespace futils

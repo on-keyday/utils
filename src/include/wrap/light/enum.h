@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <utility>
 #include <compare>
 
-namespace utils {
+namespace futils {
     namespace wrap {
 
 #define DEFINE_ENUM_FLAGOP(TYPE)                                                   \
@@ -131,4 +131,4 @@ namespace utils {
 #define END_ENUM_ERROR_MSG END_ENUM_STRING_MSG("unknown error")
 
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

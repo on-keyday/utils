@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -20,7 +20,7 @@
 #include <cassert>
 #endif
 
-namespace utils {
+namespace futils {
     namespace helper::either {
         // some code are copied from https://cpprefjp.github.io/reference/expected/expected.html and it's linked pages
         // which is under CC Attribution 3.0 Unported
@@ -123,9 +123,9 @@ namespace utils {
         }  // namespace internal
 
 #ifdef _DEBUG
-#define UTILS_EXPECTED_ASSERT(x) assert(x)
+#define FUTILS_EXPECTED_ASSERT(x) assert(x)
 #else
-#define UTILS_EXPECTED_ASSERT(x)
+#define FUTILS_EXPECTED_ASSERT(x)
 #endif
 
         struct unexpect_t {
@@ -720,21 +720,21 @@ namespace utils {
             }
 
             constexpr const E& error() const& noexcept {
-                UTILS_EXPECTED_ASSERT(!has_value());
+                FUTILS_EXPECTED_ASSERT(!has_value());
                 return e_val;
             }
 
             constexpr E& error() & noexcept {
-                UTILS_EXPECTED_ASSERT(!has_value());
+                FUTILS_EXPECTED_ASSERT(!has_value());
                 return e_val;
             }
             constexpr const E&& error() const&& noexcept {
-                UTILS_EXPECTED_ASSERT(!has_value());
+                FUTILS_EXPECTED_ASSERT(!has_value());
                 return std::move(e_val);
             }
 
             constexpr E&& error() && noexcept {
-                UTILS_EXPECTED_ASSERT(!has_value());
+                FUTILS_EXPECTED_ASSERT(!has_value());
                 return std::move(e_val);
             }
 
@@ -785,20 +785,20 @@ namespace utils {
             }
 
             constexpr const T& operator*() const& noexcept {
-                UTILS_EXPECTED_ASSERT(has_value());
+                FUTILS_EXPECTED_ASSERT(has_value());
                 return t_val;
             }
             constexpr T& operator*() & noexcept {
-                UTILS_EXPECTED_ASSERT(has_value());
+                FUTILS_EXPECTED_ASSERT(has_value());
                 return t_val;
             }
             constexpr T&& operator*() && noexcept {
-                UTILS_EXPECTED_ASSERT(has_value());
+                FUTILS_EXPECTED_ASSERT(has_value());
                 return std::move(t_val);
             }
 
             constexpr const T&& operator*() const&& noexcept {
-                UTILS_EXPECTED_ASSERT(has_value());
+                FUTILS_EXPECTED_ASSERT(has_value());
                 return std::move(t_val);
             }
 
@@ -1248,22 +1248,22 @@ namespace utils {
             }
 
             constexpr const E& error() const& noexcept {
-                UTILS_EXPECTED_ASSERT(!has_value());
+                FUTILS_EXPECTED_ASSERT(!has_value());
                 return e_val;
             }
 
             constexpr E& error() & noexcept {
-                UTILS_EXPECTED_ASSERT(!has_value());
+                FUTILS_EXPECTED_ASSERT(!has_value());
                 return e_val;
             }
 
             constexpr const E&& error() const&& noexcept {
-                UTILS_EXPECTED_ASSERT(!has_value());
+                FUTILS_EXPECTED_ASSERT(!has_value());
                 return std::move(e_val);
             }
 
             constexpr E&& error() && noexcept {
-                UTILS_EXPECTED_ASSERT(!has_value());
+                FUTILS_EXPECTED_ASSERT(!has_value());
                 return std::move(e_val);
             }
 
@@ -1284,7 +1284,7 @@ namespace utils {
             }
 
             constexpr void operator*() const noexcept {
-                UTILS_EXPECTED_ASSERT(has_value());
+                FUTILS_EXPECTED_ASSERT(has_value());
             }
 
             constexpr explicit operator bool() const noexcept {
@@ -1484,7 +1484,7 @@ namespace utils {
 #undef do_nothing
 #undef must_move
 #undef must_copy
-#undef UTILS_EXPECTED_ASSERT
+#undef FUTILS_EXPECTED_ASSERT
 
     }  // namespace helper::either
-}  // namespace utils
+}  // namespace futils

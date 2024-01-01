@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,17 +10,17 @@
 #include <wrap/cin.h>
 #include <wrap/cout.h>
 #include <platform/detect.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <Windows.h>
 #endif
 #include <unicode/utf/convert.h>
 #include <helper/defer.h>
 #include <file/file.h>
 
-namespace utils {
+namespace futils {
     namespace wrap {
 
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         static bool read_record(wrap::path_string& buf, INPUT_RECORD& rec, bool& zero_input, wrap::InputState& state) {
             auto& cout = wrap::cout_wrap();
             auto echo_back = [&](auto&& buf) {
@@ -213,7 +213,7 @@ namespace utils {
                     else {
                         // NOTE: if path_char is not wchar_t,
                         // this code is simply evaluated false and ignored
-                        if (utils::unicode::utf16::is_high_surrogate(c)) {
+                        if (futils::unicode::utf16::is_high_surrogate(c)) {
                             if (u16_index == 0) {
                                 tmp[0] = c;
                                 u16_index++;
@@ -263,4 +263,4 @@ namespace utils {
         }
 
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

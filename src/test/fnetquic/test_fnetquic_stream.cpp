@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,8 +15,8 @@
 #include <fnet/quic/stream/typeconfig.h>
 
 namespace test {
-    namespace stream = utils::fnet::quic::stream;
-    namespace impl = utils::fnet::quic::stream::impl;
+    namespace stream = futils::fnet::quic::stream;
+    namespace impl = futils::fnet::quic::stream::impl;
     stream::InitialLimits gen_local_limits() {
         stream::InitialLimits limits;
         limits.bidi_stream_data_local_limit = 1000;
@@ -42,7 +42,7 @@ namespace test {
 }  // namespace test
 
 struct RecvQ {
-    utils::fnet::slib::list<std::shared_ptr<test::impl::BidiStream<test::stream::TypeConfig<std::mutex>>>> que;
+    futils::fnet::slib::list<std::shared_ptr<test::impl::BidiStream<test::stream::TypeConfig<std::mutex>>>> que;
 
     auto accept() {
         auto res = std::move(que.front());
@@ -60,10 +60,10 @@ int main() {
         count++;
         return 1;
     };
-    utils::fnet::set_normal_allocs(utils::fnet::debug::allocs(&pers));
-    utils::fnet::set_objpool_allocs(utils::fnet::debug::allocs(&pers));
-    utils::test::set_alloc_hook(true);
-    using IOResult = utils::fnet::quic::IOResult;
+    futils::fnet::set_normal_allocs(futils::fnet::debug::allocs(&pers));
+    futils::fnet::set_objpool_allocs(futils::fnet::debug::allocs(&pers));
+    futils::test::set_alloc_hook(true);
+    using IOResult = futils::fnet::quic::IOResult;
     auto peer = test::gen_peer_limits();
     auto local = test::gen_local_limits();
     auto conn_local = test::impl::make_conn<test::stream::TypeConfig<std::mutex>>(test::stream::Origin::client);
@@ -75,11 +75,11 @@ int main() {
     auto stream_1 = conn_local->open_bidi();
     assert(stream_1 && stream_1->sender.id() == 0);
     stream_1->sender.add_data("Hello peer!", false);
-    utils::byte traffic[1000];
-    utils::binary::writer w{traffic};
-    // std::vector<std::weak_ptr<utils::fnet::quic::ack::ACKLostRecord>> locals, peers;
-    namespace frame = utils::fnet::quic::frame;
-    utils::fnet::quic::ack::ACKRecorder locals, peers;
+    futils::byte traffic[1000];
+    futils::binary::writer w{traffic};
+    // std::vector<std::weak_ptr<futils::fnet::quic::ack::ACKLostRecord>> locals, peers;
+    namespace frame = futils::fnet::quic::frame;
+    futils::fnet::quic::ack::ACKRecorder locals, peers;
     frame::fwriter fw{w};
     IOResult ok = conn_local->send(fw, locals);
     // first, this program is not multi thread so use_count is correct,
@@ -90,23 +90,23 @@ int main() {
     auto h = conn_peer->get_conn_handler();
     h->arg = std::shared_ptr<RecvQ>(&q, [](RecvQ*) {});
     h->bidi_accept_cb = [](std::shared_ptr<void>& v, std::shared_ptr<test::impl::BidiStream<test::stream::TypeConfig<std::mutex>>> d) {
-        auto recv = std::make_shared<utils::fnet::quic::stream::impl::RecvSorter<std::mutex>>();
-        using H = utils::fnet::quic::stream::impl::FragmentSaver<>;
+        auto recv = std::make_shared<futils::fnet::quic::stream::impl::RecvSorter<std::mutex>>();
+        using H = futils::fnet::quic::stream::impl::FragmentSaver<>;
         d->receiver.set_receiver(H(std::move(recv),
-                                   utils::fnet::quic::stream::impl::reader_recv_handler<std::mutex, test::stream::TypeConfig<std::mutex>>));
+                                   futils::fnet::quic::stream::impl::reader_recv_handler<std::mutex, test::stream::TypeConfig<std::mutex>>));
         static_cast<RecvQ*>(v.get())->que.push_back(std::move(d));
     };
     /*
     conn_peer->set_accept_bidi(std::shared_ptr<RecvQ>(&q, [](RecvQ*) {}), [](std::shared_ptr<void>& v, std::shared_ptr<test::impl::BidiStream<test::stream::TypeConfig<std::mutex>>> d) {
-        auto recv = std::make_shared<utils::fnet::quic::stream::impl::RecvSorted<std::mutex>>();
-        using H = utils::fnet::quic::stream::impl::FragmentSaver<>;
+        auto recv = std::make_shared<futils::fnet::quic::stream::impl::RecvSorted<std::mutex>>();
+        using H = futils::fnet::quic::stream::impl::FragmentSaver<>;
         d->receiver.set_receiver(H(std::move(recv),
-                                   utils::fnet::quic::stream::impl::reader_recv_handler<std::mutex, test::stream::TypeConfig<std::mutex>>));
+                                   futils::fnet::quic::stream::impl::reader_recv_handler<std::mutex, test::stream::TypeConfig<std::mutex>>));
         static_cast<RecvQ*>(v.get())->que.push_back(std::move(d));
     });
     */
 
-    utils::binary::reader r{w.written()};
+    futils::binary::reader r{w.written()};
     frame::parse_frame<std::vector>(r, [&](frame::Frame& f, bool err) {
         assert(!err);
         auto [res, e] = conn_peer->recv(f);

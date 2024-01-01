@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <string>
 #include <helper/expected.h>
 
-namespace utils {
+namespace futils {
     namespace fnet {
 
         namespace error {
@@ -81,19 +81,19 @@ namespace utils {
                 use_custom,
             };
 
-            fnet_dll_export(bool) register_categspec_nummsg(utils::error::Category categ, NumErrMode mode, void (*fn)(helper::IPushBacker<> pb, std::uint64_t code));
+            fnet_dll_export(bool) register_categspec_nummsg(futils::error::Category categ, NumErrMode mode, void (*fn)(helper::IPushBacker<> pb, std::uint64_t code));
 
             namespace internal {
-                fnet_dll_export(void) invoke_categspec(helper::IPushBacker<> pb, utils::error::Category categ, std::uint64_t val);
-                fnet_dll_export(NumErrMode) categspec_mode(utils::error::Category categ);
+                fnet_dll_export(void) invoke_categspec(helper::IPushBacker<> pb, futils::error::Category categ, std::uint64_t val);
+                fnet_dll_export(NumErrMode) categspec_mode(futils::error::Category categ);
 
-                constexpr void categ_spec_error(auto& out, utils::error::Category categ, std::uint64_t val) {
+                constexpr void categ_spec_error(auto& out, futils::error::Category categ, std::uint64_t val) {
                     if (!std::is_constant_evaluated()) {
                         invoke_categspec(out, categ, val);
                     }
                 }
 
-                constexpr NumErrMode categ_spec_mode(utils::error::Category categ) {
+                constexpr NumErrMode categ_spec_mode(futils::error::Category categ) {
                     if (std::is_constant_evaluated()) {
                         return NumErrMode::use_default;
                     }
@@ -549,26 +549,26 @@ namespace utils {
             };
             */
 
-            using Category = utils::error::Category;
+            using Category = futils::error::Category;
 
-            struct FormatTraits : utils::error::DefaultFormatTraits<std::uint32_t> {
+            struct FormatTraits : futils::error::DefaultFormatTraits<std::uint32_t> {
                 static constexpr void num_error(auto&& t, std::uint64_t val, Category c, std::uint32_t s) {
                     auto mode = internal::categ_spec_mode(c);
                     if (mode == NumErrMode::use_default) {
-                        utils::error::DefaultFormatTraits<std::uint32_t>::num_error(t, val, c, s);
+                        futils::error::DefaultFormatTraits<std::uint32_t>::num_error(t, val, c, s);
                         return;
                     }
                     internal::categ_spec_error(t, c, val);
                 }
             };
 
-            using Error = utils::error::Error<glheap_allocator<byte>, std::string, std::uint32_t, FormatTraits>;
+            using Error = futils::error::Error<glheap_allocator<byte>, std::string, std::uint32_t, FormatTraits>;
 
-            using ErrorType = utils::error::ErrorType;
+            using ErrorType = futils::error::ErrorType;
 
             constexpr auto none = Error();
 
-            static_assert(Error(none).type() == utils::error::ErrorType::null);
+            static_assert(Error(none).type() == futils::error::ErrorType::null);
 
             enum {
                 fnet_generic_error = 0x100,
@@ -653,4 +653,4 @@ namespace utils {
         }
 
     }  // namespace fnet
-}  // namespace utils
+}  // namespace futils

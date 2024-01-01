@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include "lazy.h"
 #include "sslfuncs.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::lazy {
         extern DLL libssl;
         extern DLL libcrypto;
@@ -181,4 +181,4 @@ namespace utils {
 
 #undef LAZY_BIND
     }  // namespace fnet::lazy
-}  // namespace utils
+}  // namespace futils

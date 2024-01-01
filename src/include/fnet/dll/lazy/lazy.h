@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "../../../core/byte.h"
 #include "../dll_path.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::lazy {
 
         using func_t = void (*)();
@@ -317,7 +317,7 @@ namespace utils {
         }  // namespace test
 
         // for ssl reset
-        bool libcrypto_init(utils::fnet::lazy::DLLInit l, InitState on_load);
+        bool libcrypto_init(futils::fnet::lazy::DLLInit l, InitState on_load);
 
     }  // namespace fnet::lazy
-}  // namespace utils
+}  // namespace futils

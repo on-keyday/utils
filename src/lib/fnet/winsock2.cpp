@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include <fnet/dll/errno.h>
 #include <fnet/socket.h>
 
-namespace utils::fnet {
+namespace futils::fnet {
 
     Canceler make_canceler(std::uint64_t code, bool w, void* b) {
         Canceler c;
@@ -66,7 +66,7 @@ namespace utils::fnet {
         }
     }  // namespace event
 
-    void call_stream(utils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
+    void call_stream(futils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
         auto hdr = (WinSockIOTableHeader*)base;
         auto sock = make_socket(hdr->base);
         hdr->l.unlock();  // release, so can do next IO
@@ -74,7 +74,7 @@ namespace utils::fnet {
         notify(std::move(sock), cb->user, std::move(result));
     }
 
-    void call_recvfrom(utils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
+    void call_recvfrom(futils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
         auto hdr = (WinSockReadTable*)base;
         auto sock = make_socket(hdr->base);
         auto addr = sockaddr_to_NetAddrPort((sockaddr*)&hdr->from, hdr->from_len);
@@ -257,4 +257,4 @@ namespace utils::fnet {
         lazy::ioctlsocket_(sock, FIONBIO, &nb);
     }
 
-}  // namespace utils::fnet
+}  // namespace futils::fnet

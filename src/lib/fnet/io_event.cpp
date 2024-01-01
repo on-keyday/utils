@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,8 +12,8 @@
 #include <fnet/plthead.h>
 #include <platform/detect.h>
 
-namespace utils::fnet::event {
-#ifdef UTILS_PLATFORM_WINDOWS
+namespace futils::fnet::event {
+#ifdef FUTILS_PLATFORM_WINDOWS
     fnet_dll_implement(expected<IOEvent>) make_io_event(void (*f)(void*, void*), void* rt) {
         if (!f) {
             return unexpect(error::Error("need non-null pointer handler", error::Category::lib, error::fnet_usage_error));
@@ -68,7 +68,7 @@ namespace utils::fnet::event {
         fnet_handle_completion(&ent, nullptr);
     }
 
-#elif defined(UTILS_PLATFORM_LINUX)
+#elif defined(FUTILS_PLATFORM_LINUX)
     fnet_dll_implement(expected<IOEvent>) make_io_event(void (*f)(void*, void*), void* rt) {
         if (!f) {
             return unexpect(error::Error("need non-null pointer handler", error::Category::lib, error::fnet_usage_error));
@@ -124,4 +124,4 @@ namespace utils::fnet::event {
         fnet_handle_completion(&evt, nullptr);
     }
 #endif
-}  // namespace utils::fnet::event
+}  // namespace futils::fnet::event

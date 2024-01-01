@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include "range.h"
 #include "number.h"
 
-namespace utils::comb2::composite {
+namespace futils::comb2::composite {
     constexpr auto back_slash = lit('\\');
     constexpr auto hex2_str = hexadecimal_number & hexadecimal_number;
 
@@ -90,4 +90,4 @@ namespace utils::comb2::composite {
         static_assert(check_string());
     }  // namespace test
 
-}  // namespace utils::comb2::composite
+}  // namespace futils::comb2::composite

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace utils::comb2::opti {
+namespace futils::comb2::opti {
     template <class A, class B,
               bool = std::is_empty_v<A>&& std::is_default_constructible_v<A>,
               bool = std::is_empty_v<B>&& std::is_default_constructible_v<B>>
@@ -93,4 +93,4 @@ namespace utils::comb2::opti {
         }
     };
 
-}  // namespace utils::comb2::opti
+}  // namespace futils::comb2::opti

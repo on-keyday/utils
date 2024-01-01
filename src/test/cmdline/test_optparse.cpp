@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,11 +11,11 @@
 #include <wrap/cout.h>
 #include <wrap/argv.h>
 
-auto& cout = utils::wrap::cout_wrap();
-using namespace utils::cmdline;
+auto& cout = futils::wrap::cout_wrap();
+using namespace futils::cmdline;
 
 void test_optparse(int argc, char** argv, option::ParseFlag flag) {
-    cout << option::get_flag_state<utils::wrap::string>(flag)
+    cout << option::get_flag_state<futils::wrap::string>(flag)
          << "\n";
     auto result = option::do_parse(
         argc, argv, flag, 1, [](option::CmdParseState& state) {
@@ -47,7 +47,7 @@ void test_optparse(int argc, char** argv, option::ParseFlag flag) {
 }
 
 int main(int argc, char** argv) {
-    utils::wrap::U8Arg _(argc, argv);
+    futils::wrap::U8Arg _(argc, argv);
     test_optparse(argc, argv, option::ParseFlag::default_mode);
     test_optparse(argc, argv, option::ParseFlag::golang_mode);
     test_optparse(argc, argv, option::ParseFlag::optget_mode);

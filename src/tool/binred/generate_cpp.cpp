@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,8 +12,8 @@
 #include <view/slice.h>
 
 namespace binred {
-    namespace hlp = utils::helper;
-    namespace view = utils::view;
+    namespace hlp = futils::helper;
+    namespace view = futils::view;
     using tree_t = utw::shared_ptr<Tree>;
 
     bool find_name(const utw::string& name, Struct& st) {
@@ -65,7 +65,7 @@ namespace binred {
     }
 
     void set_val(utw::string& str, Val& val, auto& in) {
-        if (val.kind == utils::syntax::KeyWord::id) {
+        if (val.kind == futils::syntax::KeyWord::id) {
             hlp::appends(str, in, ".");
         }
         hlp::appends(str, val.val);
@@ -241,7 +241,7 @@ namespace binred {
     }
 
     using Dependency = utw::map<utw::string, utw::vector<utw::string>>;
-    namespace us = utils::syntax;
+    namespace us = futils::syntax;
     void generate_dependency(Dependency& dep, utw::string& str, FileData& data, GenFlag flag) {
         for (auto& d : dep) {
             if (d.second.size() <= 1) {

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -16,7 +16,7 @@
 #include <helper/pushbacker.h>
 #include <core/sequencer.h>
 
-namespace utils {
+namespace futils {
     namespace sha {
         namespace internal {
             constexpr void calc_sha1(std::uint32_t* h, const std::uint8_t* bits) {
@@ -133,4 +133,4 @@ namespace utils {
         }
     }  // namespace sha
 
-}  // namespace utils
+}  // namespace futils

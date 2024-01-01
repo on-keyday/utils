@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,8 +15,8 @@
 #include <view/slice.h>
 
 namespace ifacegen {
-    namespace hlp = utils::strutil;
-    namespace view = utils::view;
+    namespace hlp = futils::strutil;
+    namespace view = futils::view;
 
     constexpr auto decltype_func = "decltype";
     constexpr auto copy_func = "__copy__";
@@ -972,7 +972,7 @@ namespace ifacegen {
             nmspc.append("indep_");
             bool upper = false;
             for (auto i = 0; i < 20; i++) {
-                nmspc.push_back(utils::number::to_num_char(uni(dev), upper));
+                nmspc.push_back(futils::number::to_num_char(uni(dev), upper));
                 upper = !upper;
             }
 
@@ -1032,7 +1032,7 @@ namespace ifacegen {
                 hlp::append(str, "<helper/deref.h>");
             }
             hlp::append(str, "\n");
-            nmspc = "utils::helper::";
+            nmspc = "futils::helper::";
         }
         auto has_other_typeinfo = data.typeid_func.size() && data.typeid_type.size();
         auto use_dycast = any(flag & GenFlag::use_dyn_cast);

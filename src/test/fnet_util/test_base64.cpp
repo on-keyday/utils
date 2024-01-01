@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,34 +11,34 @@
 #include <helper/pushbacker.h>
 
 constexpr auto test_encode(auto& in) {
-    utils::helper::FixedPushBacker<char[13], 13> buf;
-    utils::base64::encode(in, buf);
+    futils::helper::FixedPushBacker<char[13], 13> buf;
+    futils::base64::encode(in, buf);
     return buf;
 }
 
 constexpr auto test_decode(auto& in) {
-    utils::helper::FixedPushBacker<char[13], 13> buf;
-    utils::base64::decode(in, buf);
+    futils::helper::FixedPushBacker<char[13], 13> buf;
+    futils::base64::decode(in, buf);
     return buf;
 }
 
 constexpr auto be(auto input) {
-    utils::binary::Buf<decltype(input)> buf;
+    futils::binary::Buf<decltype(input)> buf;
     buf.write_be(input);
     return buf;
 }
 
 constexpr auto li(auto input) {
-    utils::binary::Buf<decltype(input)> buf;
+    futils::binary::Buf<decltype(input)> buf;
     buf.write_le(input);
     return buf;
 }
 
 void test_base64() {
     constexpr auto result = test_encode("hello");
-    static_assert(utils::strutil::equal(result.buf, "aGVsbG8="));
+    static_assert(futils::strutil::equal(result.buf, "aGVsbG8="));
     constexpr auto result2 = test_decode(result.buf);
-    static_assert(utils::strutil::equal(result2.buf, "hello"));
+    static_assert(futils::strutil::equal(result2.buf, "hello"));
     constexpr auto b = be(-0x03000000);
     constexpr auto l = li(0x03000000);
     static_assert(b.read_be() == -0x03000000);

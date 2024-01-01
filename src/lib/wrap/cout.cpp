@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include <cstdio>
 #include <iostream>
 #include <platform/detect.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <fcntl.h>
 #include <io.h>
 #include "Windows.h"
@@ -20,7 +20,7 @@
 #include <unistd.h>
 #endif
 
-namespace utils {
+namespace futils {
     namespace wrap {
         /*
         ::FILE* is_std(std::ios_base& out);
@@ -33,7 +33,7 @@ namespace utils {
         void UtfOut::write(const path_string& p) {
             if (std_handle) {
                 force_init_io();
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
                 auto no = ::_fileno(std_handle);
                 if (::_isatty(no)) {
                     auto h = ::GetStdHandle(no == 1 ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE);
@@ -58,7 +58,7 @@ namespace utils {
         }
 
         bool UtfOut::is_tty() const {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             return ::_isatty(::_fileno(std_handle));
 #else
             return isatty(fileno(std_handle));
@@ -86,4 +86,4 @@ namespace utils {
             return cerr;
         }
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

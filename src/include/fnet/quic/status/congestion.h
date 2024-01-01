@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include "pto.h"
 #include "../packet/summary.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::status {
 
         static constexpr std::uint64_t min_window(const InternalConfig& config, std::uint64_t max_udp_payload_size) {
@@ -203,4 +203,4 @@ namespace utils {
         static_assert(sizeof(Congestion<NullAlgorithm>));
 
     }  // namespace fnet::quic::status
-}  // namespace utils
+}  // namespace futils

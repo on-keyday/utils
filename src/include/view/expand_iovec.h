@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <memory>
 #include <new>
 
-namespace utils {
+namespace futils {
     namespace view {
         namespace internal {
             enum class sso_state : byte {
@@ -391,7 +391,7 @@ namespace utils {
                     constexpr size_t size() const {
                         return size_;
                     }
-                } l{ptr, utils::strlen(ptr)};
+                } l{ptr, futils::strlen(ptr)};
                 return append(l);
             }
 
@@ -473,4 +473,4 @@ namespace utils {
         using expand_storage_vec = basic_expand_storage_vec<Alloc, byte>;
 
     }  // namespace view
-}  // namespace utils
+}  // namespace futils

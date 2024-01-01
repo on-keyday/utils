@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -16,14 +16,14 @@
 #include <strutil/append.h>
 #include <platform/detect.h>
 
-#ifndef UTILS_PLATFORM_WINDOWS
+#ifndef FUTILS_PLATFORM_WINDOWS
 #if __has_include(<dlfcn.h>)
 #include <dlfcn.h>
 #define FNET_HAS_DLOPEN
 #endif
 #endif
 
-namespace utils {
+namespace futils {
     namespace fnet::lazy {
         func_t DLLInit::lookup(const char* name) {
             return dll ? dll->lookup_platform(name) : nullptr;
@@ -40,7 +40,7 @@ namespace utils {
             abort();
         }
 
-        bool libcrypto_init(utils::fnet::lazy::DLLInit l, InitState state) {
+        bool libcrypto_init(futils::fnet::lazy::DLLInit l, InitState state) {
             if (state == InitState::unload) {
                 return true;
             }
@@ -92,12 +92,12 @@ namespace utils {
             char buf[120]{};
             helper::CharVecPushbacker<char> pb{buf, 119};
             strutil::appends(pb, fn, ok ? " loaded" : " unavailable", "\n");
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             OutputDebugStringA(buf);
 #endif
         }
 
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         bool DLL::load_platform() {
             if (sys) {
                 target = LoadLibraryExW(path, nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -237,4 +237,4 @@ namespace utils {
 #endif
 
     }  // namespace fnet::lazy
-}  // namespace utils
+}  // namespace futils

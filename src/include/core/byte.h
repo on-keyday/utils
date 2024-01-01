@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 // byte - byte type
 #pragma once
 
-namespace utils {
+namespace futils {
     using byte = unsigned char;
     constexpr auto bit_per_byte = 8;
-}  // namespace utils
+}  // namespace futils

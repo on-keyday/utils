@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <strutil/equal.h>
 #include "error.h"
 
-namespace utils {
+namespace futils {
     namespace qpack {
         using StreamID = fnet::quic::stream::StreamID;
         namespace fields {
@@ -57,7 +57,7 @@ namespace utils {
 
             constexpr auto size_of(auto&& v) {
                 if constexpr (std::is_pointer_v<std::decay_t<decltype(v)>>) {
-                    return utils::strlen(v);
+                    return futils::strlen(v);
                 }
                 else {
                     return v.size();
@@ -382,4 +382,4 @@ namespace utils {
             }
         }  // namespace fields
     }      // namespace qpack
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 // quic - QUIC implemetation
 // this header provides useful aliases of type that provides QUIC protocol context
 // to customize configuration, see also context/context.h
-// using namespace utils::fnet::quic::use to export usable alias
+// using namespace futils::fnet::quic::use to export usable alias
 #pragma once
 #include "context/context.h"
 #include "context/default.h"
@@ -16,7 +16,7 @@
 #include "stream/impl/recv_stream.h"
 #include <mutex>
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::use {
 
         using Config = context::Config;
@@ -118,4 +118,4 @@ namespace utils {
         }  // namespace rawptr
 
     }  // namespace fnet::quic::use
-}  // namespace utils
+}  // namespace futils

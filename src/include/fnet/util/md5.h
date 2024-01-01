@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include <view/iovec.h>
 #include <binary/buf.h>
 
-namespace utils::md5 {
+namespace futils::md5 {
     // K for calculated by sin(i) * 2^32
     // clang-format off
     constexpr std::uint32_t K[64] = {
@@ -206,4 +206,4 @@ namespace utils::md5 {
         static_assert(check_md5());
     }  // namespace test
 
-}  // namespace utils::md5
+}  // namespace futils::md5

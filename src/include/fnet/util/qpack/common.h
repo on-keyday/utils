@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include "error.h"
 #include "field_refs.h"
 
-namespace utils {
+namespace futils {
     namespace qpack {
 
         struct Field {
@@ -37,4 +37,4 @@ namespace utils {
         }  // namespace internal
 
     }  // namespace qpack
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #include <fnet/ntp.h>
 #include <fnet/connect.h>
 #include <random>
-namespace fnet = utils::fnet;
+namespace fnet = futils::fnet;
 
 int main() {
     auto [sock, addr] = fnet::connect("ntp.nict.jp", "123", fnet::sockattr_udp(), false).value();

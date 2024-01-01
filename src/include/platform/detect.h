@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -7,26 +7,26 @@
 
 #pragma once
 
-#ifndef UTILS_PLATFORM
+#ifndef FUTILS_PLATFORM
 #if defined(_WIN32)
-#define UTILS_PLATFORM_WINDOWS
+#define FUTILS_PLATFORM_WINDOWS
 #elif defined(__APPLE__) && defined(__MACH__)
-#define UTILS_PLATFORM_MACOS
+#define FUTILS_PLATFORM_MACOS
 #elif defined(__wasi__)
-#define UTILS_PLATFORM_WASI
+#define FUTILS_PLATFORM_WASI
 #elif defined(__unix__)
-#define UTILS_PLATFORM_UNIX
+#define FUTILS_PLATFORM_UNIX
 #if defined(__linux__)
-#define UTILS_PLATFORM_LINUX
+#define FUTILS_PLATFORM_LINUX
 #endif
 #if defined(__EMSCRIPTEN__)
-#define UTILS_PLATFORM_EMSCRIPTEN
+#define FUTILS_PLATFORM_EMSCRIPTEN
 #endif
 #if defined(__ANDROID__)
-#define UTILS_PLATFORM_ANDROID
+#define FUTILS_PLATFORM_ANDROID
 #endif
 #else
 #error "Unsupported platform"
 #endif
-#define UTILS_PLATFORM 1
+#define FUTILS_PLATFORM 1
 #endif

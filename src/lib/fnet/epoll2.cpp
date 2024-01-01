@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <fnet/socket.h>
 #include <cstdint>
 
-namespace utils::fnet {
+namespace futils::fnet {
 
     expected<void> Socket::set_skipnotify(bool skip_notif, bool skip_event) {
         return unexpect(error::Error("not supported on linux", error::Category::lib, error::fnet_usage_error));
@@ -63,7 +63,7 @@ namespace utils::fnet {
         }
     }  // namespace event
 
-    void call_stream(utils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
+    void call_stream(futils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
         auto hdr = (EpollIOTableHeader*)base;
         auto sock = make_socket(hdr->base);
         hdr->cb = {};     // clear for epoll_lock
@@ -72,7 +72,7 @@ namespace utils::fnet {
         notify(std::move(sock), cb->user, std::move(result));
     }
 
-    void call_recvfrom(utils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
+    void call_recvfrom(futils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
         auto hdr = (EpollIOTableHeader*)base;
         auto sock = make_socket(hdr->base);
         hdr->cb = {};     // clear for epoll_lock
@@ -230,4 +230,4 @@ namespace utils::fnet {
         lazy::ioctl_(sock, FIONBIO, &nb);
     }
 
-}  // namespace utils::fnet
+}  // namespace futils::fnet

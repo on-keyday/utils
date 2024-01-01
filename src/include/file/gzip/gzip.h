@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #include "../../binary/number.h"
 #include "deflate.h"
 
-namespace utils::file::gzip {
+namespace futils::file::gzip {
     enum GZIPHeaderFlag : byte {
         FNONE = 0x0,
         FTEXT = 0x1,
@@ -247,4 +247,4 @@ namespace utils::file::gzip {
         }
         return deflate::DeflateError::none;
     }
-}  // namespace utils::file::gzip
+}  // namespace futils::file::gzip

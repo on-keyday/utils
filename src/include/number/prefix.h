@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <strutil/append.h>
 #include "parse.h"
 
-namespace utils {
+namespace futils {
     namespace number {
         template <class String>
         constexpr int has_prefix(String&& str) {
@@ -115,4 +115,4 @@ namespace utils {
             return true;
         }
     }  // namespace number
-}  // namespace utils
+}  // namespace futils

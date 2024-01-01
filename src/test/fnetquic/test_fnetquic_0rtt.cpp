@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,12 +10,12 @@
 #include <fnet/addrinfo.h>
 #include <env/env_sys.h>
 #include <fnet/connect.h>
-using namespace utils::fnet::quic::use::rawptr;
-namespace tls = utils::fnet::tls;
-namespace quic = utils::fnet::quic;
-namespace env_sys = utils::env::sys;
+using namespace futils::fnet::quic::use::rawptr;
+namespace tls = futils::fnet::tls;
+namespace quic = futils::fnet::quic;
+namespace env_sys = futils::env::sys;
 
-using path = utils::wrap::path_string;
+using path = futils::wrap::path_string;
 path libssl;
 path libcrypto;
 std::string cert;
@@ -30,39 +30,39 @@ void load_env() {
 int main() {
     load_env();
 #ifdef _WIN32
-    utils::fnet::tls::set_libcrypto(libcrypto.data());
-    utils::fnet::tls::set_libssl(libssl.data());
+    futils::fnet::tls::set_libcrypto(libcrypto.data());
+    futils::fnet::tls::set_libssl(libssl.data());
 #endif
 
-    auto [sock, to] = utils::fnet::connect("localhost", "8090", utils::fnet::sockattr_udp(), false).value();
+    auto [sock, to] = futils::fnet::connect("localhost", "8090", futils::fnet::sockattr_udp(), false).value();
 
     auto ctx = std::make_shared<Context>();
-    auto conf = utils::fnet::tls::configure();
+    auto conf = futils::fnet::tls::configure();
     assert(conf);
     conf.set_early_data_enabled(true);
     conf.set_alpn("\x04test");
     conf.set_cacert_file(cert.data());
-    utils::fnet::tls::Session sess;
-    conf.set_session_callback([](utils::fnet::tls::Session&& sess, void* cb) {
-        *(utils::fnet::tls::Session*)cb = sess;
+    futils::fnet::tls::Session sess;
+    conf.set_session_callback([](futils::fnet::tls::Session&& sess, void* cb) {
+        *(futils::fnet::tls::Session*)cb = sess;
         return true;
     },
                               &sess);
     auto def = use_default_config(std::move(conf));
     bool reqested = false;
-    utils::fnet::flex_storage s;
+    futils::fnet::flex_storage s;
     auto set_zero_rtt_obj = [&] {
         def.zero_rtt.obj = std::shared_ptr<void>(&s, [](auto) {});
     };
     set_zero_rtt_obj();
-    def.zero_rtt.store_token = [](void* p, utils::view::rvec key, quic::token::Token tok) {
-        auto& st = *((utils::fnet::flex_storage*)p);
+    def.zero_rtt.store_token = [](void* p, futils::view::rvec key, quic::token::Token tok) {
+        auto& st = *((futils::fnet::flex_storage*)p);
         st = tok.token;
     };
-    def.zero_rtt.find_token = [](void* p, utils::view::rvec key) {
-        auto& st = *((utils::fnet::flex_storage*)p);
+    def.zero_rtt.find_token = [](void* p, futils::view::rvec key) {
+        auto& st = *((futils::fnet::flex_storage*)p);
         if (st.size() != 0) {
-            return quic::token::TokenStorage{utils::fnet::make_storage(st.rvec())};
+            return quic::token::TokenStorage{futils::fnet::make_storage(st.rvec())};
         }
         return quic::token::TokenStorage{};
     };
@@ -77,7 +77,7 @@ int main() {
         if (payload.size()) {
             sock.writeto(to.addr, payload);
         }
-        utils::byte data[1500];
+        futils::byte data[1500];
         auto recv = sock.readfrom(data);
         if (recv && recv->first.size()) {
             ctx->parse_udp_payload(recv->first);
@@ -114,7 +114,7 @@ int main() {
         if (payload.size()) {
             sock.writeto(to.addr, payload);
         }
-        utils::byte data[1500];
+        futils::byte data[1500];
         auto recv = sock.readfrom(data);
         if (recv && recv->first.size()) {
             ctx->parse_udp_payload(recv->first);

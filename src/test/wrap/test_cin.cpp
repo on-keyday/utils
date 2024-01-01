@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -20,14 +20,14 @@
 #endif
 
 void test_cin() {
-    auto& cout = utils::wrap::cout_wrap();
+    auto& cout = futils::wrap::cout_wrap();
     cout.set_virtual_terminal(true);
-    auto& cin = utils::wrap::cin_wrap();
+    auto& cin = futils::wrap::cin_wrap();
     cout << "|>> ";
     size_t i = 0;
     size_t count = 0;
-    utils::wrap::path_string peek, prev;
-    namespace ces = utils::console::escape;
+    futils::wrap::path_string peek, prev;
+    namespace ces = futils::console::escape;
     bool updated = false;
     cout << ces::cursor_visibility(ces::CursorVisibility::hide);
     while (!cin.peek_buffer(peek, false, &updated)) {
@@ -71,7 +71,7 @@ void test_cin() {
             update_progress();
         }
     }
-    utils::wrap::string str;
+    futils::wrap::string str;
     cin >> str;
     cout << "\n"
          << str;

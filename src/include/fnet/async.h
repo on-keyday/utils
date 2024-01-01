@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include "address.h"
 #include <optional>
 
-namespace utils::fnet {
+namespace futils::fnet {
     enum class NotifyState {
         wait,  // waiting notification, callback will be called
         done,  // operation done, callback will not be called
@@ -280,4 +280,4 @@ namespace utils::fnet {
     using stream_notify_t = void (*)(Socket&&, void*, NotifyResult&& err);
     using recvfrom_notify_t = void (*)(Socket&&, NetAddrPort&&, void*, NotifyResult&& err);
 
-}  // namespace utils::fnet
+}  // namespace futils::fnet

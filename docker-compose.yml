@@ -1,4 +1,4 @@
-#    utils - utility library
+#    futils - utility library
 #    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
@@ -8,15 +8,15 @@ services:
     build: .
     ports:
       - "8092:8092"
-    container_name: utils
+    container_name: futils
     tty: true
     stdin_open: true
     volumes:
-      - ./src:/usr/utilsdev/workspace/src:cached
-      - ./build:/usr/utilsdev/workspace/build:cached
-      - ./CMakeLists.txt:/usr/utilsdev/workspace/CMakeLists.txt:cached
-      - ./docker_vscode:/usr/utilsdev/workspace/.vscode:cached
-      - ./shell:/usr/utilsdev/workspace/shell:cached
+      - ./src:/usr/futilsdev/workspace/src:cached
+      - ./build:/usr/futilsdev/workspace/build:cached
+      - ./CMakeLists.txt:/usr/futilsdev/workspace/CMakeLists.txt:cached
+      - ./docker_vscode:/usr/futilsdev/workspace/.vscode:cached
+      - ./shell:/usr/futilsdev/workspace/shell:cached
     cap_add:
       - SYS_PTRACE
     security_opt:

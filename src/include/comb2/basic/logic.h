@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,7 +14,7 @@
 #include "../cbtype.h"
 #include <helper/template_instance.h>
 
-namespace utils::comb2 {
+namespace futils::comb2 {
     namespace types {
 
         template <class A, class B>
@@ -252,4 +252,4 @@ namespace utils::comb2 {
             };
         }
     }  // namespace ops
-}  // namespace utils::comb2
+}  // namespace futils::comb2

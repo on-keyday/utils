@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,10 +9,10 @@
 #include <platform/detect.h>
 #include <file/file.h>
 #include <unicode/utf/convert.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #else
-#ifdef UTILS_PLATFORM_WASI
+#ifdef FUTILS_PLATFORM_WASI
 #define _WASI_EMULATED_MMAN
 #endif
 #include <unistd.h>
@@ -25,9 +25,9 @@
 
 #endif
 
-namespace utils::file {
+namespace futils::file {
 
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
     // from golang syscall.Open. see also https://cs.opensource.google/go/go/+/refs/tags/go1.21.3:src/syscall/syscall_windows.go;l=342
     file_result<File> File::open(const wrap::path_char* filename, Flag flag, Mode mode) {
         std::uint32_t access = 0;
@@ -129,7 +129,7 @@ namespace utils::file {
             number::to_string(pb, GetLastError());
             return;
         }
-        auto d = utils::helper::defer([&] { LocalFree(buf); });
+        auto d = futils::helper::defer([&] { LocalFree(buf); });
         utf::convert<2, 1>(buf, pb);
     }
 
@@ -279,7 +279,7 @@ namespace utils::file {
         if (m_handle == nullptr) {
             return helper::either::unexpected(FileError{.method = "CreateFileMappingW", .err_code = GetLastError()});
         }
-        auto d = utils::helper::defer([&] { CloseHandle(m_handle); });
+        auto d = futils::helper::defer([&] { CloseHandle(m_handle); });
         auto ptr = MapViewOfFile(m_handle, file_map_flag, 0, 0, 0);
         if (ptr == nullptr) {
             return helper::either::unexpected(FileError{.method = "MapViewOfFile", .err_code = GetLastError()});
@@ -607,7 +607,7 @@ namespace utils::file {
                 break;
         }
 
-#ifdef UTILS_PLATFORM_LINUX
+#ifdef FUTILS_PLATFORM_LINUX
         if (flag.direct()) {
             flags |= O_DIRECT;
         }
@@ -667,7 +667,7 @@ namespace utils::file {
             default:
                 break;
         }
-#ifdef UTILS_PLATFORM_LINUX
+#ifdef FUTILS_PLATFORM_LINUX
         if (flags & O_DIRECT) {
             flag.direct(true);
         }
@@ -734,7 +734,7 @@ namespace utils::file {
         stat.mode.gid(st.st_mode & S_ISGID);
         stat.mode.sticky(st.st_mode & S_ISVTX);
         stat.size = st.st_size;
-#ifdef UTILS_PLATFORM_MACOS
+#ifdef FUTILS_PLATFORM_MACOS
         stat.create_time.sec = st.st_ctimespec.tv_sec;
         stat.create_time.nsec = st.st_ctimespec.tv_nsec;
         stat.access_time.sec = st.st_atimespec.tv_sec;
@@ -941,4 +941,4 @@ namespace utils::file {
 
 #endif
 
-}  // namespace utils::file
+}  // namespace futils::file

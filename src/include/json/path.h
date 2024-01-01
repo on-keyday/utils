@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include "../escape/escape.h"
 #include "../escape/read_string.h"
 
-namespace utils {
+namespace futils {
     namespace json {
 
         enum class PathError {
@@ -191,4 +191,4 @@ namespace utils {
             return path(const_cast<JSONBase<String, Vec, Object>&>(json), pathstr, false);
         }
     }  // namespace json
-}  // namespace utils
+}  // namespace futils

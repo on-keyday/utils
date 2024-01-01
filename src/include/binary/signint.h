@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include "../core/byte.h"
 #include <cstdint>
 
-namespace utils::binary {
+namespace futils::binary {
 
     // make t signed integer type
     template <class T>
@@ -64,7 +64,7 @@ namespace utils::binary {
         else if constexpr (value <= 0xFFFFFFFFFFFFFFFF) {
             return std::uint64_t();
         }
-#ifdef UTILS_BINARY_SUPPORT_INT128
+#ifdef FUTILS_BINARY_SUPPORT_INT128
         else {
             return uint128_t();
         }
@@ -85,7 +85,7 @@ namespace utils::binary {
         else if constexpr (value == 8) {
             return std::uint64_t();
         }
-#ifdef UTILS_BINARY_SUPPORT_INT128
+#ifdef FUTILS_BINARY_SUPPORT_INT128
         else if constexpr (value == 16) {
             return uint128_t();
         }
@@ -107,4 +107,4 @@ namespace utils::binary {
     template <byte l>
     using n_bit_int_t = n_byte_int_t<(l >> 3)>;
 
-}  // namespace utils::binary
+}  // namespace futils::binary

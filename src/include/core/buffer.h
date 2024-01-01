@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -17,7 +17,7 @@
 #include "strlen.h"
 #include <helper/disable_self.h>
 
-namespace utils {
+namespace futils {
 
     template <class Seq, bool is_ptr = std::is_pointer_v<std::decay_t<Seq>>>
     struct Buffer {
@@ -115,4 +115,4 @@ namespace utils {
         return f.size();
     }
 
-}  // namespace utils
+}  // namespace futils

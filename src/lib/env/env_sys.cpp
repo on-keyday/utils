@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,14 +11,14 @@
 #include <helper/defer.h>
 #include <binary/term.h>
 #include <platform/detect.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <Windows.h>
 #else
 extern char** environ;
 #include <stdlib.h>
 #endif
 
-namespace utils {
+namespace futils {
     namespace env::sys {
         bool get_cb(env_value_t k, auto&& cb) {
             // HACK(on-keyday):
@@ -61,7 +61,7 @@ namespace utils {
             return visit(cb);
         }
 
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         struct WinEnv {
             bool get_environ(EnvSetter s) {
                 auto f = GetEnvironmentStringsW();
@@ -174,4 +174,4 @@ namespace utils {
             return sys_env;
         }
     }  // namespace env::sys
-}  // namespace utils
+}  // namespace futils

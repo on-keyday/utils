@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <cstring>
 #include <fnet/tls/liberr.h>
 
-namespace utils {
+namespace futils {
 
     namespace fnet::quic::crypto {
         bool set_quic_method(void* ptr);
@@ -534,4 +534,4 @@ namespace utils {
             return lazy::ssl::SSL_in_init_(c->ssl);
         }
     }  // namespace fnet::tls
-}  // namespace utils
+}  // namespace futils

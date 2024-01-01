@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,14 +8,14 @@
 // plthead - platform depended headers
 #pragma once
 #include <platform/detect.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <WinSock2.h>
 #include <MSWSock.h>
 #include <WS2tcpip.h>
 #include <afunix.h>
-#elif defined(UTILS_PLATFORM_WASI)
+#elif defined(FUTILS_PLATFORM_WASI)
 #include <stub/network.h>
-#elif defined(UTILS_PLATFORM_UNIX)
+#elif defined(FUTILS_PLATFORM_UNIX)
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/ioctl.h>
@@ -24,7 +24,7 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 #include <sys/un.h>
-#ifdef UTILS_PLATFORM_LINUX
+#ifdef FUTILS_PLATFORM_LINUX
 #include <sys/epoll.h>
 #endif
 #ifdef GAI_WAIT  // XXX(on-keyday): hack for getaddrinfo_a

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include <variant>
 #include <view/span.h>
 
-namespace utils::fnet::tcp {
+namespace futils::fnet::tcp {
 
     enum class TCPState : byte {
         LISTEN,
@@ -724,4 +724,4 @@ namespace utils::fnet::tcp {
             return {};
         }
     }  // namespace option
-}  // namespace utils::fnet::tcp
+}  // namespace futils::fnet::tcp

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,7 +10,7 @@
 #pragma once
 #include <iterator>
 
-namespace utils {
+namespace futils {
     namespace wrap {
         template <class Wrap>
         struct PairIter {
@@ -143,4 +143,4 @@ namespace utils {
             return WrapRange<It1, Wrap1, It2, Wrap2>{make_wrapiter(it1, wrap1), make_wrapiter(it2, wrap2)};
         }
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

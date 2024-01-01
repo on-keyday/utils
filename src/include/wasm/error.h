@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include <helper/expected.h>
 
-namespace utils::wasm {
+namespace futils::wasm {
     enum class Error {
         short_input,
         large_input,
@@ -32,10 +32,10 @@ namespace utils::wasm {
     };
 
     template <class T>
-    using result = utils::helper::either::expected<T, Error>;
+    using result = futils::helper::either::expected<T, Error>;
 
     auto unexpect(auto&& v) {
-        return utils::helper::either::unexpected(std::forward<decltype(v)>(v));
+        return futils::helper::either::unexpected(std::forward<decltype(v)>(v));
     }
 
-}  // namespace utils::wasm
+}  // namespace futils::wasm

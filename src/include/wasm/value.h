@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -14,7 +14,7 @@
 #include <helper/pushbacker.h>
 #include <helper/transform.h>
 
-namespace utils::wasm {
+namespace futils::wasm {
     using helper::either::assign_to, helper::either::cast_to, helper::either::push_back_to, helper::either::empty_value;
 
     template <class T>
@@ -204,4 +204,4 @@ namespace utils::wasm {
 
     using Index = std::uint32_t;
 
-}  // namespace utils::wasm
+}  // namespace futils::wasm

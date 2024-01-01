@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <cstddef>
 #include <platform/detect.h>
 
-namespace utils {
+namespace futils {
     namespace test {
         enum class HookType {
             alloc,
@@ -27,12 +27,12 @@ namespace utils {
             HookType type;
         };
 
-#if defined(_DEBUG) && defined(UTILS_PLATFORM_WINDOWS)
+#if defined(_DEBUG) && defined(FUTILS_PLATFORM_WINDOWS)
 
         using Hooker = void (*)(HookInfo info);
-        utils_DLL_EXPORT extern Hooker log_hooker;
-        utils_DLL_EXPORT bool STDCALL set_log_file(const char* file);
-        utils_DLL_EXPORT void STDCALL set_alloc_hook(bool on);
+        futils_DLL_EXPORT extern Hooker log_hooker;
+        futils_DLL_EXPORT bool STDCALL set_log_file(const char* file);
+        futils_DLL_EXPORT void STDCALL set_alloc_hook(bool on);
 #else
 
         struct fake_assign {
@@ -49,4 +49,4 @@ namespace utils {
         inline void set_alloc_hook(bool on) {}
 #endif
     }  // namespace test
-}  // namespace utils
+}  // namespace futils

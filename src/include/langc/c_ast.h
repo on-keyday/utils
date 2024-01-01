@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <number/prefix.h>
 #include <map>
 
-namespace utils::langc {
+namespace futils::langc {
     using Errors = comb2::tree::node::Errors;
     using Error = comb2::tree::node::Error;
     namespace ast {
@@ -158,7 +158,7 @@ namespace utils::langc {
             template <class T>
             std::optional<T> parse_as() const {
                 T t = 0;
-                if (!utils::number::prefix_integer(raw, t)) {
+                if (!futils::number::prefix_integer(raw, t)) {
                     return std::nullopt;
                 }
                 return t;
@@ -887,8 +887,8 @@ namespace utils::langc {
                 if (f->params.size() > count) {
                     errs.push(Error{
                         "expect more than " +
-                            utils::number::to_string<std::string>(f->params.size()) + " arguments but got " +
-                            utils::number::to_string<std::string>(count) + " arguments",
+                            futils::number::to_string<std::string>(f->params.size()) + " arguments but got " +
+                            futils::number::to_string<std::string>(count) + " arguments",
                         c->pos});
                     return nullptr;
                 }
@@ -897,8 +897,8 @@ namespace utils::langc {
                 if (f->params.size() != count) {
                     errs.push(Error{
                         "expect " +
-                            utils::number::to_string<std::string>(f->params.size()) + " arguments but got " +
-                            utils::number::to_string<std::string>(count) + " arguments",
+                            futils::number::to_string<std::string>(f->params.size()) + " arguments but got " +
+                            futils::number::to_string<std::string>(count) + " arguments",
                         c->pos});
                     return nullptr;
                 }
@@ -1978,4 +1978,4 @@ namespace utils::langc {
             return prog;
         }
     }  // namespace ast
-}  // namespace utils::langc
+}  // namespace futils::langc

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -19,17 +19,17 @@
 #include <fnet/util/ipaddr.h>
 #include <view/charvec.h>
 #include <platform/detect.h>
-#ifndef UTILS_PLATFORM_WINDOWS
-#ifdef UTILS_PLATFORM_WASI
+#ifndef FUTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WASI
 #define _WASI_EMULATED_SIGNAL
 #endif
 #include <signal.h>
 #include <thread>
 #endif
 
-namespace utils {
+namespace futils {
     namespace fnet {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         using raw_paddrinfo = PADDRINFOEXW;
         void free_addr(void* p) {
             lazy::FreeAddrInfoExW_(raw_paddrinfo(p));
@@ -74,7 +74,7 @@ namespace utils {
 
         struct WaitObject {
             raw_paddrinfo info;
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
             OVERLAPPED ol;
             HANDLE cancel;
             bool done_immediate = false;
@@ -123,7 +123,7 @@ namespace utils {
             });
         }
 
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 
         static bool platform_cancel(WaitObject* obj, error::Error& err) {
             auto res = lazy::GetAddrInfoExCancel_(&obj->cancel);
@@ -441,4 +441,4 @@ namespace utils {
             }
         }
     }  // namespace fnet
-}  // namespace utils
+}  // namespace futils

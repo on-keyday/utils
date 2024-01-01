@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <cstdint>
 #include "../../core/buffer.h"
 
-namespace utils::unicode::utf {
+namespace futils::unicode::utf {
     template <class C>
     struct MiniBuffer {
         static constexpr size_t bufsize = 4 / sizeof(C);
@@ -78,4 +78,4 @@ namespace utils::unicode::utf {
     using U8Buffer = MiniBuffer<std::uint8_t>;
     using U16Buffer = MiniBuffer<char16_t>;
     using U32Buffer = MiniBuffer<char32_t>;
-}  // namespace utils::unicode::utf
+}  // namespace futils::unicode::utf

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #pragma once
 #include "constant.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::status {
         struct Config {
             std::uint64_t window_initial_factor = default_window_initial_factor;
@@ -70,4 +70,4 @@ namespace utils {
         };
 
     }  // namespace fnet::quic::status
-}  // namespace utils
+}  // namespace futils

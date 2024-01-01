@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -45,7 +45,7 @@ struct CustomError {
     }
 
     void error(auto&& b) {
-        utils::strutil::append(b, "error");
+        futils::strutil::append(b, "error");
     }
 };
 
@@ -57,7 +57,7 @@ struct UnwrapError {
     }
 
     void error(auto&& b) {
-        utils::strutil::append(b, "error");
+        futils::strutil::append(b, "error");
     }
 
     CustomError unwrap() {
@@ -67,19 +67,19 @@ struct UnwrapError {
 
 struct Unwrap2 {
     void error(auto&& b) {
-        utils::strutil::append(b, "error");
+        futils::strutil::append(b, "error");
     }
-    utils::error::Error<std::allocator<utils::byte>> unwrap() {
-        return utils::error::Error<std::allocator<utils::byte>>("test", utils::error::Category::none);
+    futils::error::Error<std::allocator<futils::byte>> unwrap() {
+        return futils::error::Error<std::allocator<futils::byte>>("test", futils::error::Category::none);
     }
 };
 
 int main() {
-    namespace error = utils::error;
-    error::Error<std::allocator<utils::byte>> e;
-    error::Error<my_allocator<utils::byte>> e2;
+    namespace error = futils::error;
+    error::Error<std::allocator<futils::byte>> e;
+    error::Error<my_allocator<futils::byte>> e2;
     // non allocation conversion
-    e = error::Error<std::allocator<utils::byte>>("test", error::Category::none);
+    e = error::Error<std::allocator<futils::byte>>("test", error::Category::none);
     e2 = e;
     // different allocator Error can compare
     e = CustomError{.a = 1};

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,7 +15,7 @@
 #include "../transport_error.h"
 #include "../status/pn_space.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::crypto {
         struct CryptoRecvFragment {
             storage fragment;
@@ -369,4 +369,4 @@ namespace utils {
             }
         };
     }  // namespace fnet::quic::crypto
-}  // namespace utils
+}  // namespace futils

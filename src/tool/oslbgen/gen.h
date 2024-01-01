@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -29,8 +29,8 @@ namespace oslbgen {
     constexpr auto k_alias = "alias";
 
     constexpr auto gen_parser() {
-        using namespace utils::comb2::ops;
-        namespace cps = utils::comb2::composite;
+        using namespace futils::comb2::ops;
+        namespace cps = futils::comb2::composite;
         auto ident = str(k_ident, cps::c_ident);
         auto space = cps::space | cps::tab;
         auto space_sep = space & -~space;
@@ -56,7 +56,7 @@ namespace oslbgen {
     constexpr auto parse = gen_parser();
 
     constexpr auto test_parser(auto&& ctx) {
-        auto ptr = utils::make_ref_seq(R"(
+        auto ptr = futils::make_ref_seq(R"(
         // this is test
         /*you can comment like this*/
         fn test_fn (write argument here) result type
@@ -75,8 +75,8 @@ namespace oslbgen {
         #include <cstddef>
     )");
         auto res = parse(ptr, ctx);
-        return res == utils::comb2::Status::match;
+        return res == futils::comb2::Status::match;
     }
 
-    static_assert(test_parser(utils::comb2::test::TestContext{}));
+    static_assert(test_parser(futils::comb2::test::TestContext{}));
 }  // namespace oslbgen

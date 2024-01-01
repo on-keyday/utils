@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include "term.h"
 #include "expandable_writer.h"
 
-namespace utils {
+namespace futils {
     namespace binary {
 
         template <class T, class C>
@@ -21,4 +21,4 @@ namespace utils {
                    w.write(term, 1);
         }
     }  // namespace binary
-}  // namespace utils
+}  // namespace futils

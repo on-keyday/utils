@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,7 +15,7 @@
 #include <queue>
 #include "../path/addrmanage.h"
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::server {
         struct Handler {
             std::atomic<std::int64_t> next_deadline = -1;
@@ -427,4 +427,4 @@ namespace utils {
             }
         };
     }  // namespace fnet::quic::server
-}  // namespace utils
+}  // namespace futils

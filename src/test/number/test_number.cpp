@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,18 +10,18 @@
 
 constexpr bool test_is_number() {
     bool is_float;
-    return utils::number::is_number("3", 16, &is_float);
+    return futils::number::is_number("3", 16, &is_float);
 }
 
 constexpr int test_parse_integer() {
     int test = 0;
-    utils::number::parse_integer("-92013827", test);
+    futils::number::parse_integer("-92013827", test);
     return test;
 }
 
 constexpr double test_parse_float() {
     double test = 0;
-    utils::number::parse_float("3.141516", test);
+    futils::number::parse_float("3.141516", test);
     return test;
 }
 

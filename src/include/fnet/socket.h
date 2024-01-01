@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -21,7 +21,7 @@
 #include "event/io.h"
 #include "async.h"
 
-namespace utils {
+namespace futils {
     namespace fnet {
 
         // wait_event waits io completion until time passed
@@ -568,4 +568,4 @@ namespace utils {
         fnet_dll_export(expected<Socket>) make_socket(SockAttr attr, event::IOEvent* io = nullptr);
 
     }  // namespace fnet
-}  // namespace utils
+}  // namespace futils

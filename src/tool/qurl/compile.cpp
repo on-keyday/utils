@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -23,7 +23,7 @@ namespace qurl::compile {
             return false;
         }
         std::uint64_t value = 0;
-        if (!utils::number::prefix_integer(ival->token, value)) {
+        if (!futils::number::prefix_integer(ival->token, value)) {
             env.error(Error{
                 .msg = std::format("int token {} is not parsable as 64 bit integer", ival->token),
                 .pos = ival->pos,

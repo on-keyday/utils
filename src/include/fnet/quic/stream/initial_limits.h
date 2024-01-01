@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #pragma once
 #include <cstdint>
 
-namespace utils {
+namespace futils {
     namespace fnet::quic::stream {
         struct InitialLimits {
             std::uint64_t conn_data_limit = 0;
@@ -21,4 +21,4 @@ namespace utils {
         };
 
     }  // namespace fnet::quic::stream
-}  // namespace utils
+}  // namespace futils

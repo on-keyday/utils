@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #pragma once
 #include <helper/pushbacker.h>
 
-namespace utils {
+namespace futils {
     namespace fnet::http2 {
         namespace setting {
             enum class SettingKey : std::uint16_t {
@@ -110,4 +110,4 @@ namespace utils {
         }  // namespace setting
 
     }  // namespace fnet::http2
-}  // namespace utils
+}  // namespace futils

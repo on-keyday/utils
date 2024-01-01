@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include "../basic/proxy.h"
 #include "../internal/context_fn.h"
 
-namespace utils::comb2::composite {
+namespace futils::comb2::composite {
     enum class IndentMode {
         less = 0x1,
         equal = 0x2,
@@ -61,4 +61,4 @@ namespace utils::comb2::composite {
     constexpr auto new_or_eq_indent = make_indent(IndentMode::more_equal);
     constexpr auto less_indent = make_indent(IndentMode::less);
     constexpr auto less_eq_indent = make_indent(IndentMode::less_equal);
-}  // namespace utils::comb2::composite
+}  // namespace futils::comb2::composite

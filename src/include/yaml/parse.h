@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -17,7 +17,7 @@
 #include "../comb2/composite/string.h"
 #include "../helper/defer.h"
 
-namespace utils::yaml::parser {
+namespace futils::yaml::parser {
     namespace cps = comb2::composite;
     using namespace comb2::ops;
     namespace ctxs = comb2::ctxs;
@@ -384,4 +384,4 @@ namespace utils::yaml::parser {
             ns_single_text &
             str("c-single-quote", c_double_quote));
 
-}  // namespace utils::yaml::parser
+}  // namespace futils::yaml::parser

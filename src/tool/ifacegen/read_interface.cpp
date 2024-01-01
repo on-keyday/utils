@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -23,9 +23,9 @@ namespace ifacegen {
     constexpr auto typename_def = "TYPENAME";
     constexpr auto deftype_def = "DEFTYPE";
     constexpr auto typeid_def = "TYPEID";
-    namespace us = utils::syntax;
+    namespace us = futils::syntax;
 
-    bool read_callback(utils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
+    bool read_callback(futils::syntax::MatchContext<utw::string, utw::vector>& result, State& state) {
         if (result.top() == package_def && result.result.kind == us::KeyWord::id) {
             state.data.pkgname = result.token();
             return true;

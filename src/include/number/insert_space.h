@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include <limits>
 #include "radix.h"
 
-namespace utils {
+namespace futils {
     namespace number {
         template <class Result, class T, class Char = char>
         constexpr NumErr insert_space(Result& result, size_t count, T input, int radix = 10, Char c = ' ') {
@@ -46,4 +46,4 @@ namespace utils {
             return true;
         }
     }  // namespace number
-}  // namespace utils
+}  // namespace futils

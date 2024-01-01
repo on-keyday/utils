@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,7 +15,7 @@
 #include <utility>
 #include <memory>
 
-namespace utils {
+namespace futils {
     namespace helper {
         struct NopPushBacker {
             constexpr NopPushBacker() {}
@@ -119,4 +119,4 @@ namespace utils {
                 : text(t), size_(size), cap(cap) {}
         };
     }  // namespace helper
-}  // namespace utils
+}  // namespace futils

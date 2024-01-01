@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include "channel.h"
 #include "../strutil/compare_type.h"
 
-namespace utils {
+namespace futils {
     namespace thread {
         template <class T, class Container = wrap::queue<T>, class Compare = std::less<>>
         struct WithRawContainer : std::priority_queue<T, Container, Compare> {
@@ -97,4 +97,4 @@ namespace utils {
             }
         };
     }  // namespace thread
-}  // namespace utils
+}  // namespace futils

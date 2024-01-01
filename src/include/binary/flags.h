@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -13,7 +13,7 @@
 #include <cstddef>
 #include "signint.h"
 
-namespace utils {
+namespace futils {
     namespace binary {
 
         template <class T>
@@ -243,7 +243,7 @@ namespace utils {
     static constexpr auto name##_mask = decltype(flags)::template get_mask<num>();
 
         namespace test {
-#ifdef UTILS_BINARY_SUPPORT_INT128
+#ifdef FUTILS_BINARY_SUPPORT_INT128
             constexpr bool check_128bit() {
                 flags_t<uint128_t, 1, 127> val;
                 val.set<0>(true);
@@ -257,4 +257,4 @@ namespace utils {
         }  // namespace test
 
     }  // namespace binary
-}  // namespace utils
+}  // namespace futils

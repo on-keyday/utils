@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,7 +15,7 @@
 #include "convert.h"
 #include "retreat.h"
 
-namespace utils::unicode::utf {
+namespace futils::unicode::utf {
 
     template <class Buf, class Char>
     class View {
@@ -138,4 +138,4 @@ namespace utils::unicode::utf {
 
     template <class T>
     using U32View = View<T, char32_t>;
-}  // namespace utils::unicode::utf
+}  // namespace futils::unicode::utf

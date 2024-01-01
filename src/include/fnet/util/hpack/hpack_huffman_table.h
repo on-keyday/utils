@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -11,7 +11,7 @@
 #include <binary/term.h>
 #include <number/parse.h>
 
-namespace utils {
+namespace futils {
     namespace hpack {
         namespace huffman {
             // see https://datatracker.ietf.org/doc/html/rfc7541
@@ -377,4 +377,4 @@ namespace utils {
             }  // namespace test
         }      // namespace huffman
     }          // namespace hpack
-}  // namespace utils
+}  // namespace futils

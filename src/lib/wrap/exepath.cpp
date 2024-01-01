@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,16 +10,16 @@
 #include <strutil/append.h>
 #include <unicode/utf/convert.h>
 #include <platform/detect.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #else
 #include <fcntl.h>
 #include <unistd.h>
 #endif
 
-namespace utils {
+namespace futils {
     namespace wrap {
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
         void STDCALL get_exepath(helper::IPushBacker<> pb) {
             {
                 wchar_t buf[1024]{};
@@ -68,4 +68,4 @@ namespace utils {
         }
 #endif
     }  // namespace wrap
-}  // namespace utils
+}  // namespace futils

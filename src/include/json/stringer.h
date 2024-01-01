@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -21,7 +21,7 @@
 #include <helper/disable_self.h>
 #include <helper/template_instance.h>
 
-namespace utils {
+namespace futils {
     namespace json {
         template <class T, class V>
         concept has_json_member = requires(T t) {
@@ -355,14 +355,14 @@ namespace utils {
                 if (int_traits == IntTraits::int_as_str ||
                     (std::is_same_v<decltype(value), std::uint64_t> && int_traits == IntTraits::u64_as_str)) {
                     write("\"");
-                    utils::number::to_string(buf, value);  // to optimize
+                    futils::number::to_string(buf, value);  // to optimize
                     write("\"");
                     return true;
                 }
                 if (int_traits == IntTraits::overflow_int_as_str) {
                     if (overflow) {
                         write("\"");
-                        utils::number::to_string(buf, value);  // to optimize
+                        futils::number::to_string(buf, value);  // to optimize
                         write("\"");
                         return true;
                     }
@@ -375,19 +375,19 @@ namespace utils {
                 if (handle_int(value)) {
                     return;
                 }
-                utils::number::to_string(buf, value);  // to optimize
+                futils::number::to_string(buf, value);  // to optimize
             }
 
             constexpr void number(std::uint64_t value) {
                 if (handle_int(value)) {
                     return;
                 }
-                utils::number::to_string(buf, value);  // to optimize
+                futils::number::to_string(buf, value);  // to optimize
             }
 
             constexpr void number(double value) {
                 write_indent();
-                utils::number::to_string(buf, value);  // to optimize
+                futils::number::to_string(buf, value);  // to optimize
             }
 
             constexpr void set_indent(const Indent& s) {
@@ -434,7 +434,7 @@ namespace utils {
                 }
                 else {
                     write("\"");
-                    escape::escape_str(value, buf, escape_flags, utils::escape::json_set_no_html());  // to optimize
+                    escape::escape_str(value, buf, escape_flags, futils::escape::json_set_no_html());  // to optimize
                     write("\"");
                 }
             }
@@ -606,4 +606,4 @@ true,
             static_assert(check_stringer());
         }  // namespace test
     }      // namespace json
-}  // namespace utils
+}  // namespace futils

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -9,7 +9,7 @@
 #include <binary/number.h>
 #include "ip.h"
 
-namespace utils::fnet::udp {
+namespace futils::fnet::udp {
     struct UDPPacket {
         std::uint16_t src_port = 0;
         std::uint16_t dst_port = 0;
@@ -53,4 +53,4 @@ namespace utils::fnet::udp {
         }
     };
 
-}  // namespace utils::fnet::udp
+}  // namespace futils::fnet::udp

@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -27,7 +27,7 @@
 #include <charconv>
 #include <numeric>
 
-namespace exp = utils::helper::either;
+namespace exp = futils::helper::either;
 
 // 整数除算
 exp::expected<int, std::string> idiv(int a, int b) {

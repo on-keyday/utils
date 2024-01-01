@@ -1,12 +1,12 @@
-#    utils - utility library
+#    futils - utility library
 #    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
 FROM ubuntu:devel
 
-RUN mkdir -p /usr/utilsdev/workspace
+RUN mkdir -p /usr/futilsdev/workspace
 
-WORKDIR /usr/utilsdev/workspace
+WORKDIR /usr/futilsdev/workspace
 
 # if you are not in Japan region, you should comment out this line, or change `ftp.jaist.ac.jp/pub/Linux` to your region millor server address.
 RUN sed -i 's@archive.ubuntu.com@ftp.jaist.ac.jp/pub/Linux@g' /etc/apt/sources.list
@@ -38,7 +38,7 @@ RUN apt-get update && \
 RUN apt-get install -y \
     seq-gen\
     net-tools\
-    iputils-ping
+    ipfutils-ping
 RUN apt-get update && \
     apt-get install -y\
     zlib1g
@@ -53,21 +53,21 @@ RUN unlink /usr/bin/ld
 RUN ln -s /usr/bin/ld.lld /usr/bin/ld
 
 RUN curl https://github.com/lldb-tools/lldb-mi/archive/refs/heads/main.zip \
-    -o /usr/utilsdev/lldb-mi.zip -L
+    -o /usr/futilsdev/lldb-mi.zip -L
 
-RUN unzip /usr/utilsdev/lldb-mi.zip -d /usr/utilsdev
-RUN rm /usr/utilsdev/lldb-mi.zip
+RUN unzip /usr/futilsdev/lldb-mi.zip -d /usr/futilsdev
+RUN rm /usr/futilsdev/lldb-mi.zip
 
-RUN (cd /usr/utilsdev/lldb-mi-main;cmake -G Ninja .)
-RUN (cd /usr/utilsdev/lldb-mi-main;cmake --build .)
-RUN cp /usr/utilsdev/lldb-mi-main/src/lldb-mi /bin/lldb-mi
+RUN (cd /usr/futilsdev/lldb-mi-main;cmake -G Ninja .)
+RUN (cd /usr/futilsdev/lldb-mi-main;cmake --build .)
+RUN cp /usr/futilsdev/lldb-mi-main/src/lldb-mi /bin/lldb-mi
 
 
 
-#COPY ./src/ /usr/utilsdev/workspace/src/
-#COPY ./build /usr/utilsdev/workspace/build
-#COPY ./CMakeLists.txt  /usr/utilsdev/workspace/CMakeLists.txt
-#COPY ./.clang-format /usr/utilsdev/workspace/.clang-format
+#COPY ./src/ /usr/futilsdev/workspace/src/
+#COPY ./build /usr/futilsdev/workspace/build
+#COPY ./CMakeLists.txt  /usr/futilsdev/workspace/CMakeLists.txt
+#COPY ./.clang-format /usr/futilsdev/workspace/.clang-format
 
 
 CMD /bin/bash

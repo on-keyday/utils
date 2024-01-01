@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -15,18 +15,18 @@
 #include <space/line_pos.h>
 #include "runtime.h"
 
-struct Flags : utils::cmdline::templ::HelpOption {
+struct Flags : futils::cmdline::templ::HelpOption {
     std::string script;
     bool show_tree = true;
     bool show_istrs = true;
-    void bind(utils::cmdline::option::Context &ctx) {
+    void bind(futils::cmdline::option::Context &ctx) {
         bind_help(ctx);
         ctx.VarString(&script, "s,script", "qurl script file", "FILE");
         ctx.VarBool(&show_tree, "t,show-tree", "show script syntax tree");
         ctx.VarBool(&show_istrs, "i,show-istrs", "show asm-like instructions");
     }
 };
-auto &cerr = utils::wrap::cerr_wrap();
+auto &cerr = futils::wrap::cerr_wrap();
 
 void eprint(auto &&...args) {
     cerr << "qurl: error: ";
@@ -44,7 +44,7 @@ void print_errors(auto &&seq, std::vector<qurl::Error> &errs, const std::string 
         if (!err.pos.npos()) {
             seq.rptr = err.pos.begin;
             auto len = err.pos.len();
-            auto loc = utils::space::write_src_loc(src, seq, err.pos.len(), 10);
+            auto loc = futils::space::write_src_loc(src, seq, err.pos.len(), 10);
             src = std::format("{}:{}:{}:\n{}", file, loc.line + 1, loc.pos + 1, src);
         }
         eprint(err.msg, "\n", src, "\n");
@@ -58,12 +58,12 @@ struct Context : qurl::comb2::tree::BranchTable {
 };
 
 template <class T>
-bool runCompile(utils::Sequencer<T> &seq, qurl::compile::Env &env, bool show_tree, bool show_istrs, const std::string &file) {
+bool runCompile(futils::Sequencer<T> &seq, qurl::compile::Env &env, bool show_tree, bool show_istrs, const std::string &file) {
     Context table;
     auto s = qurl::script::parse(seq, table);
     if (s != qurl::comb2::Status::match) {
         std::string src;
-        auto loc = utils::space::write_src_loc(src, seq);
+        auto loc = futils::space::write_src_loc(src, seq);
         cerr << std::format("{}:{}:{}:\n{}", file, loc.line + 1, loc.pos + 1, src);
         ;
         return false;
@@ -106,13 +106,13 @@ int runScript(auto &&seq, qurl::compile::Env &env, const std::string &file) {
     return 0;
 }
 
-int scriptMain(Flags &flags, utils::cmdline::option::Context &ctx) {
-    utils::file::View file;
+int scriptMain(Flags &flags, futils::cmdline::option::Context &ctx) {
+    futils::file::View file;
     if (!file.open(flags.script)) {
         eprint("failed to open file: ", flags.script);
         return -1;
     }
-    auto seq = utils::make_ref_seq(file);
+    auto seq = futils::make_ref_seq(file);
     qurl::compile::Env env;
     if (!runCompile(seq, env, flags.show_tree, flags.show_istrs, flags.script)) {
         return 1;
@@ -120,7 +120,7 @@ int scriptMain(Flags &flags, utils::cmdline::option::Context &ctx) {
     return runScript(seq, env, flags.script);
 }
 
-int Main(Flags &flags, utils::cmdline::option::Context &ctx) {
+int Main(Flags &flags, futils::cmdline::option::Context &ctx) {
     if (flags.script.size()) {
         return scriptMain(flags, ctx);
     }
@@ -129,9 +129,9 @@ int Main(Flags &flags, utils::cmdline::option::Context &ctx) {
 
 int main(int argc, char **argv) {
     Flags flags;
-    return utils::cmdline::templ::parse_or_err<std::string>(
+    return futils::cmdline::templ::parse_or_err<std::string>(
         argc, argv, flags, [](auto &&str) { cerr << str; },
-        [](Flags &flags, utils::cmdline::option::Context &ctx) {
+        [](Flags &flags, futils::cmdline::option::Context &ctx) {
             return Main(flags, ctx);
         });
 }

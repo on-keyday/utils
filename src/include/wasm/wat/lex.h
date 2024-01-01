@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -12,7 +12,7 @@
 #include <comb2/basic/unicode.h>
 #include <comb2/composite/comment.h>
 
-namespace utils::wasm::wat::lex {
+namespace futils::wasm::wat::lex {
     using namespace comb2::ops;
 
     namespace cps = comb2::composite;
@@ -47,4 +47,4 @@ namespace utils::wasm::wat::lex {
     constexpr auto fN = sign & fNmag;
 
     constexpr auto string_char = lit("\\t") | lit("\\n") | lit("\\r") | lit("\\\"") | lit("\\\\") | lit("\\0") | lit("\\x") & hex_num;
-}  // namespace utils::wasm::wat::lex
+}  // namespace futils::wasm::wat::lex

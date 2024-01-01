@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -10,12 +10,12 @@
 #include <coro/coro_platform.h>
 #include <view/iovec.h>
 #include <unistd.h>
-#ifdef UTILS_PLATFORM_WASI
+#ifdef FUTILS_PLATFORM_WASI
 #define _WASI_EMULATED_MMAN
 #endif
 #include <sys/mman.h>
 
-namespace utils {
+namespace futils {
     namespace coro {
         struct CallStack {
            private:
@@ -274,4 +274,4 @@ namespace utils {
         }
 
     }  // namespace coro
-}  // namespace utils
+}  // namespace futils

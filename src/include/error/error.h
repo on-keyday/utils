@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -21,7 +21,7 @@
 #include <helper/disable_self.h>
 #include <helper/template_instance.h>
 
-namespace utils::error {
+namespace futils::error {
 
     enum class ErrorType : byte {
         null,
@@ -796,4 +796,4 @@ namespace utils::error {
             return !has_error();
         }
     };
-}  // namespace utils::error
+}  // namespace futils::error

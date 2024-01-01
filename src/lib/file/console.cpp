@@ -1,5 +1,5 @@
 /*
-    utils - utility library
+    futils - utility library
     Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
     Released under the MIT license
     https://opensource.org/licenses/mit-license.php
@@ -8,7 +8,7 @@
 #include <platform/windows/dllexport_source.h>
 #include <platform/detect.h>
 #include <file/file.h>
-#ifdef UTILS_PLATFORM_WINDOWS
+#ifdef FUTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #else
 #include <termios.h>
@@ -16,13 +16,13 @@
 #include <sys/select.h>
 #endif
 
-namespace utils::file {
+namespace futils::file {
     struct Callback {
         void (*callback)(wrap::path_char, void*);
         void* data;
     };
 
-#if defined(UTILS_PLATFORM_WINDOWS)
+#if defined(FUTILS_PLATFORM_WINDOWS)
 
     static bool read_record(INPUT_RECORD& rec, bool& zero_input, Callback cb) {
         bool ret = true;
@@ -202,4 +202,4 @@ namespace utils::file {
         return {};
     }
 #endif
-}  // namespace utils::file
+}  // namespace futils::file
