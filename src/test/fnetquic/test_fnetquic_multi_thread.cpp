@@ -132,8 +132,8 @@ void thread(QCTX ctx, RecvChan c, int i) {
     http.read_response<std::string>(code, resp, &info);
     std::string text;
     bool inval = false;
-    auto v = http.read_body(text, info, 0, 0, &inval);
-    assert(v);
+    auto v = http.read_body(text, info, 0, 0);
+    assert(v == futils::http::body::BodyReadResult::full);
     http.write_response(code, resp);
     futils::wrap::cout_wrap() << http.get_output();
 

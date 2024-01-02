@@ -32,7 +32,7 @@ namespace futils {
                 if (result == http::body::BodyReadResult::chunk_read ||
                     result == http::body::BodyReadResult::incomplete) {
                     if (!s.read_async(
-                            req.client.sock, std::move(req), [hdr, fn, buf = std::move(buf), info = std::move(info)](Socket&& sock, Requester&& req, StateContext&& as, bool was_err) mutable {
+                            req.client.sock, std::move(req), [hdr, fn, buf = std::move(buf), info = std::move(info)](Socket&& sock, Requester&& req, StateContext as, bool was_err) mutable {
                                 if (was_err) {
                                     return;  // discard
                                 }
