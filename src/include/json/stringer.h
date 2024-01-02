@@ -236,9 +236,7 @@ namespace futils {
                 if (use_indent()) {
                     if (comma) {
                         write("\n");
-                    }
-                    current_indent--;
-                    if (comma) {
+                        current_indent--;
                         write_indent();
                     }
                 }
@@ -511,6 +509,14 @@ true,
                         field(true);
                         field("hey");
                     });
+                    field("child2", [&] {
+                        auto _ = s.array();
+                        (void)_;
+                    });
+                    field("child3", [&] {
+                        auto _ = s.object();
+                        (void)_;
+                    });
                 }
                 if (!strutil::equal(s.out(), R"({
     "key": "value",
@@ -518,7 +524,9 @@ true,
     "child": [
         true,
         "hey"
-    ]
+    ],
+    "child2": [],
+    "child3": {}
 })")) {
                     return false;
                 }
