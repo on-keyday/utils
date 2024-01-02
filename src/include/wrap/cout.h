@@ -25,6 +25,14 @@ namespace futils {
 
         using write_hook_fn = file::file_result<void> (*)(UtfOut&, view::rvec);
 
+        namespace internal {
+            template <class T, class C = byte>
+            concept is_path_convertible = requires(T t) {
+                { t } -> view::internal::is_const_data<C>;
+                { std::size(t) } -> std::convertible_to<size_t>;
+            };
+        }
+
         struct futils_DLL_EXPORT UtfOut {
            private:
             stringstream ss;
@@ -42,14 +50,14 @@ namespace futils {
             }
 
             template <class T>
-                requires(file::internal::has_data_size_for_path<T>)
+                requires(internal::is_path_convertible<T, path_char>)
             UtfOut& operator<<(const T& t) {
                 write(t);
                 return *this;
             }
 
             template <class T>
-                requires(!std::is_same_v<wrap::path_char, char> && file::internal::has_data_size_for_path<T, char>)
+                requires(!std::is_same_v<wrap::path_char, char> && internal::is_path_convertible<T>)
             UtfOut& operator<<(const T& t) {
                 write(t);
                 return *this;
@@ -57,10 +65,10 @@ namespace futils {
 
             // write utf8 string to console. if console is not utf8, convert to utf16
             template <class U16Buf = u16string, class T>
-                requires(!std::is_same_v<wrap::path_char, char> && file::internal::has_data_size_for_path<T, char>)
+                requires(!std::is_same_v<wrap::path_char, char> && internal::is_path_convertible<T>)
             file::file_result<void> write_no_hook(const T& p) {
                 if (file.is_tty()) {
-                    if constexpr (sizeof(path_char) != 2) {
+                    if constexpr (sizeof(path_char) != 1) {
                         U16Buf s;
                         utf::convert<1, 2>(p, s);
                         return file.write_console(s).transform([](auto) {});
@@ -74,7 +82,7 @@ namespace futils {
 
             // write utf16 string to console. if console is not utf16, convert to utf8
             template <class U8Buf = string, class T>
-                requires(file::internal::has_data_size_for_path<T>)
+                requires(internal::is_path_convertible<T, path_char>)
             file::file_result<void> write_no_hook(const T& p) {
                 if (file.is_tty()) {
                     return file.write_console(p).transform([](auto) {});
@@ -90,8 +98,18 @@ namespace futils {
             }
 
             // write utf8 string to console. if console is not utf8, convert to utf16
+            template <class U16String = u16string, class T>
+                requires(!std::is_same_v<wrap::path_char, char> && internal::is_path_convertible<T>)
+            file::file_result<void> write(const T& p) {
+                if (hook_write) {
+                    return hook_write(*this, p);
+                }
+                return write_no_hook<U16String>(p);
+            }
+
+            // write utf16 string to console. if console is not utf16, convert to utf8
             template <class U8String = string, class T>
-                requires(file::internal::has_data_size_for_path<T>)
+                requires(internal::is_path_convertible<T, path_char>)
             file::file_result<void> write(const T& p) {
                 if (hook_write) {
                     if constexpr (sizeof(path_char) != 1) {
@@ -104,16 +122,6 @@ namespace futils {
                     }
                 }
                 return write_no_hook<U8String>(p);
-            }
-
-            // write utf16 string to console. if console is not utf16, convert to utf8
-            template <class U16String = u16string, class T>
-                requires(!std::is_same_v<wrap::path_char, char> && file::internal::has_data_size_for_path<T, char>)
-            file::file_result<void> write(const T& p) {
-                if (hook_write) {
-                    return hook_write(*this, p);
-                }
-                return write_no_hook<U16String>(p);
             }
 
             UtfOut& operator<<(internal::Pack&& pack) {

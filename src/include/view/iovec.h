@@ -22,21 +22,23 @@ namespace futils {
 
         namespace internal {
 
-            template <class T>
+            template <class T, size_t size>
             concept non_const_ptr = std::is_pointer_v<T> &&
-                                    std::is_const_v<std::remove_pointer_t<T>> == false;
+                                    std::is_const_v<std::remove_pointer_t<T>> == false &&
+                                    sizeof(std::remove_pointer_t<T>) == size;
 
-            template <class T>
-            concept const_ptr = std::is_pointer_v<T>;
+            template <class T, size_t size>
+            concept const_ptr = std::is_pointer_v<T> &&
+                                sizeof(std::remove_pointer_t<T>) == size;
 
-            template <class T>
+            template <class T, class C>
             concept is_not_const_data = requires(T t) {
-                { std::data(t) } -> non_const_ptr;
+                { std::data(t) } -> non_const_ptr<sizeof(C)>;
             };
 
-            template <class T>
+            template <class T, class C>
             concept is_const_data = requires(T t) {
-                { std::data(t) } -> const_ptr;
+                { std::data(t) } -> const_ptr<sizeof(C)>;
             };
 
             template <class T>
@@ -103,7 +105,7 @@ namespace futils {
             }
 
             template <class T>
-                requires internal::is_const_data<T>
+                requires internal::is_const_data<T, C>
             constexpr basic_rvec(T&& t) noexcept
                 : basic_rvec(std::data(t), std::size(t)) {}
 
@@ -229,7 +231,7 @@ namespace futils {
             basic_wvec(U* begin, U* end)
                 : basic_rvec<C>(begin, end) {}
 
-            template <internal::is_not_const_data T>
+            template <internal::is_not_const_data<C> T>
             constexpr basic_wvec(T&& t) noexcept
                 : basic_rvec<C>(t) {}
 
