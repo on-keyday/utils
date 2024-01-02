@@ -148,16 +148,33 @@ namespace futils {
                 void* c;
             };
             fnetserv_dll_export(void) http_handler(void* ctx, Client&& cl, StateContext s);
-            fnetserv_dll_export(void) read_body(Requester&& req,http::body::HTTPBodyInfo info, StateContext s);
+
+            enum class BodyState {
+                complete,
+                best_effort,
+                error,
+            };
+
+            template <class T>
+            using body_callback_fn = void (*)(Requester&& req, T* hdr, http::body::HTTPBodyInfo info, flex_storage&& body, BodyState s, StateContext c);
+
+            fnetserv_dll_export(void) read_body(Requester&& req, void* hdr, http::body::HTTPBodyInfo info, StateContext s, body_callback_fn<void> cb);
+
+            template <class T>
+                requires(!std::is_void_v<T>)
+            void read_body(Requester&& req, T* hdr, http::body::HTTPBodyInfo info, StateContext s, body_callback_fn<std::type_identity_t<T>> cb) {
+                read_body(std::move(req), hdr, info, std::move(s), (body_callback_fn<void>)cb);
+            }
+
             fnetserv_dll_export(void) handle_keep_alive(Requester&& cl, StateContext s);
 
             template <class TmpString>
-            bool read_header_and_check_keep_alive(HTTP& http, auto&& header, bool& keep_alive) {
+            bool read_header_and_check_keep_alive(HTTP& http, auto&& method, auto&& path, auto&& header, bool& keep_alive, http::body::HTTPBodyInfo* body_info = nullptr) {
                 number::Array<char, 20, true> version;
                 keep_alive = false;
                 bool close = false;
                 if (!http.read_request<TmpString>(
-                        helper::nop, helper::nop, [&](auto&& key, auto&& value) {
+                        method, path, [&](auto&& key, auto&& value) {
                             if (strutil::equal(key, "Connection", strutil::ignore_case())) {
                                 if (strutil::contains(value, "close", strutil::ignore_case())) {
                                     close = true;
@@ -168,7 +185,7 @@ namespace futils {
                             }
                             return futils::http::header::apply_call_or_emplace(header, std::move(key), std::move(value));
                         },
-                        nullptr, false, version)) {
+                        body_info, false, version)) {
                     return false;  // no keep alive
                 }
                 if (close) {  // Connection: close

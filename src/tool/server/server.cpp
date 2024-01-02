@@ -66,7 +66,7 @@ void http_serve(void*, futils::fnet::server::Requester req, futils::fnet::server
     req.http.peek_request_line(method, path);
     s.log(serv::log_level::info, req.client.addr, "request ", method, " ", path);
     serv::read_header_and_check_keep_alive<std::string>(
-        req.http, [](auto&&...) {}, keep_alive);
+        req.http, futils::helper::nop, futils::helper::nop, [](auto&&...) {}, keep_alive);
     std::map<std::string, std::string> h;
     h["Content-Type"] = "text/html; charset=UTF-8";
     if (keep_alive) {

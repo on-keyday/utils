@@ -21,10 +21,43 @@ namespace futils {
 
             void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as);
 
-            fnetserv_dll_internal(void) read_body(Requester&& req, http::body::HTTPBodyInfo info, StateContext s) {
-                if (req.already_shutdown) {
+            void read_body_impl(Requester&& req, void* hdr, http::body::HTTPBodyInfo info, StateContext s, flex_storage&& buf, body_callback_fn<void> fn) {
+                auto result = req.http.read_body(buf, info);
+                if (result == http::body::BodyReadResult::invalid) {
+                    s.log(log_level::warn, "invalid body received", req.client.addr);
+                    req.client.sock.shutdown();
+                    fn(std::move(req), hdr, info, flex_storage(), BodyState::error, std::move(s));
                     return;  // discard
                 }
+                if (result == http::body::BodyReadResult::chunk_read ||
+                    result == http::body::BodyReadResult::incomplete) {
+                    if (!s.read_async(
+                            req.client.sock, std::move(req), [hdr, fn, buf = std::move(buf), info = std::move(info)](Socket&& sock, Requester&& req, StateContext&& as, bool was_err) mutable {
+                                if (was_err) {
+                                    return;  // discard
+                                }
+                                if (req.already_shutdown) {
+                                    return;  // discard
+                                }
+                                read_body_impl(std::move(req), hdr, info, std::move(as), std::move(buf), fn);
+                            })) {
+                        req.client.sock.shutdown();  // discard
+                        fn(std::move(req), hdr, info, flex_storage(), BodyState::error, std::move(s));
+                    }
+                    return;
+                }
+                fn(std::move(req), hdr, info, std::move(buf), result == http::body::BodyReadResult::full ? BodyState::complete : BodyState::best_effort, std::move(s));
+            }
+
+            fnetserv_dll_internal(void) read_body(Requester&& req, void* hdr, http::body::HTTPBodyInfo info, StateContext s, body_callback_fn<void> fn) {
+                if (!fn) {
+                    return;
+                }
+                if (req.already_shutdown) {
+                    fn(std::move(req), hdr, info, flex_storage(), BodyState::error, std::move(s));
+                    return;  // discard
+                }
+                read_body_impl(std::move(req), hdr, std::move(info), std::move(s), flex_storage(), fn);
             }
 
             void call_read_async(HTTPServ* serv, Requester& req, StateContext& as) {
