@@ -21,6 +21,12 @@ namespace futils {
 
             void http_handler_impl(HTTPServ* serv, Requester&& req, StateContext as);
 
+            fnetserv_dll_internal(void) read_body(Requester&& req, http::body::HTTPBodyInfo info, StateContext s) {
+                if (req.already_shutdown) {
+                    return;  // discard
+                }
+            }
+
             void call_read_async(HTTPServ* serv, Requester& req, StateContext& as) {
                 if (req.already_shutdown) {
                     return;  // discard
@@ -36,7 +42,7 @@ namespace futils {
                     http_handler_impl(serv, std::move(req), std::move(as));
                 };
                 req.data_added = false;
-                if (!as.read_async(req.client.sock, fn, std::move(req))) {
+                if (!as.read_async(req.client.sock, std::move(req), fn)) {
                     req.client.sock.shutdown();  // discard
                 }
             }

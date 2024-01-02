@@ -22,65 +22,24 @@ namespace futils {
         namespace body {
             enum class BodyType {
                 no_info,
-                chuncked,
+                chunked,
                 content_length,
             };
 
-            // read_body reads http body with BodyType
-            // Retrun Value
-            // 1 - full of body read
-            // -1 - invalid body format or length
-            // 0 - reading http body is incomplete
-            template <class String, class T>
-            constexpr int read_body(String& result, Sequencer<T>& seq, size_t& expect, BodyType type = BodyType::no_info) {
-                auto inipos = seq.rptr;
-                if (type == BodyType::chuncked) {
-                    while (true) {
-                        strutil::parse_eol<true>(seq);
-                        if (seq.eos()) {
-                            return 0;
-                        }
-                        size_t num = 0;
-                        auto e = number::parse_integer(seq, num, 16);
-                        if (e != number::NumError::none) {
-                            return -1;
-                        }
-                        if (!strutil::parse_eol<true>(seq)) {
-                            return -1;
-                        }
-                        if (num != 0) {
-                            if (seq.remain() < num) {
-                                seq.rptr = inipos;
-                                expect = num;
-                                return 0;
-                            }
-                            if (!strutil::read_n(result, seq, num)) {
-                                return -1;
-                            }
-                            continue;
-                        }
-                        strutil::parse_eol<true>(seq);
-                        if (num == 0) {
-                            return 1;
-                        }
-                    }
-                }
-                else if (type == BodyType::content_length) {
-                    if (seq.remain() < expect) {
-                        return 0;
-                    }
-                    if (!strutil::read_n(result, seq, expect)) {
-                        return -1;
-                    }
-                    return 1;
-                }
-                else {
-                    if (!strutil::read_all(result, seq)) {
-                        return -1;
-                    }
-                    return 1;
-                }
-            }
+            enum class BodyReadResult {
+                full,         // full of body read
+                best_effort,  // best effort read because no content-length or transfer-encoding: chunked
+                incomplete,   // incomplete read because of no more data
+                chunk_read,   // 1 or more chunk read but not full
+                invalid,      // invalid body format
+            };
+
+            enum class ChunkReadState {
+                chunk_size,
+                chunk_data,
+                chunk_data_line,
+                chunk_end,
+            };
 
             // HTTPBodyInfo is body information of HTTP
             // this is required for HTTP.body_read
@@ -88,13 +47,91 @@ namespace futils {
             struct HTTPBodyInfo {
                 BodyType type = BodyType::no_info;
                 size_t expect = 0;
+                ChunkReadState chunk_state = ChunkReadState::chunk_size;
             };
+
+            // read_body reads http body with BodyType
+            template <class String, class T>
+            constexpr BodyReadResult read_body(String& result, Sequencer<T>& seq, HTTPBodyInfo& info) {
+                auto base_pos = seq.rptr;
+                if (info.type == BodyType::chunked) {
+                    bool read_chunk = false;
+                    while (true) {
+                        if (seq.eos()) {
+                            return BodyReadResult::incomplete;
+                        }
+                        switch (info.chunk_state) {
+                            case ChunkReadState::chunk_size: {
+                                base_pos = seq.rptr;
+                                size_t num = 0;
+                                auto e = number::parse_integer(seq, num, 16);
+                                if (e != number::NumError::none) {
+                                    return BodyReadResult::invalid;
+                                }
+                                if (seq.remain() < 2) {
+                                    seq.rptr = base_pos;
+                                    return BodyReadResult::incomplete;
+                                }
+                                if (!seq.seek_if("\r\n")) {
+                                    return BodyReadResult::invalid;
+                                }
+                                info.expect = num;
+                                info.chunk_state = ChunkReadState::chunk_data;
+                                [[fallthrough]];  // fallthrough
+                            }
+                            case ChunkReadState::chunk_data: {
+                                if (seq.remain() < info.expect) {
+                                    return BodyReadResult::incomplete;
+                                }
+                                if (!strutil::read_n(result, seq, info.expect)) {
+                                    return BodyReadResult::invalid;
+                                }
+                                info.chunk_state = ChunkReadState::chunk_data_line;
+                                read_chunk = true;
+                                [[fallthrough]];  // fallthrough
+                            }
+                            case ChunkReadState::chunk_data_line: {
+                                if (seq.remain() < 2) {
+                                    return read_chunk ? BodyReadResult::chunk_read : BodyReadResult::incomplete;
+                                }
+                                if (!seq.seek_if("\r\n")) {
+                                    return BodyReadResult::invalid;
+                                }
+                                if (info.expect == 0) {
+                                    info.chunk_state = ChunkReadState::chunk_end;
+                                    return BodyReadResult::full;
+                                }
+                                info.chunk_state = ChunkReadState::chunk_size;
+                                break;
+                            }
+                            case ChunkReadState::chunk_end: {
+                                return BodyReadResult::full;
+                            }
+                        }
+                    }
+                }
+                else if (info.type == BodyType::content_length) {
+                    if (seq.remain() < info.expect) {
+                        return BodyReadResult::incomplete;
+                    }
+                    if (!strutil::read_n(result, seq, info.expect)) {
+                        return BodyReadResult::invalid;
+                    }
+                    return BodyReadResult::full;
+                }
+                else {
+                    if (!strutil::read_all(result, seq)) {
+                        return BodyReadResult::invalid;
+                    }
+                    return BodyReadResult::best_effort;
+                }
+            }
 
             constexpr auto body_info_preview(BodyType& type, size_t& expect) {
                 return [&](auto& key, auto& value) {
                     if (strutil::equal(key, "transfer-encoding", strutil::ignore_case()) &&
                         strutil::contains(value, "chunked")) {
-                        type = body::BodyType::chuncked;
+                        type = body::BodyType::chunked;
                     }
                     else if (type == body::BodyType::no_info &&
                              strutil::equal(key, "content-length", strutil::ignore_case())) {

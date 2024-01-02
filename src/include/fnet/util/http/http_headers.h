@@ -56,12 +56,15 @@ namespace futils::http::header {
                 return false;
             }
         }
+        body::HTTPBodyInfo info;
+        info.type = btype;
+        info.expect = expect;
         while (true) {
-            auto s = body::read_body(body, seq, expect, btype);
-            if (s == -1) {
+            body::BodyReadResult s = body::read_body(body, seq, info);
+            if (s == body::BodyReadResult::invalid) {
                 return false;
             }
-            else if (s == 1) {
+            else if (s == body::BodyReadResult::full || s == body::BodyReadResult::best_effort) {
                 break;
             }
             if (!callback(seq, expect, false)) {

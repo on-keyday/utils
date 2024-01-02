@@ -148,6 +148,7 @@ namespace futils {
                 void* c;
             };
             fnetserv_dll_export(void) http_handler(void* ctx, Client&& cl, StateContext s);
+            fnetserv_dll_export(void) read_body(Requester&& req,http::body::HTTPBodyInfo info, StateContext s);
             fnetserv_dll_export(void) handle_keep_alive(Requester&& cl, StateContext s);
 
             template <class TmpString>

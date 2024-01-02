@@ -289,15 +289,15 @@ namespace futils {
             // peek = 0: not remain data if completed
             // peek > 0: remain data
             // if read_from > 0 peek must be grater than 0
-            bool read_body(auto&& buf, HTTPBodyInfo info, int peek = -1, size_t read_from = 0, bool* invalid = nullptr) {
+            bool read_body(auto&& buf, HTTPBodyInfo& info, int peek = -1, size_t read_from = 0, bool* invalid = nullptr) {
                 if (peek <= 0 && read_from != 0) {
                     return false;  // TODO(on-keyday): read only body?
                 }
                 namespace h = http::body;
-                auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
+                auto check = make_cpy_seq(input);
                 check.rptr = read_from;
-                auto res = h::read_body(buf, check, info.expect, info.type);
-                if (res == -1) {
+                auto res = h::read_body(buf, check, info);
+                if (res == h::BodyReadResult::invalid) {
                     if (invalid) {
                         *invalid = true;
                     }
@@ -306,7 +306,8 @@ namespace futils {
                 if (invalid) {
                     *invalid = false;
                 }
-                if (res == 0) {
+                if (res == h::BodyReadResult::incomplete ||
+                    res == h::BodyReadResult::chunk_read) {
                     if (peek < 0) {
                         input.shift_front(check.rptr);
                         return check.rptr != 0;

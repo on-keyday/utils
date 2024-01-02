@@ -272,7 +272,7 @@ namespace futils {
                     : s(s) {}
 
                public:
-                bool read_async(Socket& sock, auto fn, auto&& context) {
+                bool read_async(Socket& sock, auto&& context, auto fn) {
                     return s->read_async(sock, std::forward<decltype(fn)>(fn),
                                          std::forward<decltype(context)>(context));
                 }
@@ -318,6 +318,10 @@ namespace futils {
                     log(level, &addr, error::Error(InfoLog<decltype(msg)...>{std::forward_as_tuple(msg...)}, error::Category::app));
                 }
             };
+
+            inline auto make_state(void* c, ServerEntry entry) {
+                return std::make_shared<State>(c, entry);
+            }
 
         }  // namespace server
     }      // namespace fnet

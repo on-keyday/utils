@@ -21,11 +21,16 @@
 namespace futils {
     namespace wrap {
 
+        struct UtfOut;
+
+        using write_hook_fn = file::file_result<void> (*)(UtfOut&, view::rvec);
+
         struct futils_DLL_EXPORT UtfOut {
            private:
             stringstream ss;
             thread::LiteLock lock;
             const file::File& file;
+            write_hook_fn hook_write = nullptr;
 
            public:
             UtfOut(const file::File& out)
@@ -37,15 +42,40 @@ namespace futils {
             }
 
             template <class T>
-                requires(file::internal::has_c_str_for_path<T>)
+                requires(file::internal::has_data_size_for_path<T>)
             UtfOut& operator<<(const T& t) {
                 write(t);
                 return *this;
             }
 
+            template <class T>
+                requires(!std::is_same_v<wrap::path_char, char> && file::internal::has_data_size_for_path<T, char>)
+            UtfOut& operator<<(const T& t) {
+                write(t);
+                return *this;
+            }
+
+            // write utf8 string to console. if console is not utf8, convert to utf16
+            template <class U16Buf = u16string, class T>
+                requires(!std::is_same_v<wrap::path_char, char> && file::internal::has_data_size_for_path<T, char>)
+            file::file_result<void> write_no_hook(const T& p) {
+                if (file.is_tty()) {
+                    if constexpr (sizeof(path_char) != 2) {
+                        U16Buf s;
+                        utf::convert<1, 2>(p, s);
+                        return file.write_console(s).transform([](auto) {});
+                    }
+                    else {
+                        return file.write_console(p).transform([](auto) {});
+                    }
+                }
+                return file.write_file(p).transform([](auto) {});
+            }
+
+            // write utf16 string to console. if console is not utf16, convert to utf8
             template <class U8Buf = string, class T>
-                requires(file::internal::has_c_str_for_path<T>)
-            file::file_result<void> write(const T& p) {
+                requires(file::internal::has_data_size_for_path<T>)
+            file::file_result<void> write_no_hook(const T& p) {
                 if (file.is_tty()) {
                     return file.write_console(p).transform([](auto) {});
                 }
@@ -57,6 +87,33 @@ namespace futils {
                 else {
                     return file.write_file(p).transform([](auto) {});
                 }
+            }
+
+            // write utf8 string to console. if console is not utf8, convert to utf16
+            template <class U8String = string, class T>
+                requires(file::internal::has_data_size_for_path<T>)
+            file::file_result<void> write(const T& p) {
+                if (hook_write) {
+                    if constexpr (sizeof(path_char) != 1) {
+                        U8String s;
+                        utf::convert<2, 1>(p, s);
+                        return hook_write(*this, s);
+                    }
+                    else {
+                        return hook_write(*this, p);
+                    }
+                }
+                return write_no_hook<U8String>(p);
+            }
+
+            // write utf16 string to console. if console is not utf16, convert to utf8
+            template <class U16String = u16string, class T>
+                requires(!std::is_same_v<wrap::path_char, char> && file::internal::has_data_size_for_path<T, char>)
+            file::file_result<void> write(const T& p) {
+                if (hook_write) {
+                    return hook_write(*this, p);
+                }
+                return write_no_hook<U16String>(p);
             }
 
             UtfOut& operator<<(internal::Pack&& pack) {
@@ -74,6 +131,11 @@ namespace futils {
 
             const file::File& get_file() const {
                 return file;
+            }
+
+            // thread unsafe. must be called before any output
+            write_hook_fn set_hook_write(write_hook_fn hook) {
+                return std::exchange(hook_write, hook);
             }
         };
 

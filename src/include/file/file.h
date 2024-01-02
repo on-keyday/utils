@@ -224,10 +224,17 @@ namespace futils::file {
             return flag;
         }
 
-        template <class T>
+        template <class T, class C = wrap::path_char>
         concept has_c_str_for_path = requires(T t) {
-            { t.c_str() } -> std::convertible_to<const wrap::path_char*>;
+            { t.c_str() } -> std::convertible_to<const C*>;
         };
+
+        template <class T, class C = wrap::path_char>
+        concept has_data_size_for_path = requires(T t) {
+            { t.data() } -> std::convertible_to<const C*>;
+            { t.size() } -> std::convertible_to<std::size_t>;
+        };
+
     }  // namespace internal
 
     constexpr auto O_CREAT = internal::make_spec_flag([](Flag& flag) {
