@@ -291,7 +291,7 @@ namespace futils {
             // if read_from > 0 peek must be grater than 0
             http::body::BodyReadResult read_body(auto&& buf, HTTPBodyInfo& info, int peek = -1, size_t read_from = 0) {
                 if (peek <= 0 && read_from != 0) {
-                    return false;  // TODO(on-keyday): read only body?
+                    return http::body::BodyReadResult::invalid;  // TODO(on-keyday): read only body?
                 }
                 namespace h = http::body;
                 auto check = make_cpy_seq(input);
