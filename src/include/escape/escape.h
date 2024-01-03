@@ -23,7 +23,7 @@
 namespace futils {
     namespace escape {
         // priority utf16 > utf32 > hex > oct
-        enum class EscapeFlag : byte {
+        enum class EscapeFlag : std::uint16_t {
             none = 0,
             utf16 = 0x1,            // \u0000
             oct = 0x2,              // \000
@@ -88,9 +88,15 @@ namespace futils {
 
         constexpr auto default_should_escape() {
             return [](auto&& c) {
-                return !number::is_in_visible_range(c) && c != ' ';
+                return !number::is_non_space_ascii(c) && c != ' ';
             };
         };
+
+        constexpr auto only_ctrl_char_escape() {
+            return [](auto&& c) {
+                return number::is_control_char(c) && c != ' ';
+            };
+        }
 
         constexpr auto html_range() {
             return [](auto&& c) {
@@ -125,7 +131,10 @@ namespace futils {
                 }
                 if (!done) {
                     if (should_escape(c)) {
-                        if (any(flag & EscapeFlag::utf16)) {
+                        auto which = [&](EscapeFlag n) {
+                            return any(flag & n);
+                        };
+                        if (which(EscapeFlag::utf16)) {
                             auto s = seq.rptr;
                             utf::U16Buffer buf;
                             if (utf::convert_one(seq, buf, false, !any(flag & EscapeFlag::no_replacement))) {
@@ -154,7 +163,7 @@ namespace futils {
                                 seq.rptr = s;
                             }
                         }
-                        if (any(flag & EscapeFlag::utf32)) {
+                        if (!done && which(EscapeFlag::utf32)) {
                             auto s = seq.rptr;
                             std::uint32_t v;
                             if (utf::to_utf32(seq, v, false, !any(flag & EscapeFlag::no_replacement))) {
@@ -193,7 +202,7 @@ namespace futils {
                                 seq.rptr = s;
                             }
                         }
-                        if (!done && any(flag & EscapeFlag::hex)) {
+                        if (!done && which(EscapeFlag::hex)) {
                             strutil::append(out, "\\x");
                             if (c < 0x10) {
                                 out.push_back('0');
@@ -203,7 +212,7 @@ namespace futils {
                             }
                             done = true;
                         }
-                        if (!done && any(flag & EscapeFlag::oct)) {
+                        if (!done && which(EscapeFlag::oct)) {
                             strutil::append(out, "\\");
                             if (auto e = number::to_string(out, c, 8); !e) {
                                 return e;

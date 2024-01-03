@@ -152,6 +152,7 @@ namespace futils {
                 f_html_escape = 0x1,
                 f_use_indent = 0x2,
                 f_no_colon_space = 0x4,  // for legacy code
+                f_only_ctrl_escape = 0x8,
             };
 
             byte flags = 0;
@@ -410,7 +411,7 @@ namespace futils {
                 int_traits = tr;
             }
 
-            constexpr void set_utf_escape(bool utf, bool upper = false, bool replace = true) {
+            constexpr void set_utf_escape(bool utf, bool upper = false, bool replace = true, bool only_ctrl = false) {
                 escape_flags = escape::EscapeFlag::none;
                 if (utf) {
                     escape_flags |= escape::EscapeFlag::utf16;
@@ -421,18 +422,34 @@ namespace futils {
                 if (!replace) {
                     escape_flags |= escape::EscapeFlag::no_replacement;
                 }
+                if (only_ctrl) {
+                    set_flag(f_only_ctrl_escape, true);
+                }
+                else {
+                    set_flag(f_only_ctrl_escape, false);
+                }
             }
 
             constexpr void string(StringView value) {
                 write_indent();
                 if (html()) {
                     write("\"");
-                    escape::escape_str(value, buf, escape_flags, escape::json_set(any(escape_flags & escape::EscapeFlag::upper)));
+                    if (flags & f_only_ctrl_escape) {
+                        escape::escape_str(value, buf, escape_flags, escape::json_set(any(escape_flags & escape::EscapeFlag::upper)), escape::only_ctrl_char_escape());
+                    }
+                    else {
+                        escape::escape_str(value, buf, escape_flags, escape::json_set(any(escape_flags & escape::EscapeFlag::upper)));
+                    }
                     write("\"");
                 }
                 else {
                     write("\"");
-                    escape::escape_str(value, buf, escape_flags, futils::escape::json_set_no_html());  // to optimize
+                    if (flags & f_only_ctrl_escape) {
+                        escape::escape_str(value, buf, escape_flags, escape::json_set_no_html(), escape::only_ctrl_char_escape());
+                    }
+                    else {
+                        escape::escape_str(value, buf, escape_flags, escape::json_set_no_html());
+                    }
                     write("\"");
                 }
             }

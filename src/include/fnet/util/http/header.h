@@ -293,7 +293,7 @@ namespace futils::http::header {
     template <class String>
     constexpr bool is_valid_key(String&& key, bool allow_empty = false) {
         return strutil::validate(key, allow_empty, [](auto&& c) {
-            if (!number::is_in_visible_range(c)) {
+            if (!number::is_non_space_ascii(c)) {
                 return false;
             }
             if (!is_valid_key_char(c)) {
@@ -306,7 +306,7 @@ namespace futils::http::header {
     template <class String>
     constexpr bool is_valid_value(String&& value, bool allow_empty = false) {
         return strutil::validate(value, allow_empty, [](auto&& c) {
-            return number::is_in_visible_range(c) || c == ' ' || c == '\t';
+            return number::is_non_space_ascii(c) || c == ' ' || c == '\t';
         });
     }
 

@@ -47,7 +47,7 @@ namespace futils {
         }
 
         template <class C>
-        constexpr bool is_in_visible_range(C&& c) {
+        constexpr bool is_non_space_ascii(C&& c) {
             return c >= 0x21 && c <= 0x7e;
         }
 
@@ -87,7 +87,7 @@ namespace futils {
 
         template <class C>
         constexpr bool is_symbol_char(C&& c) {
-            return is_in_visible_range(c) && !is_alnum(c);
+            return is_non_space_ascii(c) && !is_alnum(c);
         }
 
         constexpr bool is_upper(std::uint8_t c) {
