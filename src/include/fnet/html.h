@@ -253,7 +253,7 @@ window.addEventListener("load",action);
                     if (c == '\t' || c == ' ' || c == '\n' || c == '\r') {
                         break;
                     }
-                    tagname.push_back(helper::to_lower(seq.current()));
+                    tagname.push_back(strutil::to_lower(seq.current()));
                     seq.consume();
                 }
                 auto element = std::make_shared<TagElement>();
