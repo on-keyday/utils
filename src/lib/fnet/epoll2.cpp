@@ -42,7 +42,7 @@ namespace futils::fnet {
                     }
                     if (tbl->r.cb.call) {
                         auto cb = tbl->r.cb;
-                        tbl->r.cb.call(&cb, tbl, 0);
+                        tbl->r.cb.call(&cb, &tbl->r, 0);
                     }
                 }
             }
@@ -55,8 +55,8 @@ namespace futils::fnet {
                         nanosleep(&spec, &spec);
                     }
                     if (tbl->w.cb.call) {
-                        auto cb = tbl->r.cb;
-                        tbl->w.cb.call(&cb, tbl, std::nullopt);
+                        auto cb = tbl->w.cb;
+                        tbl->w.cb.call(&cb, &tbl->w, std::nullopt);
                     }
                 }
             }
