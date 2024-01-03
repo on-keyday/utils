@@ -66,16 +66,16 @@ namespace futils::fnet {
         }
     }  // namespace event
 
-    void call_stream(futils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
-        auto hdr = (WinSockIOTableHeader*)base;
+    void call_stream(futils::fnet::NotifyCallback* cb, IOTableHeader* base, NotifyResult&& result) {
+        auto hdr = static_cast<WinSockIOTableHeader*>(base);
         auto sock = make_socket(hdr->base);
         hdr->l.unlock();  // release, so can do next IO
         auto notify = reinterpret_cast<stream_notify_t>(cb->notify);
         notify(std::move(sock), cb->user, std::move(result));
     }
 
-    void call_recvfrom(futils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
-        auto hdr = (WinSockReadTable*)base;
+    void call_recvfrom(futils::fnet::NotifyCallback* cb, IOTableHeader* base, NotifyResult&& result) {
+        auto hdr = static_cast<WinSockReadTable*>(base);
         auto sock = make_socket(hdr->base);
         auto addr = sockaddr_to_NetAddrPort((sockaddr*)&hdr->from, hdr->from_len);
         hdr->l.unlock();  // release, so can do next IO

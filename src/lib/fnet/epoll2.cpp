@@ -42,7 +42,7 @@ namespace futils::fnet {
                     }
                     if (tbl->r.cb.call) {
                         auto cb = tbl->r.cb;
-                        tbl->r.cb.call(&cb, &tbl->r, 0);
+                        tbl->r.cb.call(&cb, &tbl->r, std::nullopt);
                     }
                 }
             }
@@ -63,8 +63,8 @@ namespace futils::fnet {
         }
     }  // namespace event
 
-    void call_stream(futils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
-        auto hdr = (EpollIOTableHeader*)base;
+    void call_stream(futils::fnet::NotifyCallback* cb, IOTableHeader* base, NotifyResult&& result) {
+        auto hdr = static_cast<EpollIOTableHeader*>(base);
         auto sock = make_socket(hdr->base);
         hdr->cb = {};     // clear for epoll_lock
         hdr->l.unlock();  // release, so can do next IO
@@ -72,8 +72,8 @@ namespace futils::fnet {
         notify(std::move(sock), cb->user, std::move(result));
     }
 
-    void call_recvfrom(futils::fnet::NotifyCallback* cb, void* base, NotifyResult&& result) {
-        auto hdr = (EpollIOTableHeader*)base;
+    void call_recvfrom(futils::fnet::NotifyCallback* cb, IOTableHeader* base, NotifyResult&& result) {
+        auto hdr = static_cast<EpollIOTableHeader*>(base);
         auto sock = make_socket(hdr->base);
         hdr->cb = {};     // clear for epoll_lock
         hdr->l.unlock();  // release, so can do next IO

@@ -99,10 +99,13 @@ namespace futils::fnet {
         }
     };
 
+    // dummy for type checking
+    struct IOTableHeader {};
+
     struct NotifyCallback {
         void (*notify)() = nullptr;
         void* user = nullptr;
-        void (*call)(NotifyCallback*, void* base, NotifyResult&&) = nullptr;
+        void (*call)(NotifyCallback*, IOTableHeader* base, NotifyResult&&) = nullptr;
 
         void set_notify(void* u, auto f, auto c) {
             user = u;
@@ -115,7 +118,7 @@ namespace futils::fnet {
 
     struct WinSockTable;
 
-    struct WinSockIOTableHeader {
+    struct WinSockIOTableHeader : IOTableHeader {
         OVERLAPPED ol;
         WinSockTable* base;
         NotifyCallback cb;
@@ -129,6 +132,8 @@ namespace futils::fnet {
             bufs = &buf1;
         }
     };
+
+    static_assert(offsetof(WinSockIOTableHeader, ol) == 0, "ol must be the first member of WinSockIOTableHeader");
 
     struct WinSockReadTable : WinSockIOTableHeader {
         sockaddr_storage from;
@@ -146,7 +151,7 @@ namespace futils::fnet {
     };
 #elif defined(FUTILS_PLATFORM_LINUX)
     struct EpollTable;
-    struct EpollIOTableHeader {
+    struct EpollIOTableHeader : IOTableHeader {
         NotifyCallback cb;
         CancelableLock l;
         EpollTable* base;
