@@ -28,7 +28,7 @@ namespace futils::fnet {
 
     struct SockTable {
         std::uintptr_t sock = ~std::uintptr_t(0);
-        event::IOEvent* event;
+        event::IOEvent* event = nullptr;
         std::atomic_uint32_t refs;
 
         SockTable()
@@ -38,12 +38,14 @@ namespace futils::fnet {
             refs++;
         }
 
-        void decr() {
+        std::uint32_t decr() {
             if (0 == --refs) {
                 auto sock = this->sock;
                 destroy_platform(this);
                 sockclose(sock);
+                return 0;
             }
+            return refs;
         }
     };
 

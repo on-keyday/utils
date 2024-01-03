@@ -86,7 +86,8 @@ namespace futils::fnet {
     AsyncResult on_success(WinSockTable* t, std::uint64_t code, bool w, size_t bytes) {
         if (t->skip_notif) {
             // skip callback call, so should decrement reference count and release lock here
-            t->decr();
+            auto dec = t->decr();
+            assert(dec != 0);
             if (w) {
                 t->w.l.unlock();
             }
@@ -103,7 +104,8 @@ namespace futils::fnet {
             return on_success(t, cancel_code, is_write, proc_bytes);
         }
         if (get_error() != WSA_IO_PENDING) {
-            t->decr();
+            auto dec = t->decr();
+            assert(dec != 0);
             const auto d = helper::defer([&] { io.l.unlock(); });
             return unexpect(error::Errno());
         }

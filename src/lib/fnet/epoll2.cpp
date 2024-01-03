@@ -83,7 +83,8 @@ namespace futils::fnet {
 
     AsyncResult on_success(EpollTable* t, std::uint64_t code, bool w, size_t bytes) {
         // skip callback call, so should decrement reference count and release lock here
-        t->decr();
+        auto dec = t->decr();
+        assert(dec != 0);
         if (w) {
             t->w.l.unlock();
             t->w.cb = {};  // clear for epoll lock
@@ -101,7 +102,8 @@ namespace futils::fnet {
         }
         if (get_error() != EWOULDBLOCK &&
             get_error() != EAGAIN) {
-            t->decr();
+            auto dec = t->decr();
+            assert(dec != 0);
             const auto d = helper::defer([&] { io.l.unlock(); });
             return unexpect(error::Errno());
         }
