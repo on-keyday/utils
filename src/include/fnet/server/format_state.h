@@ -15,8 +15,8 @@ namespace futils {
         String format_state(const Counter& servstate) {
             json::Stringer<String> w;
             w.set_indent("    ");
-            auto field = w.object();
             {
+                auto field = w.object();
                 field("current_acceptor_thread", servstate.current_acceptor_thread.load());
                 field("current_handler_thread", servstate.current_handler_thread.load());
                 field("current_handling_handler_thread", servstate.current_handling_handler_thread.load());
