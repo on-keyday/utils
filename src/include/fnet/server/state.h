@@ -321,6 +321,10 @@ namespace futils {
                 void enqueue_callback(DeferredCallback&& w) {
                     s->enqueue_callback(std::move(w));
                 }
+
+                const Counter& state() const {
+                    return s->state();
+                }
             };
 
             inline auto make_state(void* c, ServerEntry entry) {

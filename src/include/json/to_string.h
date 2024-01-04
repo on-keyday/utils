@@ -31,6 +31,9 @@ namespace futils {
                 w.set_html_escape(any(flags & FmtFlag::html));
                 w.set_no_colon_space(any(flags & FmtFlag::no_space_key_value));
                 w.set_int_traits(traits);
+                if (any(flags & FmtFlag::no_line)) {
+                    w.unset_indent();
+                }
                 auto f = [&](auto& f, Holder& h) -> JSONErr {
                     if (h.is_undef()) {
                         if (!any(flags & FmtFlag::undef_as_null)) {

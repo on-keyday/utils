@@ -199,8 +199,7 @@ int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
         if (str.back() == '\n') {
             str.pop_back();
             if (str == futils::utf::convert<futils::wrap::path_string>("status")) {
-                futils::json::JSON js;
-                cout << serv::format_state<std::string>(servstate, js);
+                cout << serv::format_state<std::string>(servstate);
             }
             str.clear();
         }

@@ -22,7 +22,7 @@ namespace futils {
             struct Requester {
                private:
                 void* internal_;
-
+                fnet::flex_storage read_buf;
                 friend void*& internal(Requester& req);
 
                public:
@@ -30,7 +30,6 @@ namespace futils {
                 tls::TLS tls;
                 HTTP http;
                 std::uintptr_t user_id;
-                fnet::flex_storage read_buf;
                 bool data_added = false;
                 bool already_shutdown = false;
 
