@@ -75,27 +75,33 @@ namespace futils::fnet {
         }
     };
 
-    struct DeferredNotification {
+    struct DeferredCallback {
        private:
         friend struct Socket;
+
+        friend DeferredCallback make_deferred_callback(void* task_ptr, void (*call)(void*, bool delete_only));
         void* task_ptr = nullptr;
         void (*call)(void*, bool) = nullptr;
 
-        constexpr DeferredNotification(void* p, void (*c)(void*, bool del_only))
+        constexpr DeferredCallback(void* p, void (*c)(void*, bool delete_only))
             : task_ptr(p), call(c) {}
 
        public:
-        constexpr DeferredNotification() = default;
-        constexpr DeferredNotification(DeferredNotification&& i)
+        constexpr DeferredCallback() = default;
+        constexpr DeferredCallback(DeferredCallback&& i)
             : task_ptr(std::exchange(i.task_ptr, nullptr)), call(std::exchange(i.call, nullptr)) {}
 
-        constexpr DeferredNotification& operator=(DeferredNotification&& i) {
+        constexpr DeferredCallback& operator=(DeferredCallback&& i) {
             if (this == &i) {
                 return *this;
             }
             task_ptr = std::exchange(i.task_ptr, nullptr);
             call = std::exchange(i.call, nullptr);
             return *this;
+        }
+
+        constexpr explicit operator bool() const {
+            return call != nullptr;
         }
 
         constexpr void invoke() {
@@ -118,10 +124,17 @@ namespace futils::fnet {
             }
         }
 
-        ~DeferredNotification() {
+        constexpr ~DeferredCallback() {
             cancel();
         }
     };
+
+    constexpr DeferredCallback make_deferred_callback(void* task_ptr, void (*call)(void*, bool delete_only)) {
+        if (!call) {
+            return DeferredCallback{};
+        }
+        return DeferredCallback(task_ptr, call);
+    }
 
     template <typename T>
     concept AsyncBufferType = requires(T t) {

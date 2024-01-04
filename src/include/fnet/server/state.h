@@ -103,7 +103,7 @@ namespace futils {
             DEFINE_ENUM_COMPAREOP(log_level)
 
             struct Queued {
-                DeferredNotification runner;
+                DeferredCallback runner;
             };
 
             using ServerEntry = void (*)(void*, Client&&, StateContext);
@@ -208,7 +208,7 @@ namespace futils {
                         std::forward<decltype(context)>(context),
                         // HACK(on-keyday): in this case, this pointer is valid via th of runner function
                         // so use this pointer instead of shared_from_this()
-                        [this](DeferredNotification&& n) { this->enqueue_object(std::move(n)); },
+                        [this](DeferredCallback&& n) { this->enqueue_object(std::move(n)); },
                         [th = shared_from_this(), fn](Socket&& s, auto&& context, NotifyResult&& r) mutable {
                             th->count.waiting_async_read--;
                             Enter ent{th->count.current_handling_handler_thread};
@@ -257,7 +257,7 @@ namespace futils {
                     return true;
                 }
 
-                void enqueue_object(DeferredNotification&& w) {
+                void enqueue_object(DeferredCallback&& w) {
                     count.total_queued++;
                     count.current_enqueued++;
                     io_notify << Queued{std::move(w)};

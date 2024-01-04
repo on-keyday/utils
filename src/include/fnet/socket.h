@@ -306,7 +306,7 @@ namespace futils {
                     };
                     data_ptr->socket = std::move(socket);
                     data_ptr->result = std::move(result);
-                    data_ptr->notify(DeferredNotification(data_ptr, deferred));
+                    data_ptr->notify(DeferredCallback(data_ptr, deferred));
                 };
 
                 return read_async(data_ptr->buffer_mgr.get_buffer(), data_ptr, +lambda, flag)
@@ -380,7 +380,7 @@ namespace futils {
                     };
                     data_ptr->socket = std::move(socket);
                     data_ptr->result = std::move(result);
-                    data_ptr->notify(DeferredNotification(data_ptr, deferred));
+                    data_ptr->notify(DeferredCallback(data_ptr, deferred));
                 };
 
                 return write_async(data_ptr->buffer_mgr.get_buffer(), data_ptr, +lambda, flag)
@@ -457,7 +457,7 @@ namespace futils {
                     data_ptr->socket = std::move(socket);
                     data_ptr->result = std::move(result);
                     data_ptr->address = std::move(addr);
-                    data_ptr->notify(DeferredNotification(data_ptr, deferred));
+                    data_ptr->notify(DeferredCallback(data_ptr, deferred));
                 };
 
                 return readfrom_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
@@ -533,7 +533,7 @@ namespace futils {
                     };
                     data_ptr->socket = std::move(socket);
                     data_ptr->result = std::move(result);
-                    data_ptr->notify(DeferredNotification(data_ptr, deferred));
+                    data_ptr->notify(DeferredCallback(data_ptr, deferred));
                 };
 
                 return writeto_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
