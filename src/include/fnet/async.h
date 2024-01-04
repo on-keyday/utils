@@ -79,7 +79,7 @@ namespace futils::fnet {
        private:
         friend struct Socket;
 
-        friend DeferredCallback make_deferred_callback(void* task_ptr, void (*call)(void*, bool delete_only));
+        friend constexpr DeferredCallback make_deferred_callback(void* task_ptr, void (*call)(void*, bool delete_only));
         void* task_ptr = nullptr;
         void (*call)(void*, bool) = nullptr;
 
