@@ -122,12 +122,11 @@ namespace futils {
 
             void State::check_and_start() {
                 if (count.should_start()) {
-                    auto c_thread = count.current_handler_thread.load();
-                    if (count.current_handler_thread.compare_exchange_strong(c_thread, c_thread + 1)) {
-                        std::thread(handler_thread, shared_from_this()).detach();
-                        count.max_launched_handler_thread.compare_exchange_strong(c_thread, c_thread + 1);
-                        count.total_launched_handler_thread++;
-                    }
+                    auto c = ++count.current_handler_thread;
+                    std::thread(handler_thread, shared_from_this()).detach();
+                    c -= 1;
+                    count.max_launched_handler_thread.compare_exchange_strong(c, c + 1);
+                    count.total_launched_handler_thread++;
                 }
             }
 
