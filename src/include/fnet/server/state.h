@@ -211,7 +211,6 @@ namespace futils {
                         [this](DeferredCallback&& n) { this->enqueue_callback(std::move(n)); },
                         [th = shared_from_this(), fn](Socket&& s, auto&& context, NotifyResult&& r) mutable {
                             th->count.waiting_async_read--;
-                            Enter ent{th->count.current_handling_handler_thread};
                             auto& result = r.value();
                             if (result) {
                                 auto& size = *result;
