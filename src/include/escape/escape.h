@@ -32,7 +32,7 @@ namespace futils {
             upper = 0x10,           // using upper case for hex escape
             no_replacement = 0x20,  // not replace invalid char to replacement character
             hex_limit_4 = 0x40,     // hex escape limit to 4 digits
-            all = utf16 | oct | hex,
+            all = utf16 | oct | hex | hex_limit_4,
         };
 
         DEFINE_ENUM_FLAGOP(EscapeFlag)
@@ -281,21 +281,22 @@ namespace futils {
                             if (seq.eos()) {
                                 return false;
                             }
-                            std::uint16_t i;
+                            std::uint16_t value = 0;
                             if (any(flag & EscapeFlag::hex_limit_4)) {
-                                if (auto e = number::read_limited_int<4>(seq, i, 16); !e) {
+                                if (auto e = number::read_limited_int<4>(seq, value, 16); !e) {
                                     return e;
                                 }
                             }
                             else {
-                                if (auto e = number::read_limited_int<2>(seq, i, 16); !e) {
+                                if (auto e = number::read_limited_int<2>(seq, value, 16); !e) {
                                     return e;
                                 }
                             }
-                            if (i > mx) {
+                            if (value > mx) {
                                 return number::NumError::overflow;
                             }
-                            out.push_back(i);
+                            out.push_back(value);
+                            seq.backto();
                         }
                         else if (c == 'u' && any(flag & EscapeFlag::utf16)) {
                             seq.consume();

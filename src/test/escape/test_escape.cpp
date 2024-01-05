@@ -19,12 +19,12 @@ constexpr auto test_escape_str(const char8_t* str, futils::escape::EscapeFlag fl
     return out;
 }
 
-constexpr auto test_unescape_str(const char* str) {
+constexpr auto test_unescape_str(const char* str, futils::escape::EscapeFlag flag = futils::escape::EscapeFlag::all) {
     namespace ue = futils::escape;
     namespace uh = futils::helper;
     auto seq = futils::make_ref_seq(str);
     uh::FixedPushBacker<char8_t[30], 29> out;
-    ue::unescape_str(seq, out);
+    ue::unescape_str(seq, out, ue::default_set(), flag);
     return out;
 }
 
@@ -38,6 +38,11 @@ void test_escape() {
     constexpr auto t1 = test_escape_str(u8"🎅", futils::escape::EscapeFlag::utf16);
     constexpr auto t2 = test_unescape_str(t1.buf);
     static_assert(futils::strutil::equal(u8"🎅", t2.buf), "expect true but assertion failed");
+
+    constexpr auto e2 = test_unescape_str("\\177ELF");
+    constexpr auto e3 = test_unescape_str("\\x7fELF", futils::escape::EscapeFlag::hex);
+    static_assert(futils::strutil::equal("\177ELF", e2.buf), "expect true but assertion failed");
+    static_assert(futils::strutil::equal("\177ELF", e3.buf), "expect true but assertion failed");
 }
 
 int main() {
