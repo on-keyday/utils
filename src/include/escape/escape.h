@@ -31,6 +31,7 @@ namespace futils {
             utf32 = 0x8,            // \U00000000
             upper = 0x10,           // using upper case for hex escape
             no_replacement = 0x20,  // not replace invalid char to replacement character
+            hex_limit_4 = 0x40,     // hex escape limit to 4 digits
             all = utf16 | oct | hex,
         };
 
@@ -281,8 +282,15 @@ namespace futils {
                                 return false;
                             }
                             std::uint16_t i;
-                            if (auto e = number::read_limited_int<4>(seq, i, 16); !e) {
-                                return e;
+                            if (any(flag & EscapeFlag::hex_limit_4)) {
+                                if (auto e = number::read_limited_int<4>(seq, i, 16); !e) {
+                                    return e;
+                                }
+                            }
+                            else {
+                                if (auto e = number::read_limited_int<2>(seq, i, 16); !e) {
+                                    return e;
+                                }
                             }
                             if (i > mx) {
                                 return number::NumError::overflow;
