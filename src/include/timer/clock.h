@@ -7,50 +7,10 @@
 
 #pragma once
 #include <cstdint>
-#include <compare>
 #include <chrono>
+#include "time.h"
 
 namespace futils::timer {
-    struct Time {
-       private:
-        std::uint64_t second = 0;
-        std::uint32_t nanosecond = 0;
-
-       public:
-        constexpr Time(std::uint64_t second, std::uint32_t nanosecond)
-            : second(second), nanosecond(nanosecond) {}
-
-        constexpr std::uint64_t to_millisecond() const {
-            return second * 1000 + nanosecond / 1000000;
-        }
-
-        constexpr std::uint64_t to_microsecond() const {
-            return second * 1000000 + nanosecond / 1000;
-        }
-
-        constexpr std::uint64_t to_nanosecond() const {
-            return second * 1000000000 + nanosecond;
-        }
-
-        constexpr friend bool operator==(const Time& left, const Time& right) {
-            return left.second == right.second &&
-                   left.nanosecond == right.nanosecond;
-        }
-
-        constexpr friend auto operator<=>(const Time& left, const Time& right) {
-            if (left.second != right.second) {
-                return left.second <=> right.second;
-            }
-            return left.nanosecond <=> right.nanosecond;
-        }
-
-        constexpr friend Time operator+(const Time& left, const Time& right) {
-            auto nsec = left.nanosecond + right.nanosecond;
-            auto sec = left.second + right.second + nsec / 1000000000;
-            nsec %= 1000000000;
-            return {sec, nsec};
-        }
-    };
 
     struct Clock {
        private:
@@ -79,7 +39,7 @@ namespace futils::timer {
                           now)
                           .time_since_epoch()
                           .count();
-                  return Time{sec, static_cast<std::uint32_t>(nsec % 1000000000)};
+                  return Time{static_cast<std::uint64_t>(sec), static_cast<std::uint32_t>(nsec % 1000000000)};
               }) {}
     };
 
@@ -96,13 +56,30 @@ namespace futils::timer {
                           now)
                           .time_since_epoch()
                           .count();
-                  return Time{sec, static_cast<std::uint32_t>(nsec % 1000000000)};
+                  return Time{static_cast<std::uint64_t>(sec), static_cast<std::uint32_t>(nsec % 1000000000)};
+              }) {}
+    };
+
+    struct UTCClock : Clock {
+        constexpr UTCClock()
+            : Clock([](const Clock*) {
+                  auto now = std::chrono::utc_clock::now();
+                  auto sec = std::chrono::time_point_cast<std::chrono::seconds>(
+                                 now)
+                                 .time_since_epoch()
+                                 .count();
+                  auto nsec =
+                      std::chrono::time_point_cast<std::chrono::nanoseconds>(
+                          now)
+                          .time_since_epoch()
+                          .count();
+                  return Time{static_cast<std::uint64_t>(sec), static_cast<std::uint32_t>(nsec % 1000000000)};
               }) {}
     };
 
     constexpr auto std_clock = SystemClock();
     constexpr auto steady_clock = SteadyClock();
-
+    constexpr auto utc_clock = UTCClock();
     struct FixedClock : Clock {
        private:
         Time time;

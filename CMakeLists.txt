@@ -122,6 +122,7 @@ add_executable(error_convert "src/test/error/test_error_convert.cpp")
 add_executable(nan "src/test/binary/test_nan.cpp")
 add_executable(derive2 "src/test/math/test_derive2.cpp")
 add_executable(fft "src/test/math/test_fft.cpp")
+add_executable(time_origin "src/test/timer/test_time_origin.cpp")
 
 # tests(fnet)
 add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")
