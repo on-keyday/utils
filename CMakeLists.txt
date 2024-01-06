@@ -15,7 +15,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   endif()
 endif()
 
-if(WIN32)
+if("$ENV{FUTILS_FREESTANDING}" STREQUAL "1")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffreestanding -nostdlib++ -nostdinc -cxx-isystem ${CMAKE_SOURCE_DIR}/src/include/freestd -D__FUTILS_FREESTANDING__")
+  message(STATUS "freestanding mode")
+elseif(WIN32)
 
   if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /source-charset:utf-8")
@@ -34,10 +37,8 @@ else()
   set(CMAKE_USE_WIN32_THREADS_INIT 0)
   set(CMAKE_USE_PTHREADS_INIT 1)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
-  link_directories("/lib/llvm-12/lib")
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -fcoroutines-ts -fsanitize=address -fsanitize=undefined -Wunused-variable")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
     set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
     if(WASI_SDK_PREFIX)
@@ -49,6 +50,7 @@ else()
     # set(CMAKE_EXE_LINKER_FLAGS "-lc++ -lc++abi -lm -lc -lgcc_s -lgcc -lpthread -fcoroutines")
   endif()
 endif()
+
 
 # finding dependency
 find_package(Threads REQUIRED)
@@ -391,43 +393,6 @@ message(STATUS "LLVM not found")
 endif()
 
 
-#[[
-if(WIN32)
-  if(FUTILS_BUILD_SHARED_LIBS)
-    add_custom_command(
-      TARGET futils POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libfutils.dll" "test/libfutils.dll"
-    )
-    add_custom_command(
-      TARGET fnet POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libfnet.dll" "test/libfnet.dll"
-    )
-    add_custom_command(
-      TARGET coro POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libcoro.dll" "test/libcoro.dll"
-    )
-   
-    add_custom_command(
-      TARGET futils POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libfutils.dll" "tool/libfutils.dll"
-    )
-    add_custom_command(
-      TARGET fnet POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libfnet.dll" "tool/libfnet.dll"
-    )
-    add_custom_command(
-      TARGET fnetserv POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libfnetserv.dll" "tool/libfnetserv.dll"
-    )
-
-    add_custom_command(
-      TARGET coro POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy "lib/libcoro.dll" "tool/libcoro.dll"
-    )
-
-  endif()
-endif()
-]]
 
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY true)
 set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)

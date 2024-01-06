@@ -1,0 +1,191 @@
+/*
+    futils - utility library
+    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
+    Released under the MIT license
+    https://opensource.org/licenses/mit-license.php
+*/
+
+#pragma once
+#include <freestd/cstddef>
+
+namespace futils::freestd {
+    template <typename T, T... Ints>
+    struct integer_sequence {
+        using value_type = T;
+        static constexpr size_t size() noexcept {
+            return sizeof...(Ints);
+        }
+    };
+
+    template <typename T, T... Ints>
+    using make_index_sequence = __make_integer_seq<integer_sequence, T, Ints...>;
+
+    template <bool v>
+    struct bool_constant {
+        static constexpr bool value = v;
+        using value_type = bool;
+        using type = bool_constant;
+        constexpr operator value_type() const noexcept {
+            return value;
+        }
+        constexpr value_type operator()() const noexcept {
+            return value;
+        }
+    };
+
+    using true_type = bool_constant<true>;
+    using false_type = bool_constant<false>;
+
+    template <class T, class U>
+    struct is_same : false_type {};
+
+    template <class T>
+    struct is_same<T, T> : true_type {};
+
+    template <class T, class U>
+    constexpr bool is_same_v = is_same<T, U>::value;
+
+    template <class T>
+    struct make_unsigned;
+    template <class T>
+    struct make_signed;
+
+    template <class T>
+    struct is_integral : false_type {};
+
+#define FUTILS_FREESTD_MAKE_SIGNED_UNSIGNED(sign, unsign) \
+    template <>                                           \
+    struct make_unsigned<sign> {                          \
+        using type = unsign;                              \
+    };                                                    \
+    template <>                                           \
+    struct make_unsigned<unsign> {                        \
+        using type = unsign;                              \
+    };                                                    \
+    template <>                                           \
+    struct make_signed<sign> {                            \
+        using type = sign;                                \
+    };                                                    \
+    template <>                                           \
+    struct make_signed<unsign> {                          \
+        using type = sign;                                \
+    };                                                    \
+    template <>                                           \
+    struct is_integral<sign> : true_type {};              \
+    template <>                                           \
+    struct is_integral<unsign> : true_type {};
+
+    FUTILS_FREESTD_MAKE_SIGNED_UNSIGNED(char, unsigned char)
+    FUTILS_FREESTD_MAKE_SIGNED_UNSIGNED(short, unsigned short)
+    FUTILS_FREESTD_MAKE_SIGNED_UNSIGNED(int, unsigned int)
+    FUTILS_FREESTD_MAKE_SIGNED_UNSIGNED(long, unsigned long)
+    FUTILS_FREESTD_MAKE_SIGNED_UNSIGNED(long long, unsigned long long)
+
+    template <>
+    struct is_integral<char8_t> : true_type {};
+    template <>
+    struct is_integral<char16_t> : true_type {};
+    template <>
+    struct is_integral<char32_t> : true_type {};
+
+#undef FUTILS_FREESTD_MAKE_SIGNED_UNSIGNED
+
+    template <class T>
+    using make_unsigned_t = make_unsigned<T>::type;
+    template <class T>
+    using make_signed_t = make_signed<T>::type;
+
+    template <class T>
+    struct is_pointer : false_type {};
+
+    template <class T>
+    struct is_pointer<T*> : true_type {};
+
+    template <class T>
+    constexpr bool is_pointer_v = is_pointer<T>::value;
+
+    template <class T>
+    struct remove_reference {
+        using type = T;
+    };
+
+    template <class T>
+    struct remove_reference<T&> {
+        using type = T;
+    };
+
+    template <class T>
+    struct remove_reference<T&&> {
+        using type = T;
+    };
+
+    template <class T>
+    using remove_reference_t = remove_reference<T>::type;
+
+    template <class T>
+    struct is_lvalue_reference : false_type {};
+
+    template <class T>
+    struct is_lvalue_reference<T&> : true_type {};
+
+    template <class T>
+    constexpr bool is_lvalue_reference_v = is_lvalue_reference<T>::value;
+
+    template <class T>
+    struct remove_cv {
+        using type = T;
+    };
+
+    template <class T>
+    struct remove_cv<const T> {
+        using type = T;
+    };
+
+    template <class T>
+    struct remove_cvref {
+        using type = typename remove_cv<typename remove_reference<T>::type>::type;
+    };
+
+    template <class T>
+    using remove_cvref_t = typename remove_cvref<T>::type;
+
+    template <class T>
+    struct remove_pointer {
+        using type = T;
+    };
+
+    template <class T>
+    struct remove_pointer<T*> {
+        using type = T;
+    };
+
+    template <class T>
+    using remove_pointer_t = remove_pointer<T>::type;
+
+    template <bool cond, class T = void>
+    struct enable_if {};
+
+    template <class T>
+    struct enable_if<true, T> {
+        using type = T;
+    };
+
+    template <class T>
+    struct is_reference : false_type {};
+
+    template <class T>
+    struct is_reference<T&> : true_type {};
+
+    template <class T>
+    struct is_reference<T&&> : true_type {};
+
+    template <class T>
+    constexpr bool is_reference_v = is_reference<T>::value;
+
+}  // namespace futils::freestd
+
+#ifdef FUTILS_PLATFORM_FREESTANDING
+namespace std {
+    using namespace futils::freestd;
+}
+#endif

@@ -9,7 +9,6 @@
 // cin - wrap cin
 #pragma once
 #include "../platform/windows/dllexport_header.h"
-#include <iosfwd>
 #include "light/char.h"
 #include "light/string.h"
 #include "../thread/lite_lock.h"

@@ -29,15 +29,18 @@ if "%FUTILS_BUILD_MODE%" == "gcc-shared" (
 if "%FUTILS_BUILD_MODE%" == "gcc-static" (
      set TRUE_FALSE=true
 )
+if "%FUTILS_BUILD_MODE%" == "freestanding-static" (
+     set TRUE_FALSE=true
+)
 
 if "%TRUE_FALSE%"=="false" (
     echo "Invalid FUTILS_BUILD_MODE: %FUTILS_BUILD_MODE%"
     exit /b
 )
 
+set OUTPUT_DIR=built/%FUTILS_BUILD_MODE%/%BUILD_TYPE%
 set CXX_COMPILER=clang++
 set C_COMPILER=clang
-set OUTPUT_DIR=built/%FUTILS_BUILD_MODE%/%BUILD_TYPE%
 
 if "%FUTILS_BUILD_MODE%" == "gcc-static" (
     set CXX_COMPILER=g++
@@ -49,6 +52,11 @@ if "%FUTILS_BUILD_MODE%" == "gcc-shared" (
     set CXX_COMPILER=g++
     set C_COMPILER=gcc
     set FUTILS_BUILD_MODE=shared
+)
+
+if "%FUTILS_BUILD_MODE%" == "freestanding-static" (
+    set FUTILS_FREESTANDING=1
+    set FUTILS_BUILD_MODE=static
 )
 
 rem override CXX_COMPILER and C_COMPILER if specified with FUTILS_CXX_COMPILER and FUTILS_C_COMPILER

@@ -1,0 +1,30 @@
+/*
+    futils - utility library
+    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
+    Released under the MIT license
+    https://opensource.org/licenses/mit-license.php
+*/
+
+#pragma once
+#include <platform/detect.h>
+
+namespace futils::freestd {
+#if defined(_WIN32)  // TODO(on-keyday): what is freestanding?
+    typedef unsigned long long size_t;
+    typedef long long ptrdiff_t;
+#else
+    typedef unsigned long size_t;
+    typedef long ptrdiff_t;
+#endif
+
+}  // namespace futils::freestd
+
+#ifdef FUTILS_PLATFORM_FREESTANDING
+namespace std {
+    using namespace futils::freestd;
+}
+
+using size_t = futils::freestd::size_t;
+using ptrdiff_t = futils::freestd::ptrdiff_t;
+
+#endif

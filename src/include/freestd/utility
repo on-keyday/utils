@@ -1,0 +1,36 @@
+/*
+    futils - utility library
+    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
+    Released under the MIT license
+    https://opensource.org/licenses/mit-license.php
+*/
+
+#pragma once
+#include <platform/detect.h>
+#include <freestd/type_traits>
+
+namespace futils::freestd {
+
+    template <class T>
+    constexpr T&& forward(typename remove_reference<T>::type& t) noexcept {
+        return static_cast<T&&>(t);
+    }
+
+    template <class T>
+    constexpr T&& forward(typename remove_reference<T>::type&& t) noexcept {
+        static_assert(!is_lvalue_reference_v<T>);
+        return static_cast<T&&>(t);
+    }
+
+    template <class T>
+    constexpr typename remove_reference<T>::type&& move(T&& t) noexcept {
+        return static_cast<typename remove_reference<T>::type&&>(t);
+    }
+
+}  // namespace futils::freestd
+
+#ifdef FUTILS_PLATFORM_FREESTANDING
+namespace std {
+    using namespace futils::freestd;
+}
+#endif

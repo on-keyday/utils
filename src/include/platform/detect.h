@@ -8,7 +8,9 @@
 #pragma once
 
 #ifndef FUTILS_PLATFORM
-#if defined(_WIN32)
+#ifdef __FUTILS_FREESTANDING__
+#define FUTILS_PLATFORM_FREESTANDING
+#elif defined(_WIN32)
 #define FUTILS_PLATFORM_WINDOWS
 #elif defined(__APPLE__) && defined(__MACH__)
 #define FUTILS_PLATFORM_MACOS

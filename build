@@ -8,7 +8,7 @@ fi
 if [ ! $FUTILS_BUILD_MODE ]; then
 FUTILS_BUILD_MODE=shared
 fi
-if [ $FUTILS_BUILD_MODE != "shared" ]  &&  [ $FUTILS_BUILD_MODE != "static" ] && [ $FUTILS_BUILD_MODE != "wasm-rt" ] && [ $FUTILS_BUILD_MODE != "wasm-em" ] && [ $FUTILS_BUILD_MODE != "gcc-static" ] && [ $FUTILS_BUILD_MODE != "gcc-shared" ]; then
+if [ $FUTILS_BUILD_MODE != "shared" ]  &&  [ $FUTILS_BUILD_MODE != "static" ] && [ $FUTILS_BUILD_MODE != "wasm-rt" ] && [ $FUTILS_BUILD_MODE != "wasm-em" ] && [ $FUTILS_BUILD_MODE != "gcc-static" ] && [ $FUTILS_BUILD_MODE != "gcc-shared" ] && [ $FUTILS_BUILD_MODE != "freestanding-static" ] ; then
 echo "Invalid build type: $FUTILS_BUILD_MODE"
 return 1
 fi
@@ -21,6 +21,11 @@ if [ $FUTILS_BUILD_MODE == "gcc-static" ] || [ $FUTILS_BUILD_MODE == "gcc-shared
 C_COMPILER=gcc
 CXX_COMPILER=g++
 FUTILS_BUILD_MODE=${FUTILS_BUILD_MODE#gcc-}
+fi
+
+if [ $FUTILS_BUILD_MODE == "freestanding-static" ]; then
+export FUTILS_FREESTANDING=1
+FUTILS_BUILD_MODE=static
 fi
 
 # override compiler if specified
