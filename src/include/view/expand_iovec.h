@@ -26,11 +26,11 @@ namespace futils {
                 C data[size_]{};
             };
 
-            template <class Alloc, class C>
+            template <class Alloc, class C, bool c_str>
             struct basic_sso_storage : helper::omit_empty<Alloc> {
                private:
                 union {
-                    native_array<C, sizeof(basic_wvec<C>)> sta{};
+                    native_array<C, sizeof(basic_wvec<C>) / sizeof(C)> sta{};
                     basic_wvec<C> dyn;
                 };
                 binary::flags_t<size_t, 1, sizeof(size_t) * bit_per_byte - 1> state_;
@@ -76,19 +76,30 @@ namespace futils {
 
                 constexpr void set_dyn(C* dat, size_t size) noexcept {
                     dyn = basic_wvec<C>{dat, size};
+                    if constexpr (c_str) {
+                        assert(dat && dat[size - 1] == 0);
+                    }
                     state(sso_state::dyn);
                 }
 
                 static constexpr size_t sso_size() noexcept {
-                    return sizeof(sta);
+                    if constexpr (c_str) {
+                        return sizeof(sta.data) / sizeof(C) - 1;
+                    }
+                    else {
+                        return sizeof(sta.data) / sizeof(C);
+                    }
                 }
 
                 constexpr bool set_sta(const C* dat, size_t size) noexcept {
-                    if (sizeof(sta) < size) {
+                    if (sso_size() < size) {
                         return false;
                     }
                     for (auto i = 0; i < size; i++) {
                         sta.data[i] = dat[i];
+                    }
+                    if constexpr (c_str) {
+                        sta.data[size] = 0;
                     }
                     state(sso_state::sta);
                     return true;
@@ -99,7 +110,7 @@ namespace futils {
                         return dyn;
                     }
                     else {
-                        return basic_wvec<C>(sta.data, sizeof(sta.data));
+                        return basic_wvec<C>(sta.data, sso_size());
                     }
                 }
 
@@ -108,7 +119,7 @@ namespace futils {
                         return dyn;
                     }
                     else {
-                        return basic_rvec<C>(sta.data, sizeof(sta.data));
+                        return basic_rvec<C>(sta.data, sso_size());
                     }
                 }
 
@@ -125,7 +136,7 @@ namespace futils {
         template <class Alloc, class C>
         struct basic_expand_storage_vec {
            private:
-            using storage = internal::basic_sso_storage<Alloc, C>;
+            using storage = internal::basic_sso_storage<Alloc, C, false>;
             storage data_;
             using traits = std::allocator_traits<Alloc>;
 

@@ -29,6 +29,31 @@ namespace futils {
             array,
         };
 
+        constexpr const char* to_string(JSONKind k) {
+            switch (k) {
+                case JSONKind::undefined:
+                    return "undefined";
+                case JSONKind::null:
+                    return "null";
+                case JSONKind::boolean:
+                    return "boolean";
+                case JSONKind::number_i:
+                    return "number_i";
+                case JSONKind::number_f:
+                    return "number_f";
+                case JSONKind::number_u:
+                    return "number_u";
+                case JSONKind::string:
+                    return "string";
+                case JSONKind::object:
+                    return "object";
+                case JSONKind::array:
+                    return "array";
+                default:
+                    return "unknown";
+            }
+        }
+
         template <class String, template <class...> class Vec, template <class...> class Object>
         struct JSONBase;
 

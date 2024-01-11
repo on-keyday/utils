@@ -80,7 +80,7 @@ namespace futils::freestd {
     FUTILS_FREESTD_MAKE_SIGNED_UNSIGNED(int, unsigned int)
     FUTILS_FREESTD_MAKE_SIGNED_UNSIGNED(long, unsigned long)
     FUTILS_FREESTD_MAKE_SIGNED_UNSIGNED(long long, unsigned long long)
-
+#undef FUTILS_FREESTD_MAKE_SIGNED_UNSIGNED
     template <>
     struct is_integral<char8_t> : true_type {};
     template <>
@@ -88,12 +88,44 @@ namespace futils::freestd {
     template <>
     struct is_integral<char32_t> : true_type {};
 
-#undef FUTILS_FREESTD_MAKE_SIGNED_UNSIGNED
+    template <class T>
+    constexpr bool is_integral_v = is_integral<T>::value;
+
+    template <class T>
+    struct is_floating_point : false_type {};
+
+    template <>
+    struct is_floating_point<float> : true_type {};
+    template <>
+    struct is_floating_point<double> : true_type {};
+    template <>
+    struct is_floating_point<long double> : true_type {};
+
+    template <class T>
+    constexpr bool is_floating_point_v = is_floating_point<T>::value;
+
+    template <class T>
+    struct is_arithmetic : bool_constant<is_integral_v<T> ||
+                                         is_floating_point_v<T>> {};
+
+    template <class T>
+    constexpr bool is_arithmetic_v = is_arithmetic<T>::value;
 
     template <class T>
     using make_unsigned_t = make_unsigned<T>::type;
     template <class T>
     using make_signed_t = make_signed<T>::type;
+
+    template <bool cond, class T = void>
+    struct enable_if {};
+
+    template <class T>
+    struct enable_if<true, T> {
+        using type = T;
+    };
+
+    template <bool cond, class T = void>
+    using enable_if_t = enable_if<cond, T>::type;
 
     template <class T>
     struct is_pointer : false_type {};
@@ -103,6 +135,36 @@ namespace futils::freestd {
 
     template <class T>
     constexpr bool is_pointer_v = is_pointer<T>::value;
+
+    template <class T>
+    struct is_reference : false_type {};
+
+    template <class T>
+    struct is_reference<T&> : true_type {};
+
+    template <class T>
+    struct is_reference<T&&> : true_type {};
+
+    template <class T>
+    constexpr bool is_reference_v = is_reference<T>::value;
+
+    template <class T>
+    struct is_lvalue_reference : false_type {};
+
+    template <class T>
+    struct is_lvalue_reference<T&> : true_type {};
+
+    template <class T>
+    constexpr bool is_lvalue_reference_v = is_lvalue_reference<T>::value;
+
+    template <class T>
+    struct is_const : false_type {};
+
+    template <class T>
+    struct is_const<const T> : true_type {};
+
+    template <class T>
+    constexpr bool is_const_v = is_const<T>::value;
 
     template <class T>
     struct remove_reference {
@@ -121,15 +183,6 @@ namespace futils::freestd {
 
     template <class T>
     using remove_reference_t = remove_reference<T>::type;
-
-    template <class T>
-    struct is_lvalue_reference : false_type {};
-
-    template <class T>
-    struct is_lvalue_reference<T&> : true_type {};
-
-    template <class T>
-    constexpr bool is_lvalue_reference_v = is_lvalue_reference<T>::value;
 
     template <class T>
     struct remove_cv {
@@ -161,26 +214,6 @@ namespace futils::freestd {
 
     template <class T>
     using remove_pointer_t = remove_pointer<T>::type;
-
-    template <bool cond, class T = void>
-    struct enable_if {};
-
-    template <class T>
-    struct enable_if<true, T> {
-        using type = T;
-    };
-
-    template <class T>
-    struct is_reference : false_type {};
-
-    template <class T>
-    struct is_reference<T&> : true_type {};
-
-    template <class T>
-    struct is_reference<T&&> : true_type {};
-
-    template <class T>
-    constexpr bool is_reference_v = is_reference<T>::value;
 
 }  // namespace futils::freestd
 

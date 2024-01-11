@@ -27,6 +27,13 @@ namespace futils::freestd {
         return static_cast<typename remove_reference<T>::type&&>(t);
     }
 
+    template <class T, class U>
+    constexpr T exchange(T& obj, U&& new_value) {
+        T old_value = move(obj);
+        obj = forward<U>(new_value);
+        return old_value;
+    }
+
 }  // namespace futils::freestd
 
 #ifdef FUTILS_PLATFORM_FREESTANDING
