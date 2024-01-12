@@ -10,7 +10,7 @@
 #pragma once
 #include "../strutil/append.h"
 #include "../helper/defer.h"
-#include <memory>
+#include "../helper/defer_ex.h"
 #include <string_view>
 
 namespace futils {
@@ -207,18 +207,9 @@ namespace futils {
             }
 
             [[nodiscard]] constexpr auto indent_scope_ex(std::uint32_t i = 1) {
-                w.indent(i);
-                auto d = helper::defer([this, i] {
+                return helper::defer_ex([this, i] {
                     w.indent(-i);
                 });
-                using D = decltype(d);
-                auto ptr = new D{std::move(d)};
-                struct del {
-                    constexpr auto operator()(D* v) {
-                        delete v;
-                    }
-                };
-                return std::unique_ptr<D, del>{ptr};
             }
 
             constexpr void indent_writeln(auto&& a, auto&&... s) {

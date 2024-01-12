@@ -135,6 +135,9 @@ namespace futils {
             return res;
         }
 
+        // expand_var is void(auto&& out, auto&& read)
+        // read is bool(auto& var_name)
+        // if read return false, expand_var should not write anything to out
         template <class T>
         constexpr bool expand(auto&& out, Sequencer<T>& src, auto&& expand_var, bool allow_invalid_var = true) {
             while (!src.eos()) {
