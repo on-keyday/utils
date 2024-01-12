@@ -13,10 +13,11 @@
 namespace futils::helper {
     struct DynDefer {
        private:
-        void* ptr;
-        void (*fn)(void*, bool del);
+        void* ptr = nullptr;
+        void (*fn)(void*, bool del) = nullptr;
 
        public:
+        constexpr DynDefer() = default;
         template <class F, helper_disable_self(DynDefer, F)>
         constexpr DynDefer(F&& f)
             : ptr(new std::decay_t<F>(std::forward<F>(f))), fn([](void* ptr, bool del) {
