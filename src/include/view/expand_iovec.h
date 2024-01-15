@@ -76,9 +76,6 @@ namespace futils {
 
                 constexpr void set_dyn(C* dat, size_t size) noexcept {
                     dyn = basic_wvec<C>{dat, size};
-                    if constexpr (c_str) {
-                        assert(dat && dat[size - 1] == 0);
-                    }
                     state(sso_state::dyn);
                 }
 
@@ -133,12 +130,13 @@ namespace futils {
 
         }  // namespace internal
 
-        template <class Alloc, class C>
+        template <class Alloc, class C, bool c_string = false>
         struct basic_expand_storage_vec {
            private:
-            using storage = internal::basic_sso_storage<Alloc, C, false>;
+            using storage = internal::basic_sso_storage<Alloc, C, c_string>;
             storage data_;
             using traits = std::allocator_traits<Alloc>;
+            static constexpr auto c_string_offset = c_string ? 1 : 0;
 
             [[noreturn]] void handle_too_large() {
                 if constexpr (internal::has_too_large_error<Alloc>) {
@@ -172,11 +170,14 @@ namespace futils {
                     return;
                 }
                 // ptr must not be nullptr
-                C* ptr = alloc_(input.size());
+                C* ptr = alloc_(input.size() + c_string_offset);
                 auto p = ptr;
                 for (auto d : input) {
                     *p = d;
                     p++;
+                }
+                if constexpr (c_string) {
+                    *p = 0;
                 }
                 data_.set_dyn(ptr, input.size());
             }
@@ -186,6 +187,9 @@ namespace futils {
                 auto wb = data_.wbuf();
                 for (auto i = 0; i < src.size(); i++) {
                     wb[i] = src[i];
+                }
+                if constexpr (c_string) {
+                    wb[src.size()] = 0;
                 }
             }
 
@@ -248,12 +252,15 @@ namespace futils {
 
             constexpr void reserve(size_t new_cap) {
                 auto buf = data_.wbuf();
-                if (new_cap <= buf.size()) {
+                if (new_cap <= buf.size() + c_string_offset) {
                     return;  // already exists
                 }
                 C* new_ptr = alloc_(new_cap);
                 for (size_t i = 0; i < data_.size(); i++) {
                     new_ptr[i] = buf[i];
+                }
+                if constexpr (c_string) {
+                    new_ptr[data_.size()] = 0;
                 }
                 free_dyn();
                 data_.set_dyn(new_ptr, new_cap);
@@ -271,6 +278,9 @@ namespace futils {
                     C* new_ptr = alloc_(data_.size());
                     for (auto i = 0; i < data_.size(); i++) {
                         new_ptr[i] = buf[i];
+                    }
+                    if constexpr (c_string) {
+                        new_ptr[data_.size()] = 0;
                     }
                     data_.set_dyn(new_ptr, data_.size());
                 }
@@ -292,9 +302,15 @@ namespace futils {
                     return old_size;       // already exists
                 }
                 if (capacity() < new_size) {
-                    reserve(data_.size() * 2 > new_size ? data_.size() * 2 : new_size);
+                    reserve(data_.size() * 2 > new_size + c_string_offset
+                                ? data_.size() * 2
+                                : new_size + c_string_offset);
                 }
                 data_.size(new_size);  // must return true
+                if constexpr (c_string) {
+                    auto buf = data_.wbuf();
+                    buf[new_size] = 0;
+                }
                 return old_size;
             }
 
@@ -313,6 +329,12 @@ namespace futils {
 
             static constexpr size_t max_size() noexcept {
                 return storage::size_max;
+            }
+
+            constexpr const C* c_str() const noexcept
+                requires(c_string)
+            {
+                return data_.rbuf().data();
             }
 
             constexpr const C* data() const noexcept {

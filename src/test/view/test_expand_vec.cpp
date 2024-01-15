@@ -26,5 +26,21 @@ int main() {
     auto move = std::move(data);
     copy.append(" world");
     move.shrink_to_fit();
-    copy.append("because of my own policy");
+    copy.append(" because of my own policy");
+    futils::view::basic_expand_storage_vec<std::allocator<futils::byte>, futils::byte, true> data2;
+    data2.reserve(17);
+    data2.push_back('h');
+    data2.shrink_to_fit();
+    auto d2 = data2[0];
+    data2.reserve(32);
+    data2.push_back('e');
+    data2.push_back('l');
+    data2.push_back('l');
+    data2.push_back('o');
+    auto copy2 = data2;
+    auto move2 = std::move(data2);
+    copy2.append(" world");
+    move2.shrink_to_fit();
+    copy2.append(" because of my own policy");
+    auto s = copy2.c_str();
 }
