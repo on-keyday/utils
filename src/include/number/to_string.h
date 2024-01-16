@@ -12,8 +12,8 @@
 #include <limits>
 #include <type_traits>
 
-#include "char_range.h"
-#include "radix.h"
+#include <number/char_range.h>
+#include <number/radix.h>
 
 namespace futils {
     namespace number {

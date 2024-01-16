@@ -12,9 +12,9 @@
 #include <cstdint>
 #include <limits>
 
-#include "../core/sequencer.h"
+#include <core/sequencer.h>
 
-#include "../helper/pushbacker.h"
+#include <helper/pushbacker.h>
 
 #include "char_range.h"
 

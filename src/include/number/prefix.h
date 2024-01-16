@@ -9,7 +9,7 @@
 // prefix - number with prefix
 #pragma once
 
-#include "../strutil/strutil.h"
+#include <strutil/strutil.h>
 #include <strutil/append.h>
 #include "parse.h"
 

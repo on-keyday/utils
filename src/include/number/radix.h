@@ -10,8 +10,8 @@
 #pragma once
 #include <cstdint>
 #include <limits>
-#include "char_range.h"
-#include "array.h"
+#include <number/char_range.h>
+#include <number/array.h>
 
 namespace futils {
     namespace number {
