@@ -6,8 +6,8 @@
 */
 
 #pragma once
-#include "term.h"
-#include "expandable_writer.h"
+#include <binary/term.h>
+#include <binary/expandable_writer.h>
 
 namespace futils {
     namespace binary {

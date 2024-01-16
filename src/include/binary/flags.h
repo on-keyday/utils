@@ -8,10 +8,10 @@
 #pragma once
 #include <type_traits>
 #include <cstdint>
-#include "../core/byte.h"
+#include <core/byte.h>
 #include <utility>
 #include <cstddef>
-#include "signint.h"
+#include <binary/signint.h>
 
 namespace futils {
     namespace binary {

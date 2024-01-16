@@ -7,9 +7,9 @@
 
 // number - numeric read write
 #pragma once
-#include "reader.h"
-#include "writer.h"
-#include "../binary/buf.h"
+#include <binary/reader.h>
+#include <binary/writer.h>
+#include <binary/buf.h>
 #include <utility>
 
 namespace futils {

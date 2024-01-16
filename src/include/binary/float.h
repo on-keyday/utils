@@ -6,11 +6,11 @@
 */
 
 #pragma once
-#include "../core/byte.h"
+#include <core/byte.h>
 #include <cstdint>
 #include <type_traits>
 #include <bit>
-#include "flags.h"
+#include <binary/flags.h>
 #if __has_include(<stdfloat>)
 #include <stdfloat>
 #define FUTILS_BINARY_SUPPORT_STDFLOAT 1

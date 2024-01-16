@@ -6,7 +6,7 @@
 */
 
 #pragma once
-#include "reader.h"
+#include <binary/reader.h>
 
 namespace futils {
     namespace binary {

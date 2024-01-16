@@ -9,8 +9,8 @@
 // view - endian view
 #pragma once
 
-#include "buf.h"
-#include "../core/buffer.h"
+#include <binary/buf.h>
+#include <core/buffer.h>
 
 namespace futils {
     namespace binary {

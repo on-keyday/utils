@@ -8,9 +8,9 @@
 // encdec - encode/decode methods
 #pragma once
 #include <type_traits>
-#include "../core/byte.h"
+#include <core/byte.h>
 #include <bit>
-#include "signint.h"
+#include <binary/signint.h>
 #include <cstddef>
 #include <utility>
 

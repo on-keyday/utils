@@ -6,9 +6,9 @@
 */
 
 #pragma once
-#include "int128.h"
+#include <binary/int128.h>
 #include <type_traits>
-#include "../core/byte.h"
+#include <core/byte.h>
 #include <cstdint>
 
 namespace futils::binary {

@@ -6,9 +6,9 @@
 */
 
 #pragma once
-#include "reader.h"
-#include "writer.h"
-#include "signint.h"
+#include <binary/reader.h>
+#include <binary/writer.h>
+#include <binary/signint.h>
 
 namespace futils::binary {
     template <class T, class C>

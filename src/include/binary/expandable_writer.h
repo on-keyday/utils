@@ -6,7 +6,7 @@
 */
 
 #pragma once
-#include "writer.h"
+#include <binary/writer.h>
 
 namespace futils {
     namespace binary {

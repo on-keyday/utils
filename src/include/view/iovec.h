@@ -7,8 +7,8 @@
 
 // iovec - io vector
 #pragma once
-#include "../core/strlen.h"
-#include "../core/byte.h"
+#include <core/strlen.h>
+#include <core/byte.h>
 #include <cstddef>
 #include <cstdint>
 #include <concepts>

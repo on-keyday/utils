@@ -7,9 +7,9 @@
 
 #pragma once
 
-#include "number.h"
-#include "expandable_reader.h"
-#include "expandable_writer.h"
+#include <binary/number.h>
+#include <binary/expandable_reader.h>
+#include <binary/expandable_writer.h>
 
 namespace futils {
     namespace binary {
