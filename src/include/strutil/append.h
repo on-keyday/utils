@@ -10,7 +10,7 @@
 #pragma once
 
 // #include "sfinae.h"
-#include "../core/sequencer.h"
+#include <core/sequencer.h>
 
 namespace futils {
     namespace strutil {

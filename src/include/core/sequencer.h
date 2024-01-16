@@ -9,7 +9,7 @@
 // sequencer - buffer sequencer
 #pragma once
 
-#include "buffer.h"
+#include <core/buffer.h>
 
 namespace futils {
     template <class T>

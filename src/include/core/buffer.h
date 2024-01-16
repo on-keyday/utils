@@ -14,7 +14,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
-#include "strlen.h"
+#include <core/strlen.h>
 #include <helper/disable_self.h>
 
 namespace futils {
