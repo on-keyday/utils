@@ -11,7 +11,7 @@
 #include <type_traits>
 #include <bit>
 #include <binary/flags.h>
-#if __has_include(<stdfloat>)
+#if __has_include(<stdfloat>) && __cplusplus >= 202302L
 #include <stdfloat>
 #define FUTILS_BINARY_SUPPORT_STDFLOAT 1
 #endif
