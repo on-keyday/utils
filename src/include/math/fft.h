@@ -43,6 +43,9 @@ namespace futils::math::fft {
         size_t size = 0;
     };
 
+    template <class T>
+    complex_vec(complex<T>*, size_t) -> complex_vec<T>;
+
     namespace internal {
         constexpr double abs(double x) noexcept {
             return x < 0 ? -x : x;
