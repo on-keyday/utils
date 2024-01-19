@@ -78,6 +78,8 @@ namespace futils::timer {
               }) {}
     };
     constexpr auto utc_clock = UTCClock();
+#else
+    constexpr auto utc_clock = SystemClock();
 #endif
     constexpr auto std_clock = SystemClock();
     constexpr auto steady_clock = SteadyClock();
