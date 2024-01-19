@@ -22,6 +22,8 @@
 #include <env/env_sys.h>
 #include <chrono>
 #include <format>
+#include <timer/clock.h>
+#include <timer/to_string.h>
 
 struct Flags : futils::cmdline::templ::HelpOption {
     std::string port = "8091";
@@ -102,16 +104,18 @@ void log_thread() {
         }
     }
 }
-
+constexpr auto timeFmt = "%Y-%M-%D %h:%m:%s ";
 void log(auto&&... msg) {
-    auto r = futils::wrap::packln(std::format("{} ", std::chrono::system_clock::now()), msg...).raw();
+    auto str = futils::timer::to_string<std::string>(timeFmt, futils::timer::utc_clock.now());
+    auto r = futils::wrap::packln(str, msg...).raw();
     m.lock();
     ac.push_back(std::move(r));
     m.unlock();
 }
 
 void log_internal(auto&&... msg) {
-    auto r = futils::wrap::packln(std::format("{} ", std::chrono::system_clock::now()), msg...).raw();
+    auto str = futils::timer::to_string<std::string>(timeFmt, futils::timer::utc_clock.now());
+    auto r = futils::wrap::packln(str, msg...).raw();
     cout << r;
 }
 
