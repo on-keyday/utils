@@ -60,6 +60,7 @@ namespace futils::timer {
               }) {}
     };
 
+#if __cpp_lib_chrono >= 201907L
     struct UTCClock : Clock {
         constexpr UTCClock()
             : Clock([](const Clock*) {
@@ -76,10 +77,11 @@ namespace futils::timer {
                   return Time{static_cast<std::uint64_t>(sec), static_cast<std::uint32_t>(nsec % 1000000000)};
               }) {}
     };
-
+    constexpr auto utc_clock = UTCClock();
+#endif
     constexpr auto std_clock = SystemClock();
     constexpr auto steady_clock = SteadyClock();
-    constexpr auto utc_clock = UTCClock();
+
     struct FixedClock : Clock {
        private:
         Time time;
