@@ -8,13 +8,8 @@
 
 #include <low/stack.h>
 #include <cstddef>
+#ifdef _WIN32
 #include <windows.h>
-
-alignas(16) unsigned char data[1024 * 1024 + 16];
-
-void except(futils::low::Stack* s) {
-    throw "";
-}
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
 const char* imageBaseAddr;
@@ -36,9 +31,27 @@ void f(futils::low::Stack* s, void* c) {
     }
     // throw "";
 }
+#else
+void f(futils::low::Stack* s, void* c) {
+    auto stack = s->available_stack_span();
+    auto ptr = stack.end();
+    s->suspend();
+    try {
+        // except(s);
+    } catch (...) {
+        s->resume();
+    }
+    // throw "";
+}
+#endif
+
+alignas(16) unsigned char data[1024 * 1024 + 16];
+
+void except(futils::low::Stack* s) {
+    throw "";
+}
 
 int main() {
-    imageBaseAddr = (const char*)&__ImageBase;
     try {
         throw "";
     } catch (...) {
