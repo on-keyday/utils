@@ -144,6 +144,10 @@ namespace futils {
             write_hook_fn set_hook_write(write_hook_fn hook) {
                 return std::exchange(hook_write, hook);
             }
+
+            write_hook_fn get_hook_write() const {
+                return hook_write;
+            }
         };
 
         futils_DLL_EXPORT UtfOut& STDCALL cout_wrap();
