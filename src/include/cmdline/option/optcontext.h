@@ -179,10 +179,10 @@ namespace futils {
                         help, argdesc, flag);
                 }
 
-                template <class Str = wrap::string, template <class...> class Vec = wrap::vector>
+                template <class Str = wrap::string, template <class...> class Vec = wrap::vector, bool view_like = false>
                 bool UnboundVecString(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return UnboundOption(
-                        option, VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
+                        option, VectorParser<Str, Vec>{.parser = StringParser<Str, view_like>{}, .len = len},
                         help, argdesc, flag);
                 }
 
@@ -318,13 +318,13 @@ namespace futils {
                                   help, argdesc, flag);
                 }
 
-                template <class Str = wrap::string, template <class...> class Vec = wrap::vector>
+                template <class Str = wrap::string, template <class...> class Vec = wrap::vector, bool view_like = false>
                 Vec<Str>* VecString(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, Vec<Str>&& defaultv = Vec<Str>{}) {
                     if (defaultv.size() < len) {
                         defaultv.resize(len);
                     }
                     return Option(option, std::move(defaultv),
-                                  VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
+                                  VectorParser<Str, Vec>{.parser = StringParser<Str, view_like>{}, .len = len},
                                   help, argdesc, flag);
                 }
 
