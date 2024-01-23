@@ -179,7 +179,7 @@ namespace futils {
             };
 #undef GET_VALUE
 
-            template <class String>
+            template <class String, bool view_like>
             struct StringParser {
                 bool parse(SafeVal<Value>& val, CmdParseState& state, bool reserved, size_t count) {
                     const char* v = nullptr;
@@ -194,9 +194,17 @@ namespace futils {
                         state.state = FlagType::require_more_argument;
                         return false;
                     }
-                    if (!val.set_value(utf::convert<String>(v))) {
-                        state.state = FlagType::type_not_match;
-                        return false;
+                    if constexpr (view_like) {
+                        if (!val.set_value(String(v))) {
+                            state.state = FlagType::type_not_match;
+                            return false;
+                        }
+                    }
+                    else {
+                        if (!val.set_value(utf::convert<String>(v))) {
+                            state.state = FlagType::type_not_match;
+                            return false;
+                        }
                     }
                     return true;
                 }

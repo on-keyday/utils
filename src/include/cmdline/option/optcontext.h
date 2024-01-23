@@ -158,9 +158,9 @@ namespace futils {
                     return UnboundOption(option, FloatParser{.radix = radix}, help, argdesc, flag);
                 }
 
-                template <class Str = wrap::string>
+                template <class Str = wrap::string, bool view_like = false>
                 bool UnboundString(auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
-                    return UnboundOption(option, StringParser<Str>{}, help, argdesc, flag);
+                    return UnboundOption(option, StringParser<Str, view_like>{}, help, argdesc, flag);
                 }
 
                 template <class T = std::uint64_t, template <class...> class Vec = wrap::vector>
@@ -217,14 +217,14 @@ namespace futils {
                         help, argdesc, flag);
                 }
 
-                template <class Str>
+                template <bool view_like = false, class Str>
                 bool VarString(Str* ptr, auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
                     if (!ptr) {
                         return false;
                     }
                     return (bool)Option(
                         option, ptr,
-                        StringParser<Str>{},
+                        StringParser<Str, view_like>{},
                         help, argdesc, flag);
                 }
 
@@ -290,10 +290,10 @@ namespace futils {
                         FloatParser{.radix = radix}, help, argdesc, flag);
                 }
 
-                template <class Str = wrap::string>
+                template <class Str = wrap::string, bool view_like = false>
                 Str* String(auto&& option, Str defaultv, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
                     return Option(option, std::move(defaultv),
-                                  StringParser<Str>{}, help, argdesc, flag);
+                                  StringParser<Str, view_like>{}, help, argdesc, flag);
                 }
 
                 template <class T = std::int64_t, template <class...> class Vec = wrap::vector>
