@@ -254,7 +254,7 @@ namespace futils {
                                         help, argdesc, flag);
                 }
 
-                template <class Str, template <class...> class Vec>
+                template <class Str, template <class...> class Vec, bool view_like = false>
                 bool VarVecString(Vec<Str>* ptr, auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
                     if (!ptr) {
                         return false;
@@ -263,7 +263,7 @@ namespace futils {
                         ptr->resize(len);
                     }
                     return (bool)Option(option, ptr,
-                                        VectorParser<Str, Vec>{.parser = StringParser<Str>{}, .len = len},
+                                        VectorParser<Str, Vec>{.parser = StringParser<Str, view_like>{}, .len = len},
                                         help, argdesc, flag);
                 }
 
