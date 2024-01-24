@@ -9,7 +9,7 @@
 // to_string - number to string
 #pragma once
 
-#include <limits>
+#include <binary/float.h>
 #include <type_traits>
 
 #include <number/char_range.h>
@@ -165,8 +165,7 @@ namespace futils {
                 }
                 in = -in;
             }
-            if (in == std::numeric_limits<T>::infinity() ||
-                in == -std::numeric_limits<T>::infinity()) {
+            if (binary::make_float(in).is_infinity()) {
                 if (upper) {
                     result.push_back('I');
                     result.push_back('N');

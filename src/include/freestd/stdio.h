@@ -6,17 +6,18 @@
 */
 
 #pragma once
-#include <platform/detect.h>
-#include <freestd/stddef.h>
+#include <freestd/stdarg.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+int printf(const char* format, ...);
+int vprintf(const char* format, va_list args);
+void putchar(int c);
 
+#ifdef __cplusplus
 namespace futils::freestd {
-    using ::ptrdiff_t;
-    using ::size_t;
+    using ::printf;
+    using ::putchar;
 }  // namespace futils::freestd
-
-#ifdef FUTILS_PLATFORM_FREESTANDING
-namespace std {
-    using namespace futils::freestd;
 }
-
 #endif

@@ -21,7 +21,7 @@ namespace futils {
             using U = uns_t<T>;
             U t = uns(v);
             auto m = indexed_mask<U>();
-            auto i = 0;
+            size_t i = 0;
             for (; i < sizeof(T) * bit_per_byte; i++) {
                 if (t & m(i)) {
                     break;

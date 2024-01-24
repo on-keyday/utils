@@ -6,5 +6,10 @@
 */
 
 #pragma once
-
-#define assert(x) ((void)0)
+#if defined(_WIN32)  // TODO(on-keyday): what is freestanding?
+typedef unsigned long long size_t;
+typedef long long ptrdiff_t;
+#else
+typedef unsigned long size_t;
+typedef long ptrdiff_t;
+#endif

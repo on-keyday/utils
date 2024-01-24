@@ -6,3 +6,52 @@
 */
 
 #pragma once
+#include <platform/detect.h>
+
+namespace futils::freestd {
+    struct must_zero {
+        consteval must_zero(int x) {
+            if (x != 0) {
+                throw "must be zero";
+            }
+        }
+    };
+
+    struct strong_ordering {
+       private:
+        int value;
+        constexpr strong_ordering(int v) noexcept
+            : value(v) {}
+
+       public:
+        static const strong_ordering less;
+        static const strong_ordering equal;
+        static const strong_ordering equivalent;
+        static const strong_ordering greater;
+
+        friend constexpr bool operator==(strong_ordering v,
+                                         strong_ordering c) noexcept {
+            return v.value == c.value;
+        }
+
+        friend constexpr auto operator<=>(strong_ordering c, must_zero) {
+            return c;
+        }
+
+        friend constexpr auto operator<=>(must_zero, strong_ordering v) noexcept {
+            return v.value < 0 ? strong_ordering::greater : (v.value > 0 ? strong_ordering::less : v);
+        }
+    };
+
+    inline constexpr strong_ordering strong_ordering::less(-1);
+    inline constexpr strong_ordering strong_ordering::equal(0);
+    inline constexpr strong_ordering strong_ordering::equivalent(0);
+    inline constexpr strong_ordering strong_ordering::greater(1);
+
+}  // namespace futils::freestd
+
+#ifdef FUTILS_PLATFORM_FREESTANDING
+namespace std {
+    using namespace futils::freestd;
+}
+#endif

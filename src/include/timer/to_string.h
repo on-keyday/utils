@@ -13,6 +13,7 @@
 #include <number/to_string.h>
 #include <strutil/equal.h>
 #include <number/insert_space.h>
+#include <strutil/format.h>
 
 namespace futils::timer {
 
@@ -30,208 +31,98 @@ namespace futils::timer {
         unknown,
     };
 
-    enum class FormatError {
-        none,
-        invalid_format_string,
-        missing_specifier,
-        too_large,
-    };
-
-    struct FormatStr {
-       private:
-        const char* str;
-
-       public:
-        constexpr FormatStr(const char* str)
-            : str(str) {}
-
-        constexpr FormatError parse(auto&& callback) {
-            if (!str) {
-                if (std::is_constant_evaluated()) {
-                    throw "FormatStr::parse: str is null";
-                }
-                return FormatError::invalid_format_string;
-            }
-            view::basic_rvec<char> range(str);
-            const char* prev = range.begin();
-            for (auto i = range.begin(); i != range.end(); i++) {
-                if (*i == '%') {
-                    callback(view::basic_rvec<char>(prev, i), FormatType::text);
-                    prev = i;
-                    i++;
-                    if (i == range.end()) {
-                        if (std::is_constant_evaluated()) {
-                            throw "FormatStr::parse: invalid format string";
-                        }
-                        return FormatError::invalid_format_string;
-                    }
-                    if (*i == '%') {
-                        callback(view::basic_rvec<char>("%"), FormatType::text);
-                        prev = i;
-                        continue;
-                    }
-                    while (i != range.end() && !number::is_alpha(*i)) {
-                        i++;
-                    }
-                    if (i == range.end()) {
-                        if (std::is_constant_evaluated()) {
-                            throw "FormatStr::parse: invalid format string";
-                        }
-                        return FormatError::missing_specifier;
-                    }
-                    FormatError err = FormatError::none;
-                    switch (*i) {
-                        case 'Y':
-                            err = callback(view::basic_rvec<char>(prev, i),
-                                           FormatType::year);
-                            break;
-                        case 'M':
-                            err = callback(view::basic_rvec<char>(prev, i),
-                                           FormatType::month);
-                            break;
-                        case 'D':
-                            err = callback(view::basic_rvec<char>(prev, i),
-                                           FormatType::day);
-                            break;
-                        case 'h':
-                            err = callback(view::basic_rvec<char>(prev, i),
-                                           FormatType::hour);
-                            break;
-                        case 'm':
-                            err = callback(view::basic_rvec<char>(prev, i),
-                                           FormatType::minute);
-                            break;
-                        case 's':
-                            err = callback(view::basic_rvec<char>(prev, i),
-                                           FormatType::second);
-                            break;
-                        case 'f':
-                            err = callback(view::basic_rvec<char>(prev, i),
-                                           FormatType::millisecond);
-                            break;
-                        case 'u':
-                            err = callback(view::basic_rvec<char>(prev, i),
-                                           FormatType::microsecond);
-                            break;
-                        case 'n':
-                            err = callback(view::basic_rvec<char>(prev, i),
-                                           FormatType::nanosecond);
-                            break;
-                        default:
-                            err = callback(view::basic_rvec<char>(prev, i),
-                                           FormatType::unknown);
-                            break;
-                    }
-                    prev = i + 1;
-                }
-            }
-            callback(view::basic_rvec<char>(prev, range.end()), FormatType::text);
-            return FormatError::none;
-        }
-    };
-
-    struct ConstFormatStr {
-        FormatStr fmt;
-        consteval ConstFormatStr(const char* str)
-            : fmt(str) {
-            fmt.parse([](auto&&, auto&&) {
-                return FormatError::none;
-            });
-        }
-    };
-
     template <class Out>
-    constexpr auto to_string_v(Out& o, FormatStr fmt, const Time& t, const TimeOrigin& origin = unix_epoch, char insert = '0') {
+    constexpr auto to_string_v(Out& o, strutil::FormatStr fmt, const Time& t, const TimeOrigin& origin = unix_epoch, char insert = '0') {
         auto t2 = origin.from_time(t);
-        return fmt.parse([&](view::basic_rvec<char> range, FormatType t) {
+        return fmt.parse([&](view::basic_rvec<char> range, char t) {
             switch (t) {
-                case FormatType::text:
+                case 0:
                     strutil::append(o, range);
                     break;
-                case FormatType::year:
+                case 'Y':
                     if (insert) {
                         number::insert_space(o, 4, t2.year, 10, insert);
                     }
                     number::to_string(o, t2.year);
                     break;
-                case FormatType::month:
+                case 'M':
                     if (insert) {
                         number::insert_space(o, 2, t2.month, 10, insert);
                     }
                     number::to_string(o, t2.month);
                     break;
-                case FormatType::day:
+                case 'D':
                     if (insert) {
                         number::insert_space(o, 2, t2.day, 10, insert);
                     }
                     number::to_string(o, t2.day);
                     break;
-                case FormatType::hour:
+                case 'h':
                     if (insert) {
                         number::insert_space(o, 2, t2.hour, 10, insert);
                     }
                     number::to_string(o, t2.hour);
                     break;
-                case FormatType::minute:
+                case 'm':
                     if (insert) {
                         number::insert_space(o, 2, t2.minute, 10, insert);
                     }
                     number::to_string(o, t2.minute);
                     break;
-                case FormatType::second:
+                case 's':
                     if (insert) {
                         number::insert_space(o, 2, t2.second, 10, insert);
                     }
                     number::to_string(o, t2.second);
                     break;
-                case FormatType::millisecond:
+                case 'f':
                     if (insert) {
                         number::insert_space(o, 3, t2.nanosecond / nano_per_milli, 10, insert);
                     }
                     number::to_string(o, t2.nanosecond / nano_per_milli);
                     break;
-                case FormatType::microsecond:
+                case 'u':
                     if (insert) {
                         number::insert_space(o, 6, t2.nanosecond / nano_per_micro, 10, insert);
                     }
                     number::to_string(o, t2.nanosecond / nano_per_micro);
                     break;
-                case FormatType::nanosecond:
+                case 'n':
                     if (insert) {
                         number::insert_space(o, 9, t2.nanosecond, 10, insert);
                     }
                     number::to_string(o, t2.nanosecond);
                     break;
-                case FormatType::unknown:
+                default:
                     strutil::append(o, "<unknown>");
                     break;
             }
-            return FormatError::none;
+            return strutil::FormatError::none;
         });
     }
 
     template <class Out>
-    constexpr auto to_string(Out& o, ConstFormatStr fmt, const Time& t, const TimeOrigin& origin = unix_epoch) {
+    constexpr auto to_string(Out& o, strutil::ConstFormatStr fmt, const Time& t, const TimeOrigin& origin = unix_epoch) {
         return to_string_v(o, fmt.fmt, t, origin);
     }
 
     template <class Out>
-    constexpr Out to_string(ConstFormatStr fmt, const Time& t, const TimeOrigin& origin = unix_epoch) {
+    constexpr Out to_string(strutil::ConstFormatStr fmt, const Time& t, const TimeOrigin& origin = unix_epoch) {
         Out o{};
         to_string(o, fmt, t, origin);
         return o;
     }
 
     template <class Out>
-    constexpr Out to_string_v(FormatStr fmt, const Time& t, const TimeOrigin& origin = unix_epoch) {
+    constexpr Out to_string_v(strutil::FormatStr fmt, const Time& t, const TimeOrigin& origin = unix_epoch) {
         Out o{};
         to_string_v(o, fmt, t, origin);
         return o;
     }
 
     namespace test {
-        constexpr auto format_str = ConstFormatStr("%Y-%M-%D %h:%m:%s.%n");
-        constexpr auto nengappi_str = ConstFormatStr("%Y年%M月%D日 %h時%m分%s秒");
+        constexpr auto format_str = strutil::ConstFormatStr("%Y-%M-%D %h:%m:%s.%n");
+        constexpr auto nengappi_str = strutil::ConstFormatStr("%Y年%M月%D日 %h時%m分%s秒");
 
         constexpr auto test_format() {
             Time t = unix_epoch.to_time(unix_epoch);

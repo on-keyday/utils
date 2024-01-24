@@ -1,0 +1,49 @@
+/*
+    futils - utility library
+    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
+    Released under the MIT license
+    https://opensource.org/licenses/mit-license.php
+*/
+
+#pragma once
+#include <platform/detect.h>
+#include <freestd/cstddef>
+
+namespace futils::freestd {
+    template <class T>
+    struct initializer_list {
+        using value_type = T;
+        using reference = const T&;
+        using const_reference = const T&;
+        using size_type = size_t;
+        using iterator = const T*;
+        using const_iterator = const T*;
+
+        constexpr initializer_list() noexcept = default;
+        constexpr initializer_list(const T* b, const T* e) noexcept
+            : begin_(b), end_(e) {}
+
+        [[nodiscard]] constexpr const T* begin() const noexcept {
+            return begin_;
+        }
+
+        [[nodiscard]] constexpr const T* end() const noexcept {
+            return end_;
+        }
+
+        [[nodiscard]] constexpr size_t size() const noexcept {
+            return end_ - begin_;
+        }
+
+       private:
+        const T* begin_ = nullptr;
+        const T* end_ = nullptr;
+    };
+
+}  // namespace futils::freestd
+
+#ifdef FUTILS_PLATFORM_FREESTANDING
+namespace std {
+    using namespace futils::freestd;
+}
+#endif

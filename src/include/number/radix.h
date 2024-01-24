@@ -9,7 +9,7 @@
 // radix - radix helper
 #pragma once
 #include <cstdint>
-#include <limits>
+// #include <limits>
 #include <number/char_range.h>
 #include <number/array.h>
 
@@ -17,7 +17,7 @@ namespace futils {
     namespace number {
         template <class T>
         constexpr T radix_base_max(std::uint32_t radix) {
-            auto mx = (std::numeric_limits<T>::max)();
+            T mx = std::is_signed_v<T> ? T((~std::make_unsigned_t<T>(0)) >> 1) : (~std::make_unsigned_t<T>(0));
             T t = 1;
             mx /= radix;
             while (mx) {

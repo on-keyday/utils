@@ -15,24 +15,25 @@
 namespace futils {
     namespace number {
         // clang-format off
+        constexpr auto nt = std::int8_t(-1); // not a target
         constexpr std::int8_t number_transform[] = {
         //   0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x00 - 0x0f
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x10 - 0x1f
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x20 - 0x2f
-             0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1, // 0x30 - 0x3f
-            -1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, // 0x40 - 0x4f
-            25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, -1, -1, -1, -1, -1, // 0x50 - 0x5f
-            -1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, // 0x60 - 0x6f
-            25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, -1, -1, -1, -1, -1, // 0x70 - 0x7f
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x80 - 0x8f
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0x90 - 0x9f
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xa0 - 0xaf
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xb0 - 0xbf
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xc0 - 0xcf
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xd0 - 0xdf
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xe0 - 0xef
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, // 0xf0 - 0xff
+            nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, // 0x00 - 0x0f
+            nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, // 0x10 - 0x1f
+            nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, // 0x20 - 0x2f
+             0,  1,  2,  3,  4,  5,  6,  7,  8,  9, nt, nt, nt, nt, nt, nt, // 0x30 - 0x3f
+            nt, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, // 0x40 - 0x4f
+            25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, nt, nt, nt, nt, nt, // 0x50 - 0x5f
+            nt, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, // 0x60 - 0x6f
+            25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, nt, nt, nt, nt, nt, // 0x70 - 0x7f
+            nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, // 0x80 - 0x8f
+            nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, // 0x90 - 0x9f
+            nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, // 0xa0 - 0xaf
+            nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, // 0xb0 - 0xbf
+            nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, // 0xc0 - 0xcf
+            nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, // 0xd0 - 0xdf
+            nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, // 0xe0 - 0xef
+            nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, nt, // 0xf0 - 0xff
         };
         // clang-format on
 
@@ -82,7 +83,7 @@ namespace futils {
 
         template <class C>
         constexpr bool is_control_char(C&& c) {
-            return c >= 0 && c <= 0x20 || c == 0xFF;
+            return (c >= 0 && c <= 0x20) || c == 0xFF;
         }
 
         template <class C>

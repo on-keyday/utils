@@ -6,3 +6,58 @@
 */
 
 #pragma once
+#include <platform/detect.h>
+#include <freestd/initializer_list>
+#include <freestd/cstddef>
+
+namespace futils::freestd {
+    template <class T>
+    [[nodiscard]] constexpr auto data(T& t) noexcept(noexcept(t.data()))
+        -> decltype(t.data()) {
+        return t.data();
+    }
+
+    template <class T>
+    [[nodiscard]] constexpr auto data(const T& t) noexcept(noexcept(t.data()))
+        -> decltype(t.data()) {
+        return t.data();
+    }
+
+    template <class T, size_t size>
+    [[nodiscard]] constexpr T* data(T (&t)[size]) noexcept {
+        return t;
+    }
+
+    template <class T>
+    [[nodiscard]] constexpr const T* data(initializer_list<T> t) noexcept {
+        return t.begin();
+    }
+
+    template <class T>
+    [[nodiscard]] constexpr auto size(T& t) noexcept(noexcept(t.size()))
+        -> decltype(t.size()) {
+        return t.size();
+    }
+
+    template <class T>
+    [[nodiscard]] constexpr auto size(const T& t) noexcept(noexcept(t.size()))
+        -> decltype(t.size()) {
+        return t.size();
+    }
+
+    template <class T, size_t size_>
+    [[nodiscard]] constexpr auto size(T (&)[size_]) noexcept {
+        return size_;
+    }
+
+    template <class T>
+    [[nodiscard]] constexpr size_t size(initializer_list<T> t) noexcept {
+        return t.size();
+    }
+}  // namespace futils::freestd
+
+#ifdef FUTILS_PLATFORM_FREESTANDING
+namespace std {
+    using namespace futils::freestd;
+}
+#endif

@@ -8,7 +8,7 @@
 #pragma once
 
 namespace futils::binary {
-#if defined(__GCC__) || defined(__clang__)
+#if defined(__SIZEOF_INT128__)
     using int128_t = __int128_t;
     using uint128_t = __uint128_t;
 #define FUTILS_BINARY_SUPPORT_INT128 1

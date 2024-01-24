@@ -1,0 +1,28 @@
+/*
+    futils - utility library
+    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
+    Released under the MIT license
+    https://opensource.org/licenses/mit-license.php
+*/
+
+#pragma once
+#include <platform/detect.h>
+#include <freestd/type_traits>
+
+namespace futils::freestd {
+    template <class To, class From,
+              enable_if_t<(sizeof(To) == sizeof(From) &&
+                           is_trivially_copyable_v<To> &&
+                           is_trivially_copyable_v<From>),
+                          int> = 0>
+    constexpr To bit_cast(const From& from) noexcept {
+        static_assert(sizeof(To) == sizeof(From));
+        return __builtin_bit_cast(To, from);
+    }
+}  // namespace futils::freestd
+
+#ifdef FUTILS_PLATFORM_FREESTANDING
+namespace std {
+    using namespace futils::freestd;
+}
+#endif

@@ -17,8 +17,14 @@ namespace futils::freestd {
         }
     };
 
+    template <size_t... Ints>
+    using index_sequence = integer_sequence<size_t, Ints...>;
+
     template <typename T, T... Ints>
-    using make_index_sequence = __make_integer_seq<integer_sequence, T, Ints...>;
+    using make_integer_sequence = __make_integer_seq<integer_sequence, T, Ints...>;
+
+    template <size_t N>
+    using make_index_sequence = make_integer_sequence<size_t, N>;
 
     template <bool v>
     struct bool_constant {
@@ -49,6 +55,18 @@ namespace futils::freestd {
     struct make_unsigned;
     template <class T>
     struct make_signed;
+
+    template <class T>
+    struct is_signed : bool_constant<T(-1) < T(0)> {};
+
+    template <class T>
+    constexpr bool is_signed_v = is_signed<T>::value;
+
+    template <class T>
+    struct is_unsigned : bool_constant<!is_signed_v<T>> {};
+
+    template <class T>
+    constexpr bool is_unsigned_v = is_unsigned<T>::value;
 
     template <class T>
     struct is_integral : false_type {};
@@ -195,6 +213,9 @@ namespace futils::freestd {
     };
 
     template <class T>
+    using remove_cv_t = typename remove_cv<T>::type;
+
+    template <class T>
     struct remove_cvref {
         using type = typename remove_cv<typename remove_reference<T>::type>::type;
     };
@@ -214,6 +235,36 @@ namespace futils::freestd {
 
     template <class T>
     using remove_pointer_t = remove_pointer<T>::type;
+
+    template <class T>
+    struct is_empty : bool_constant<__is_empty(T)> {};
+
+    template <class T>
+    constexpr bool is_empty_v = is_empty<T>::value;
+
+    constexpr bool is_constant_evaluated() noexcept {
+        return __builtin_is_constant_evaluated();
+    }
+
+    template <class T>
+    struct is_trivially_copyable : bool_constant<__is_trivially_copyable(T)> {};
+
+    template <class T>
+    constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;
+
+    template <class T>
+    struct is_void : is_same<void, remove_cv_t<T>> {};
+
+    template <class T>
+    constexpr bool is_void_v = is_void<T>::value;
+
+    template <class T>
+    struct underlying_type {
+        using type = __underlying_type(T);
+    };
+
+    template <class T>
+    using underlying_type_t = typename underlying_type<T>::type;
 
 }  // namespace futils::freestd
 
