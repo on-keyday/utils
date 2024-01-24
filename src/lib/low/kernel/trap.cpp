@@ -98,8 +98,14 @@ EXTERN_C void handle_exception(struct trap_frame* f) {
     uint32_t scause = READ_CSR(scause);
     uint32_t stval = READ_CSR(stval);
     uint32_t user_pc = READ_CSR(sepc);
-
-    PANIC("unexpected trap scause=%x, stval=%x, sepc=%x\n", scause, stval, user_pc);
+    if (scause == SCAUSE_ECALL) {
+        syscall_handler(f);
+        user_pc += 4;
+    }
+    else {
+        PANIC("unexpected trap scause=0x%x, stval=0x%x, sepc=0x%x\n", scause, stval, user_pc);
+    }
+    WRITE_CSR(sepc, user_pc);
 }
 
 __attribute__((naked)) EXTERN_C void switch_context(vaddr_t* prev_sp, vaddr_t* next_sp) {

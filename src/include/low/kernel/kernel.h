@@ -86,13 +86,33 @@ struct process {
     int pid;
     int state;
     vaddr_t sp;
+    vaddr_t* page_table;
     uint8_t stack[8192];
 };
 
 void yield();
 void switch_context(vaddr_t* prev_sp, vaddr_t* next_sp);
 void process_init();
-struct process* create_process(void (*entry)());
+struct process* create_kernel_process(void (*entry)());
+struct process* create_user_process(const void* image, size_t size);
+
+#define SATP_SV32 (1 << 31)
+#define PAGE_V (1 << 0)
+#define PAGE_R (1 << 1)
+#define PAGE_W (1 << 2)
+#define PAGE_X (1 << 3)
+#define PAGE_U (1 << 4)
+void map_page(uint32_t* table1, vaddr_t vaddr, paddr_t paddr, uint32_t flags);
+
+#define USER_BASE 0x1000000
+
+#define SSTATUS_SPIE (1 << 5)
+
+#define SCAUSE_ECALL 8
+
+void syscall_handler(struct trap_frame* f);
+
+void exit_current_process();
 
 #ifdef __cplusplus
 namespace futils::low::kernel {

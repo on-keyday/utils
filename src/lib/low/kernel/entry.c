@@ -31,7 +31,7 @@ EXTERN_C void boot(void) {
 void proc_a_entry(void) {
     printf("start process A\n");
     while (1) {
-        putchar('A');
+        printf("A\n");
         yield();
 
         for (int i = 0; i < 10000000; i++) {
@@ -43,7 +43,7 @@ void proc_a_entry(void) {
 void proc_b_entry(void) {
     printf("start process B\n");
     while (1) {
-        putchar('B');
+        printf("B\n");
         yield();
 
         for (int i = 0; i < 10000000; i++) {
@@ -52,19 +52,17 @@ void proc_b_entry(void) {
     }
 }
 
+extern char _binary___built_kernel_shell_bin_start[];
+extern char _binary___built_kernel_shell_bin_size[];
+
 EXTERN_C void kernel_main(void) {
     memset(__bss, 0, __bss_end - __bss);
     WRITE_CSR(stvec, (uint32_t)kernel_exception_entry);
-    printf("\n\nHello %s\n", "World!");
-    printf("1 + 2 = %d, %x\n", 1 + 2, 0x1234abcd);
-    paddr_t p = page_alloc(2);
-    printf("page_alloc(1) = %p\n", p);
-    paddr_t p2 = page_alloc(1);
-    printf("page_alloc(2) = %p\n", p2);
     process_init();
+    // struct process* a = create_kernel_process(proc_a_entry);
+    // struct process* b = create_kernel_process(proc_b_entry);
 
-    struct process* a = create_process(proc_a_entry);
-    struct process* b = create_process(proc_b_entry);
+    struct process* u = create_user_process(_binary___built_kernel_shell_bin_start, (size_t)_binary___built_kernel_shell_bin_size);
 
     yield();
     PANIC("switched to idle process\n");

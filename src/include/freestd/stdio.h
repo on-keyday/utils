@@ -12,7 +12,13 @@ extern "C" {
 #endif
 int printf(const char* format, ...);
 int vprintf(const char* format, va_list args);
-void putchar(int c);
+int putchar(int c);
+int getchar();
+
+// kernel dependent
+// if retry <= 0, this function will block until a character is received
+// if otherwise, this function will retry retry-1 times and return -1 if no character is received
+int getchar_nonblock(int retry);  // this is maybe slow
 
 #ifdef __cplusplus
 namespace futils::freestd {

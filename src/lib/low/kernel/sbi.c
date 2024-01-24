@@ -10,8 +10,13 @@
 extern "C" {
 #endif
 
-void putchar(int c) {
+int putchar(int c) {
     sbi_call(c, 0, 0, 0, 0, 0, 0, 1);
+    return c;
+}
+
+int getchar() {
+    return sbi_call(0, 0, 0, 0, 0, 0, 0, 2).error;
 }
 
 struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4, long arg5, long fid, long eid) {
