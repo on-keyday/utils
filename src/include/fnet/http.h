@@ -10,8 +10,8 @@
 // #include "httpstring.h"
 #include "util/http/http_headers.h"
 #include "util/http/predefined.h"
-#include "../view/charvec.h"
-#include "../view/sized.h"
+#include <view/charvec.h>
+#include <view/sized.h>
 #include "storage.h"
 
 namespace futils {
@@ -135,42 +135,6 @@ namespace futils {
             view::rvec get_output() {
                 return output;
             }
-
-            /*
-            void borrow_output(const char*& data, size_t& size) {
-                data = output.as_char();
-                size = output.size();
-            }
-
-            void borrow_input(const char*& data, size_t& size) {
-                data = input.as_char();
-                size = input.size();
-            }
-
-            size_t get_output(auto&& buf, size_t limit = ~0, bool peek = false) {
-                auto check = make_cpy_seq(view::CharVec(output.begin(), output.size()));
-                if (limit > output.size()) {
-                    limit = output.size();
-                }
-                strutil::read_n(buf, check, limit);
-                if (!peek) {
-                    output.shift_front(limit);
-                }
-                return limit;
-            }
-
-            size_t get_input(auto& buf, size_t limit = ~0, bool peek = false) {
-                auto check = make_cpy_seq(view::CharVec(input.begin(), input.size()));
-                if (limit > input.size()) {
-                    limit = input.size();
-                }
-                strutil::read_n(buf, check, limit);
-                if (!peek) {
-                    input.shift_front(limit);
-                }
-                return limit;
-            }
-            */
 
             void clear_input() {
                 input.resize(0);

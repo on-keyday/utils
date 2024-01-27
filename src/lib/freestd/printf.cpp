@@ -7,6 +7,7 @@
 
 #include <freestd/stdarg.h>
 #include <freestd/stdio.h>
+#include <freestd/stdlib.h>
 #include <strutil/format.h>
 #include <number/to_string.h>
 #include <console/ansiesc.h>
@@ -92,9 +93,7 @@ extern "C" void futils_kernel_panic(const char* file, int line, const char* fmt,
     vprintf(fmt, args);
     va_end(args);
     for (;;) {
-#ifdef __riscv
-        __asm__ volatile("wfi");
-#endif
+        exit(1);
         // no return
     }
 }

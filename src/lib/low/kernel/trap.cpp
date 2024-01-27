@@ -141,3 +141,9 @@ __attribute__((naked)) EXTERN_C void switch_context(vaddr_t* prev_sp, vaddr_t* n
     __asm__ volatile("addi sp, sp, 4 * 13");
     __asm__ volatile("ret");
 }
+
+EXTERN_C void exit(int) {
+    for (;;) {
+        __asm__ volatile("wfi");
+    }
+}
