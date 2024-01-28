@@ -27,6 +27,21 @@ inline void *memcpy(void *dst, const void *src, size_t n) {
     return dst;
 }
 
+inline size_t strlen(const char *s) {
+    size_t n = 0;
+    while (*s++)
+        n++;
+    return n;
+}
+
+inline int strcmp(const char *s1, const char *s2) {
+    while (*s1 && *s2 && *s1 == *s2) {
+        s1++;
+        s2++;
+    }
+    return *s1 - *s2;
+}
+
 #ifdef __cplusplus
 namespace futils::freestd {
     using ::memset;
