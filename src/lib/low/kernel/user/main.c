@@ -10,6 +10,9 @@
 
 EXTERN_C void main(void) {
     printf("Hello, world from user!\n");
+    char buf[10];
+    snprintf(buf, sizeof(buf), "Hello, world from user!\n");
+    printf("%s", buf);
     printf("Press any key to continue...\n");
     getchar();
 }

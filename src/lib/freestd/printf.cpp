@@ -11,6 +11,64 @@
 #include <strutil/format.h>
 #include <number/to_string.h>
 #include <console/ansiesc.h>
+#include <helper/pushbacker.h>
+
+int vprintf_internal(auto&& pb, const char* format, va_list args) {
+    futils::strutil::FormatStr fmt(format);
+    futils::helper::CountPushBacker<decltype(pb)> pb_count(pb);
+    fmt.parse(
+        [&](futils::view::basic_rvec<char> range, int c) {
+            if (c == 0) {
+                for (auto c : range) {
+                    pb_count.push_back(futils::byte(c));
+                }
+                return futils::strutil::FormatError::none;
+            }
+            switch (c) {
+                case 's': {
+                    auto s = va_arg(args, const char*);
+                    auto txt = futils::view::basic_rvec<char>(s);
+                    for (auto c : txt) {
+                        pb_count.push_back(futils::byte(c));
+                    }
+                    break;
+                }
+                case 'c': {
+                    auto c = va_arg(args, int);
+                    pb_count.push_back(futils::byte(c));
+                    break;
+                }
+                case 'p': {
+                    auto p = va_arg(args, void*);
+                    futils::number::to_string(pb_count, (uintptr_t)p, 16);
+                    break;
+                }
+                case 'd':
+                case 'x': {
+                    auto i = va_arg(args, int);
+                    if (c == 'x') {
+                        futils::number::to_string(pb_count, (unsigned int)i, 16);
+                    }
+                    else {
+                        futils::number::to_string(pb_count, i, 10);
+                    }
+                    break;
+                }
+            }
+            return futils::strutil::FormatError::none;
+        },
+        true);
+    return pb_count.count;
+}
+
+extern "C" int vprintf(const char* format, va_list args) {
+    struct {
+        void push_back(futils::byte c) {
+            putchar(c);
+        }
+    } pb;
+    return vprintf_internal(pb, format, args);
+}
 
 extern "C" int printf(const char* format, ...) {
     va_list args;
@@ -20,68 +78,22 @@ extern "C" int printf(const char* format, ...) {
     return count;
 }
 
-extern "C" int vprintf(const char* format, va_list args) {
-    futils::strutil::FormatStr fmt(format);
-    int count = 0;
-    fmt.parse(
-        [&](futils::view::basic_rvec<char> range, int c) {
-            if (c == 0) {
-                for (auto c : range) {
-                    putchar(futils::byte(c));
-                }
-                count += range.size();
-                return futils::strutil::FormatError::none;
-            }
-            switch (c) {
-                case 's': {
-                    auto s = va_arg(args, const char*);
-                    auto txt = futils::view::basic_rvec<char>(s);
-                    for (auto c : txt) {
-                        putchar(futils::byte(c));
-                    }
-                    count += txt.size();
-                    break;
-                }
-                case 'c': {
-                    putchar(futils::byte(va_arg(args, int)));
-                    count++;
-                    break;
-                }
-                case 'p': {
-                    auto p = va_arg(args, void*);
-                    struct {
-                        int* count;
-                        void push_back(char c) {
-                            putchar(c);
-                            (*count)++;
-                        }
-                    } cout{&count};
-                    futils::number::to_string(cout, (uintptr_t)p, 16);
-                    break;
-                }
-                case 'd':
-                case 'x': {
-                    auto i = va_arg(args, int);
-                    struct {
-                        int* count;
-                        void push_back(char c) {
-                            putchar(c);
-                            (*count)++;
-                        }
-                    } cout{&count};
-                    if (c == 'x') {
-                        futils::number::to_string(cout, (unsigned int)i, 16);
-                    }
-                    else {
-                        futils::number::to_string(cout, i, 10);
-                    }
-                    break;
-                }
-            }
-            return futils::strutil::FormatError::none;
-        },
-        true);
+extern "C" int snprintf(char* str, size_t size, const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    int count = vsnprintf(str, size, format, args);
+    va_end(args);
     return count;
+}
+
+extern "C" int vsnprintf(char* str, size_t size, const char* format, va_list args) {
+    if (size == 0) {
+        return 0;
+    }
+    futils::helper::CharVecPushbacker pb{str, 0, size - 1};
+    auto ret = vprintf_internal(pb, format, args);
+    pb.text[pb.size()] = 0;
+    return ret;
 }
 
 extern "C" void futils_kernel_panic(const char* file, int line, const char* fmt, ...) {

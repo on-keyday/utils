@@ -6,3 +6,20 @@
 */
 
 #pragma once
+
+namespace futils::freestd {
+    template <class T>
+    constexpr T* addressof(T& t) noexcept {
+        return __builtin_addressof(t);
+    }
+
+    template <class T>
+    constexpr T* addressof(T&&) = delete;
+
+}  // namespace futils::freestd
+
+#ifdef FUTILS_PLATFORM_FREESTANDING
+namespace std {
+    using namespace futils::freestd;
+}
+#endif

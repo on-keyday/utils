@@ -7,11 +7,14 @@
 
 #pragma once
 #include <freestd/stdarg.h>
+#include <freestd/stddef.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
 int printf(const char* format, ...);
 int vprintf(const char* format, va_list args);
+int snprintf(char* str, size_t size, const char* format, ...);
+int vsnprintf(char* str, size_t size, const char* format, va_list args);
 int putchar(int c);
 int getchar();
 
