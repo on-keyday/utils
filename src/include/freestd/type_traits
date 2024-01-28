@@ -130,9 +130,9 @@ namespace futils::freestd {
     constexpr bool is_arithmetic_v = is_arithmetic<T>::value;
 
     template <class T>
-    using make_unsigned_t = make_unsigned<T>::type;
+    using make_unsigned_t = typename make_unsigned<T>::type;
     template <class T>
-    using make_signed_t = make_signed<T>::type;
+    using make_signed_t = typename make_signed<T>::type;
 
     template <bool cond, class T = void>
     struct enable_if {};
@@ -143,7 +143,7 @@ namespace futils::freestd {
     };
 
     template <bool cond, class T = void>
-    using enable_if_t = enable_if<cond, T>::type;
+    using enable_if_t = typename enable_if<cond, T>::type;
 
     template <class T>
     struct is_pointer : false_type {};
@@ -200,7 +200,7 @@ namespace futils::freestd {
     };
 
     template <class T>
-    using remove_reference_t = remove_reference<T>::type;
+    using remove_reference_t = typename remove_reference<T>::type;
 
     template <class T>
     struct remove_cv {
@@ -234,7 +234,7 @@ namespace futils::freestd {
     };
 
     template <class T>
-    using remove_pointer_t = remove_pointer<T>::type;
+    using remove_pointer_t = typename remove_pointer<T>::type;
 
     template <class T>
     struct is_empty : bool_constant<__is_empty(T)> {};
