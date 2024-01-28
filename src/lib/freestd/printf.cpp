@@ -15,7 +15,7 @@
 
 int vprintf_internal(auto&& pb, const char* format, va_list args) {
     futils::strutil::FormatStr fmt(format);
-    futils::helper::CountPushBacker<decltype(pb)> pb_count(pb);
+    futils::helper::CountPushBacker<decltype(pb)> pb_count{pb};
     fmt.parse(
         [&](futils::view::basic_rvec<char> range, int c) {
             if (c == 0) {
