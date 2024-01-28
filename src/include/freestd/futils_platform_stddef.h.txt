@@ -1,0 +1,2 @@
+#define FUTILS_FREESTD_STDDEF_SIZE_T unsigned long long
+#define FUTILS_FREESTD_STDDEF_PTRDIFF_T long long

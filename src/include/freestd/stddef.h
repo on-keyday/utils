@@ -6,10 +6,22 @@
 */
 
 #pragma once
-#if defined(_WIN32)  // TODO(on-keyday): what is freestanding?
-typedef unsigned long long size_t;
-typedef long long ptrdiff_t;
+#if __has_include(<futils_platform_stddef>)
+#include <futils_platform_stddef.h>
 #else
-typedef unsigned long size_t;
-typedef long ptrdiff_t;
+#if !defined(__SIZEOF_SIZE_T__)
+#error "TOO OLD COMPILER"
 #endif
+#if __SIZEOF_SIZE_T__ == 8
+#define FUTILS_FREESTD_STDDEF_SIZE_T unsigned long long
+#define FUTILS_FREESTD_STDDEF_PTRDIFF_T long long
+#elif __SIZEOF_SIZE_T__ == 4
+#define FUTILS_FREESTD_STDDEF_SIZE_T unsigned int
+#define FUTILS_FREESTD_STDDEF_PTRDIFF_T int
+#else
+#error "TOO OLD COMPILER"
+#endif
+#endif
+
+typedef FUTILS_FREESTD_STDDEF_SIZE_T size_t;
+typedef FUTILS_FREESTD_STDDEF_PTRDIFF_T ptrdiff_t;

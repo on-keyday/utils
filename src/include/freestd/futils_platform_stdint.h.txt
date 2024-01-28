@@ -1,0 +1,8 @@
+#define FUTILS_FREESTD_STDINT_UINT8_T unsigned char
+#define FUTILS_FREESTD_STDINT_UINT16_T unsigned short
+#define FUTILS_FREESTD_STDINT_UINT32_T unsigned int
+#define FUTILS_FREESTD_STDINT_UINT64_T unsigned long long
+#define FUTILS_FREESTD_STDINT_INT8_T char
+#define FUTILS_FREESTD_STDINT_INT16_T short
+#define FUTILS_FREESTD_STDINT_INT32_T int
+#define FUTILS_FREESTD_STDINT_INT64_T long long
