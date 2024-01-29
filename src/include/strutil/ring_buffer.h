@@ -107,6 +107,33 @@ namespace futils::strutil {
         }
     };
 
+    template <class C, size_t N, class J, class A>
+    constexpr void buffered_action(FixedRingBuffer<C, N>& b, C to_add, J&& judge, A&& action) {
+        if (b.full()) {
+            if (b.liner()) {
+                action(b.tail_ptr(), b.size());
+            }
+            else {
+                C dest[N];
+                b.copy_to(dest);
+                action(dest, b.size());
+            }
+            b.clear();
+        }
+        b.push(to_add);
+        if (judge(b)) {
+            if (b.liner()) {
+                action(b.tail_ptr(), b.size());
+            }
+            else {
+                C dest[N];
+                b.copy_to(dest);
+                action(dest, b.size());
+            }
+            b.clear();
+        }
+    }
+
     namespace test {
         constexpr bool test_ring_buffer() {
             FixedRingBuffer<char, 4> b;
