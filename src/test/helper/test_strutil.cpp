@@ -8,6 +8,7 @@
 
 #include "../../include/strutil/strutil.h"
 #include <view/slice.h>
+#include <strutil/ring_buffer.h>
 
 constexpr bool test_endswith() {
     return futils::strutil::ends_with("Hey Jude", " Jude");
