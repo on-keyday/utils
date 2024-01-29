@@ -70,6 +70,12 @@ extern "C" int vprintf(const char* format, va_list args) {
     return vprintf_internal(pb, format, args);
 }
 
+extern "C" int puts(const char* str) {
+    for (auto c : futils::view::basic_rvec<char>(str)) {
+        putchar(c);
+    }
+}
+
 extern "C" int printf(const char* format, ...) {
     va_list args;
     va_start(args, format);

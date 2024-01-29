@@ -17,6 +17,7 @@ int snprintf(char* str, size_t size, const char* format, ...);
 int vsnprintf(char* str, size_t size, const char* format, va_list args);
 int putchar(int c);
 int getchar();
+int puts(const char* str);
 
 // kernel dependent
 // if retry <= 0, this function will block until a character is received
