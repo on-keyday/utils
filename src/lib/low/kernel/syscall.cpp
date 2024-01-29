@@ -5,7 +5,6 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#pragma once
 #include <low/kernel/kernel.h>
 #include <low/kernel/user.h>
 #include <freestd/stdio.h>

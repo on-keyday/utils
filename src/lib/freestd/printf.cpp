@@ -61,7 +61,7 @@ int vprintf_internal(auto&& pb, const char* format, va_list args) {
     return pb_count.count;
 }
 
-extern "C" int vprintf(const char* format, va_list args) {
+extern "C" int FUTILS_FREESTD_STDC(vprintf)(const char* format, va_list args) {
     struct {
         void push_back(futils::byte c) {
             putchar(c);
@@ -70,31 +70,32 @@ extern "C" int vprintf(const char* format, va_list args) {
     return vprintf_internal(pb, format, args);
 }
 
-extern "C" int puts(const char* str) {
+extern "C" int FUTILS_FREESTD_STDC(puts)(const char* str) {
     auto range = futils::view::basic_rvec<char>(str);
     for (auto c : range) {
-        putchar(c);
+        FUTILS_FREESTD_STDC(putchar)
+        (c);
     }
     return range.size();
 }
 
-extern "C" int printf(const char* format, ...) {
+extern "C" int FUTILS_FREESTD_STDC(printf)(const char* format, ...) {
     va_list args;
     va_start(args, format);
-    int count = vprintf(format, args);
+    int count = FUTILS_FREESTD_STDC(vprintf)(format, args);
     va_end(args);
     return count;
 }
 
-extern "C" int snprintf(char* str, size_t size, const char* format, ...) {
+extern "C" int FUTILS_FREESTD_STDC(snprintf)(char* str, size_t size, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    int count = vsnprintf(str, size, format, args);
+    int count = FUTILS_FREESTD_STDC(vsnprintf)(str, size, format, args);
     va_end(args);
     return count;
 }
 
-extern "C" int vsnprintf(char* str, size_t size, const char* format, va_list args) {
+extern "C" int FUTILS_FREESTD_STDC(vsnprintf)(char* str, size_t size, const char* format, va_list args) {
     if (size == 0) {
         return 0;
     }

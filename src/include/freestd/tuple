@@ -6,10 +6,11 @@
 */
 
 #pragma once
+#include <freestd/freestd_macro.h>
 
 namespace futils::freestd {}
 
-#ifdef FUTILS_PLATFORM_FREESTANDING
+#ifdef FUTILS_FREESTD_STD_CPP
 namespace std {
     using namespace futils::freestd;
 }

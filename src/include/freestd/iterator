@@ -6,7 +6,7 @@
 */
 
 #pragma once
-#include <platform/detect.h>
+#include <freestd/freestd_macro.h>
 #include <freestd/initializer_list>
 #include <freestd/cstddef>
 
@@ -56,7 +56,7 @@ namespace futils::freestd {
     }
 }  // namespace futils::freestd
 
-#ifdef FUTILS_PLATFORM_FREESTANDING
+#ifdef FUTILS_FREESTD_STD_CPP
 namespace std {
     using namespace futils::freestd;
 }

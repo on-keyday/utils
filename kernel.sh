@@ -17,7 +17,7 @@ STD_DIR=./src/lib/freestd
 STD_INCLUDE_DIR="-I./src/include/freestd -I./src/include"
 KERNEL_C_SRC="$SRC_DIR/entry.c $SRC_DIR/sbi.c"
 KERNEL_CPP_SRC="$SRC_DIR/trap.cpp $SRC_DIR/heap.cpp $SRC_DIR/process.cpp $SRC_DIR/page_table.cpp $SRC_DIR/syscall.cpp"
-STD_SRC="$STD_DIR/printf.cpp"
+STD_SRC="$STD_DIR/freestd.cpp"
 
 KERNEL_LINKER_SCRIPT=./src/lib/low/kernel/kernel.ld
 FREESTD_DEFINE="-D__FUTILS_FREESTANDING__"

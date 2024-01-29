@@ -6,15 +6,16 @@
 */
 
 #pragma once
+#include <freestd/freestd_macro.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void exit(int status);
+void FUTILS_FREESTD_STDC(exit)(int status);
 
 #ifdef __cplusplus
 }
 namespace futils::freestd {
-    using ::exit;
+    using ::FUTILS_FREESTD_STDC(exit);
 }  // namespace futils::freestd
 #endif
