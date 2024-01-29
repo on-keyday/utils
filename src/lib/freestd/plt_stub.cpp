@@ -10,7 +10,7 @@
 
 extern "C" void FUTILS_FREESTD_STDC(exit)(int status) {
     for (;;) {
-        asm volatile("hlt");
+        __builtin_unreachable();
     }
 }
 
