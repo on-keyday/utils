@@ -64,7 +64,8 @@ int vprintf_internal(auto&& pb, const char* format, va_list args) {
 extern "C" int FUTILS_FREESTD_STDC(vprintf)(const char* format, va_list args) {
     struct {
         void push_back(futils::byte c) {
-            putchar(c);
+            FUTILS_FREESTD_STDC(putchar)
+            (c);
         }
     } pb;
     return vprintf_internal(pb, format, args);
