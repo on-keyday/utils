@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 void FUTILS_FREESTD_STDC(exit)(int status);
+void FUTILS_FREESTD_STDC(abort)(void);
 
 #ifdef __cplusplus
 }
