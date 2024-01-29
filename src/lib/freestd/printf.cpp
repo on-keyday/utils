@@ -111,10 +111,12 @@ extern "C" void futils_kernel_panic(const char* file, int line, const char* fmt,
     printf("%sPANIC%s: %s:%d: ", red, reset, file, line);
     va_list args;
     va_start(args, fmt);
-    vprintf(fmt, args);
+    FUTILS_FREESTD_STDC(vprintf)
+    (fmt, args);
     va_end(args);
     for (;;) {
-        exit(1);
+        FUTILS_FREESTD_STDC(exit)
+        (1);
         // no return
     }
 }
