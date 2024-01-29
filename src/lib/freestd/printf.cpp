@@ -71,9 +71,11 @@ extern "C" int vprintf(const char* format, va_list args) {
 }
 
 extern "C" int puts(const char* str) {
-    for (auto c : futils::view::basic_rvec<char>(str)) {
+    auto range = futils::view::basic_rvec<char>(str);
+    for (auto c : range) {
         putchar(c);
     }
+    return range.size();
 }
 
 extern "C" int printf(const char* format, ...) {
