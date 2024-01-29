@@ -28,9 +28,6 @@ namespace futils::strutil {
 
         constexpr FormatError parse(auto&& callback, bool ignore_missing = false) const {
             if (!str) {
-                if (std::is_constant_evaluated()) {
-                    throw "FormatStr::parse: str is null";
-                }
                 return FormatError::invalid_format_string;
             }
             view::basic_rvec<char> range(str);
@@ -43,9 +40,6 @@ namespace futils::strutil {
                     if (i == range.end()) {
                         if (ignore_missing) {
                             return FormatError::none;
-                        }
-                        if (std::is_constant_evaluated()) {
-                            throw "FormatStr::parse: invalid format string";
                         }
                         return FormatError::invalid_format_string;
                     }
@@ -60,9 +54,6 @@ namespace futils::strutil {
                     if (i == range.end()) {
                         if (ignore_missing) {
                             return FormatError::none;
-                        }
-                        if (std::is_constant_evaluated()) {
-                            throw "FormatStr::parse: invalid format string";
                         }
                         return FormatError::missing_specifier;
                     }
