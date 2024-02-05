@@ -51,7 +51,7 @@ namespace futils::strutil {
                     }
                     if (*i == '%') {
                         callback(view::basic_rvec<char>("%"), 0);
-                        prev = i;
+                        prev = i + 1;
                         continue;
                     }
                     while (i != range.end() && !number::is_alpha(*i)) {

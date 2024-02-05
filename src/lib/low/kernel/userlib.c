@@ -54,6 +54,7 @@ start() {
     __asm__ volatile(
         "mv sp, %0\n"
         "call main\n"
+        "mv a0, zero\n"
         "call exit\n" : : "r"(__stack_top));
 }
 
