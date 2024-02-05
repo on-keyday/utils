@@ -7,7 +7,6 @@
 
 #include <freestd/stdarg.h>
 #include <freestd/stdio.h>
-#include <freestd/stdlib.h>
 #include <strutil/format.h>
 #include <number/to_string.h>
 #include <helper/pushbacker.h>
