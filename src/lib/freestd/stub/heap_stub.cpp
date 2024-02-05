@@ -32,6 +32,7 @@ struct SimplePool : futils_MemoryPool {
 };
 
 // stub for runtime initialization, do not use in multi-threaded environment
+FUTILS_FREESTD_STUB_WEAK
 extern "C" int __cxa_guard_acquire(uint64_t* p) {
     if (*p) {
         return 0;
@@ -39,14 +40,17 @@ extern "C" int __cxa_guard_acquire(uint64_t* p) {
     *p = 1;
     return 1;
 }
+FUTILS_FREESTD_STUB_WEAK
 extern "C" void __cxa_guard_release(uint64_t*) {}
 
+FUTILS_FREESTD_STUB_WEAK
 extern "C" futils_MemoryPool* futils_platform_global_pool() {
     static SimplePool simple_pool;
     return &simple_pool;
 }
 
 #else
+FUTILS_FREESTD_STUB_WEAK
 extern "C" futils_MemoryPool* futils_platform_global_pool() {
     static futils_MemoryPool null_memory_pool = {
         .malloc = [](futils_MemoryPool*, size_t) -> void* {

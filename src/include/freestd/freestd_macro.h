@@ -17,3 +17,5 @@
 #if !defined(__FUTILS_FREESTD_NOT_STD_CPP__) && defined(FUTILS_PLATFORM_FREESTANDING)
 #define FUTILS_FREESTD_STD_CPP
 #endif
+
+#define FUTILS_FREESTD_STUB_WEAK __attribute__((weak))

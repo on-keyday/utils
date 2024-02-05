@@ -7,7 +7,7 @@
 
 
 #include <freestd/stdio.h>
-
+FUTILS_FREESTD_STUB_WEAK
 extern "C" int FUTILS_FREESTD_STDC(putchar)(int c) {
     // stub ignore
     return c;

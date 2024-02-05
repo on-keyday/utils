@@ -7,12 +7,14 @@
 
 #include <freestd/stdlib.h>
 
+FUTILS_FREESTD_STUB_WEAK
 extern "C" void FUTILS_FREESTD_STDC(exit)(int status) {
     for (;;) {
         __builtin_unreachable();
     }
 }
 
+FUTILS_FREESTD_STUB_WEAK
 extern "C" void FUTILS_FREESTD_STDC(abort)(void) {
     FUTILS_FREESTD_STDC(exit)
     (1);
