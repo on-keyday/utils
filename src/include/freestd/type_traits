@@ -58,7 +58,10 @@ namespace futils::freestd {
     struct make_signed;
 
     template <class T>
-    struct is_signed : bool_constant<T(-1) < T(0)> {};
+    constexpr bool is_signed_internal = T(-1) < T(0);
+
+    template <class T>
+    struct is_signed : bool_constant<is_signed_internal<T>> {};
 
     template <class T>
     constexpr bool is_signed_v = is_signed<T>::value;
@@ -150,7 +153,7 @@ namespace futils::freestd {
     struct is_pointer : false_type {};
 
     template <class T>
-    struct is_pointer<T*> : true_type {};
+    struct is_pointer<T *> : true_type {};
 
     template <class T>
     constexpr bool is_pointer_v = is_pointer<T>::value;
@@ -159,10 +162,10 @@ namespace futils::freestd {
     struct is_reference : false_type {};
 
     template <class T>
-    struct is_reference<T&> : true_type {};
+    struct is_reference<T &> : true_type {};
 
     template <class T>
-    struct is_reference<T&&> : true_type {};
+    struct is_reference<T &&> : true_type {};
 
     template <class T>
     constexpr bool is_reference_v = is_reference<T>::value;
@@ -171,7 +174,7 @@ namespace futils::freestd {
     struct is_lvalue_reference : false_type {};
 
     template <class T>
-    struct is_lvalue_reference<T&> : true_type {};
+    struct is_lvalue_reference<T &> : true_type {};
 
     template <class T>
     constexpr bool is_lvalue_reference_v = is_lvalue_reference<T>::value;
@@ -191,12 +194,12 @@ namespace futils::freestd {
     };
 
     template <class T>
-    struct remove_reference<T&> {
+    struct remove_reference<T &> {
         using type = T;
     };
 
     template <class T>
-    struct remove_reference<T&&> {
+    struct remove_reference<T &&> {
         using type = T;
     };
 
@@ -230,7 +233,7 @@ namespace futils::freestd {
     };
 
     template <class T>
-    struct remove_pointer<T*> {
+    struct remove_pointer<T *> {
         using type = T;
     };
 
@@ -266,6 +269,60 @@ namespace futils::freestd {
 
     template <class T>
     using underlying_type_t = typename underlying_type<T>::type;
+
+    template <class T>
+    struct is_array : false_type {};
+
+    template <class T>
+    struct is_array<T[]> : true_type {};
+
+    template <class T, size_t N>
+    struct is_array<T[N]> : true_type {};
+
+    template <class T>
+    constexpr bool is_array_v = is_array<T>::value;
+
+    template <class T>
+    struct remove_extent {
+        using type = T;
+    };
+
+    template <class T>
+    struct remove_extent<T[]> {
+        using type = T;
+    };
+
+    template <class T, size_t N>
+    struct remove_extent<T[N]> {
+        using type = T;
+    };
+
+    template <class T>
+    using remove_extent_t = typename remove_extent<T>::type;
+
+    template <class T>
+    constexpr bool is_function_v = !is_const_v<const T> && !is_reference_v<T>;
+
+    template <class T>
+    struct is_function : bool_constant<is_function_v<T>> {};
+
+    template <class T>
+    struct add_pointer {
+        using type = remove_reference_t<T> *;
+    };
+
+    template <class T>
+    struct decay {
+        using U = remove_reference_t<T>;
+        using type = conditional_t<is_array_v<U>,
+                                   remove_extent_t<U> *,
+                                   conditional_t<is_function_v<U>,
+                                                 add_pointer_t<U>,
+                                                 remove_cv_t<U>>>;
+    };
+
+    template <class T>
+    using decay_t = typename decay<T>::type;
 
 }  // namespace futils::freestd
 
