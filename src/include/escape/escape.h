@@ -9,16 +9,17 @@
 // escape - string escape sequence
 #pragma once
 
-#include "../core/sequencer.h"
-#include "../strutil/append.h"
-#include "../unicode/utf/convert.h"
-#include "../unicode/utf/minibuffer.h"
-#include "../number/char_range.h"
-#include "../number/to_string.h"
-#include "../number/parse.h"
-#include "../core/byte.h"
+#include <core/sequencer.h>
+#include <strutil/append.h>
+#include <unicode/utf/convert.h>
+#include <unicode/utf/minibuffer.h>
+#include <number/char_range.h>
+#include <number/to_string.h>
+#include <number/parse.h>
+#include <core/byte.h>
 #include <strutil/append.h>
 #include <array>
+#include <limits>
 
 namespace futils {
     namespace escape {

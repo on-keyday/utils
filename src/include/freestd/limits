@@ -1,0 +1,35 @@
+/*
+    futils - utility library
+    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
+    Released under the MIT license
+    https://opensource.org/licenses/mit-license.php
+*/
+
+#pragma once
+#include <freestd/freestd_macro.h>
+#include <freestd/type_traits>
+
+namespace futils::freestd {
+    template <class T>
+    struct numeric_limits {
+        static constexpr T max() noexcept {
+            constexpr auto lim = futils::freestd::make_unsigned_t<T>(-1);
+            if constexpr (std::is_signed_v<T>) {
+                return lim >> 1;
+            }
+            else {
+                return lim;
+            }
+        }
+
+        static constexpr T min() noexcept {
+            return -max();
+        }
+    };
+}  // namespace futils::freestd
+
+#ifdef FUTILS_FREESTD_STD_CPP
+namespace std {
+    using namespace futils::freestd;
+}
+#endif

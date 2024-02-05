@@ -314,6 +314,42 @@ namespace futils::freestd {
     template <class T>
     using add_pointer_t = typename add_pointer<T>::type;
 
+    template <class T>
+    struct add_lvalue_reference {
+        using type = T &;
+    };
+
+    template <class T>
+    struct add_lvalue_reference<T &> {
+        using type = T &;
+    };
+
+    template <class T>
+    struct add_lvalue_reference<T &&> {
+        using type = T &&;
+    };
+
+    template <class T>
+    using add_lvalue_reference_t = typename add_lvalue_reference<T>::type;
+
+    template <class T>
+    struct add_rvalue_reference {
+        using type = T &&;
+    };
+
+    template <class T>
+    struct add_rvalue_reference<T &> {
+        using type = T &;
+    };
+
+    template <class T>
+    struct add_rvalue_reference<T &&> {
+        using type = T &&;
+    };
+
+    template <class T>
+    using add_rvalue_reference_t = typename add_rvalue_reference<T>::type;
+
     template <bool cond, class A, class B>
     struct conditional {
         using type = A;
@@ -339,6 +375,28 @@ namespace futils::freestd {
 
     template <class T>
     using decay_t = typename decay<T>::type;
+
+    template <class T>
+    auto declval() noexcept -> add_rvalue_reference_t<T>;
+
+    template <class T>
+    struct remove_const {
+        using type = T;
+    };
+
+    template <class T>
+    struct remove_const<const T> {
+        using type = T;
+    };
+
+    template <class T>
+    using remove_const_t = typename remove_const<T>::type;
+
+    template <class T>
+    struct is_move_constructible : bool_constant<__is_constructible(T, T &&)> {};
+
+    template <class T>
+    constexpr bool is_move_constructible_v = is_move_constructible<T>::value;
 
 }  // namespace futils::freestd
 
