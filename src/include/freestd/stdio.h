@@ -12,13 +12,28 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-int FUTILS_FREESTD_STDC(printf)(const char* format, ...);
-int FUTILS_FREESTD_STDC(vprintf)(const char* format, va_list args);
-int FUTILS_FREESTD_STDC(snprintf)(char* str, size_t size, const char* format, ...);
-int FUTILS_FREESTD_STDC(vsnprintf)(char* str, size_t size, const char* format, va_list args);
 int FUTILS_FREESTD_STDC(putchar)(int c);
 int FUTILS_FREESTD_STDC(getchar)();
 int FUTILS_FREESTD_STDC(puts)(const char* str);
+
+int FUTILS_FREESTD_STDC(vprintf)(const char* format, va_list args);
+int FUTILS_FREESTD_STDC(vsnprintf)(char* str, size_t size, const char* format, va_list args);
+
+inline int FUTILS_FREESTD_STDC(printf)(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    int count = FUTILS_FREESTD_STDC(vprintf)(format, args);
+    va_end(args);
+    return count;
+}
+
+inline int FUTILS_FREESTD_STDC(snprintf)(char* str, size_t size, const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    int count = FUTILS_FREESTD_STDC(vsnprintf)(str, size, format, args);
+    va_end(args);
+    return count;
+}
 
 // kernel dependent
 // if retry <= 0, this function will block until a character is received

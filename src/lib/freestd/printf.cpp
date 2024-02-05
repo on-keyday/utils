@@ -78,22 +78,6 @@ extern "C" int FUTILS_FREESTD_STDC(puts)(const char* str) {
     return range.size();
 }
 
-extern "C" int FUTILS_FREESTD_STDC(printf)(const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    int count = FUTILS_FREESTD_STDC(vprintf)(format, args);
-    va_end(args);
-    return count;
-}
-
-extern "C" int FUTILS_FREESTD_STDC(snprintf)(char* str, size_t size, const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    int count = FUTILS_FREESTD_STDC(vsnprintf)(str, size, format, args);
-    va_end(args);
-    return count;
-}
-
 extern "C" int FUTILS_FREESTD_STDC(vsnprintf)(char* str, size_t size, const char* format, va_list args) {
     if (size == 0) {
         return 0;
