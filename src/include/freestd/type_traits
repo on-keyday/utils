@@ -312,6 +312,22 @@ namespace futils::freestd {
     };
 
     template <class T>
+    using add_pointer_t = typename add_pointer<T>::type;
+
+    template <bool cond, class A, class B>
+    struct conditional {
+        using type = A;
+    };
+
+    template <class A, class B>
+    struct conditional<false, A, B> {
+        using type = B;
+    };
+
+    template <bool cond, class A, class B>
+    using conditional_t = typename conditional<cond, A, B>::type;
+
+    template <class T>
     struct decay {
         using U = remove_reference_t<T>;
         using type = conditional_t<is_array_v<U>,
