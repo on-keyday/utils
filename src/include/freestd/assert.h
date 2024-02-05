@@ -12,7 +12,11 @@
 extern "C" {
 #endif
 void futils_assert_fail(const char* expr, const char* file, int line, const char* func);
+#ifndef NDEBUG
 #define assert(x) (!!(x) ? (void)0 : futils_assert_fail(#x, __FILE__, __LINE__, __func__))
+#else
+#define assert(x) ((void)0)
+#endif
 #ifdef __cplusplus
 }
 #endif
