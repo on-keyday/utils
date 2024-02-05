@@ -11,7 +11,7 @@
 #include <number/to_string.h>
 #include <helper/pushbacker.h>
 
-int vprintf_internal(futils::helper::IPushBacker<> pb, const char* format, va_list args) {
+int vprintf_internal(auto&& pb, const char* format, va_list args) {
     futils::strutil::FormatStr fmt(format);
     futils::helper::CountPushBacker<decltype(pb)> pb_count{pb};
     fmt.parse(
