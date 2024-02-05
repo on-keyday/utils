@@ -164,7 +164,8 @@ namespace futils::freestd {
             size_t total_size = nmemb * size;
             void* ptr = malloc(total_size);
             if (ptr) {
-                memset(ptr, 0, total_size);
+                FUTILS_FREESTD_STDC(memset)
+                (ptr, 0, total_size);
             }
             return ptr;
         }
