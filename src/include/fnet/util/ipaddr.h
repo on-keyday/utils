@@ -281,17 +281,17 @@ namespace futils {
             if (v4map && after_count == 0) {
                 return false;
             }
-            auto omit = 8 - before_count - after_count;
-            for (auto i = 0; i < before_count; i++) {
+            size_t omit = 8 - before_count - after_count;
+            for (size_t i = 0; i < before_count; i++) {
                 out[i * 2] = std::uint8_t((before[i] >> 8) & 0xff);
                 out[i * 2 + 1] = std::uint8_t((before[i] >> 0) & 0xff);
             }
-            for (auto i = 0; i < omit; i++) {
+            for (size_t i = 0; i < omit; i++) {
                 auto idx = (before_count + i);
                 out[idx * 2] = 0;
                 out[idx * 2 + 1] = 0;
             }
-            for (auto i = 0; i < after_count; i++) {
+            for (size_t i = 0; i < after_count; i++) {
                 auto idx = (before_count + omit + i);
                 out[idx * 2] = std::uint8_t((after[i] >> 8) & 0xff);
                 out[idx * 2 + 1] = std::uint8_t((after[i] >> 0) & 0xff);
