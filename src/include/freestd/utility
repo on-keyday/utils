@@ -45,7 +45,7 @@ namespace futils::freestd {
         if constexpr (i == 0) {
             return p.first;
         }
-        else {
+        else if constexpr (i == 1) {
             return p.second;
         }
         else {
