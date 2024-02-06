@@ -386,7 +386,7 @@ namespace futils::http::header {
     }
 
     template <class String, class Method, class Path, class Header, class Validate = decltype(strutil::no_check2())>
-    constexpr HeaderErr render_request(String& str, Method&& method, Path&& path, Header& header, Validate&& validate = strutil::no_check2(), bool ignore_invalid = false, const char* version_str = "HTTP/1.1") {
+    constexpr HeaderErr render_request(String& str, Method&& method, Path&& path, Header&& header, Validate&& validate = strutil::no_check2(), bool ignore_invalid = false, const char* version_str = "HTTP/1.1") {
         if (auto err = render_request_line(str, method, path, version_str); !err) {
             return err;
         }
@@ -414,7 +414,7 @@ namespace futils::http::header {
     }
 
     template <class String, class Status, class Phrase, class Header, class Validate = decltype(strutil::no_check2())>
-    constexpr HeaderErr render_response(String& str, Status&& status, Phrase&& phrase, Header& header, Validate&& validate = strutil::no_check2(), bool ignore_invalid = false,
+    constexpr HeaderErr render_response(String& str, Status&& status, Phrase&& phrase, Header&& header, Validate&& validate = strutil::no_check2(), bool ignore_invalid = false,
                                         const char* version_str = "HTTP/1.1") {
         if (auto err = render_status_line(str, status, phrase, version_str); !err) {
             return err;
