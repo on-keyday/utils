@@ -330,8 +330,8 @@ namespace futils::http::header {
         };
     }
 
-    template <class String, class Header, class Validate = decltype(strutil::no_check())>
-    constexpr HeaderErr render_header_common(String& str, Header&& header, Validate&& validate = strutil::no_check(), bool ignore_invalid = false) {
+    template <class String, class Header, class Validate = decltype(strutil::no_check2())>
+    constexpr HeaderErr render_header_common(String& str, Header&& header, Validate&& validate = strutil::no_check2(), bool ignore_invalid = false) {
         HeaderError validation_error = HeaderError::none;
         auto header_add = [&](auto&& key, auto&& value) -> HeaderErr {
             if (validation_error != HeaderError::none) {
@@ -385,8 +385,8 @@ namespace futils::http::header {
         return HeaderError::none;
     }
 
-    template <class String, class Method, class Path, class Header, class Validate = decltype(strutil::no_check())>
-    constexpr HeaderErr render_request(String& str, Method&& method, Path&& path, Header& header, Validate&& validate = strutil::no_check(), bool ignore_invalid = false, const char* version_str = "HTTP/1.1") {
+    template <class String, class Method, class Path, class Header, class Validate = decltype(strutil::no_check2())>
+    constexpr HeaderErr render_request(String& str, Method&& method, Path&& path, Header& header, Validate&& validate = strutil::no_check2(), bool ignore_invalid = false, const char* version_str = "HTTP/1.1") {
         if (auto err = render_request_line(str, method, path, version_str); !err) {
             return err;
         }
@@ -414,7 +414,7 @@ namespace futils::http::header {
     }
 
     template <class String, class Status, class Phrase, class Header, class Validate = decltype(strutil::no_check2())>
-    constexpr HeaderErr render_response(String& str, Status&& status, Phrase&& phrase, Header& header, Validate&& validate = strutil::no_check(), bool ignore_invalid = false,
+    constexpr HeaderErr render_response(String& str, Status&& status, Phrase&& phrase, Header& header, Validate&& validate = strutil::no_check2(), bool ignore_invalid = false,
                                         const char* version_str = "HTTP/1.1") {
         if (auto err = render_status_line(str, status, phrase, version_str); !err) {
             return err;

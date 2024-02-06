@@ -34,6 +34,25 @@ namespace futils::freestd {
         return old_value;
     }
 
+    template <class P1, class P2>
+    struct pair {
+        P1 first;
+        P2 second;
+    };
+
+    template <size_t i, class T1, class T2>
+    constexpr auto& get(pair<T1, T2>& p) {
+        if constexpr (i == 0) {
+            return p.first;
+        }
+        else {
+            return p.second;
+        }
+        else {
+            static_assert(i < 2, "index out of range");
+        }
+    }
+
 }  // namespace futils::freestd
 
 #ifdef FUTILS_FREESTD_STD_CPP
