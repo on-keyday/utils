@@ -64,7 +64,7 @@ namespace futils {
 
         template <class In, class Cmp, class Compare = decltype(default_compare())>
         constexpr bool contains(In&& in, Cmp&& cmp, Compare&& compare = default_compare()) {
-            return find(in, cmp, 0, 0, compare) != ~0;
+            return find(in, cmp, 0, 0, compare) != ~size_t(0);
         }
 
         template <class In, class Cmp, class Before, class Compare = decltype(default_compare())>

@@ -173,7 +173,6 @@ namespace futils {
             std::uint16_t before[10], after[10];
             std::uint8_t ipv4mapped[4];
             bool v4map = false;
-            int v4mapindex;
             auto read = [&](auto& parsed) {
                 return number::parse_integer(seq, parsed, 16);
             };
@@ -209,7 +208,6 @@ namespace futils {
                                 return false;
                             }
                             before_count -= 1;
-                            v4mapindex = before_count;
                             auto [h, l] = convert_ipv4();
                             before[before_count] = h;
                             before[before_count + 1] = l;
@@ -245,7 +243,6 @@ namespace futils {
                                 return false;
                             }
                             after_count -= 1;
-                            v4mapindex = after_count;
                             auto [h, l] = convert_ipv4();
                             after[after_count] = h;
                             after[after_count + 1] = l;
