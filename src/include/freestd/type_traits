@@ -410,14 +410,6 @@ namespace futils::freestd {
     template <class T, class U>
     constexpr bool is_convertible_v = is_convertible<T, U>::value;
 
-    namespace internal {
-        template <class F, class... A>
-        concept invocable = requires(F f, A... a) {
-            f(a...);
-        };
-
-    }  // namespace internal
-
     template <class F, class... A>
     struct invoke_result {
         // TODO(on-keyday): support std::invoke patterns

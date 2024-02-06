@@ -6,3 +6,18 @@
 */
 
 #pragma once
+#include <freestd/freestd_macro.h>
+
+namespace futils::freestd {
+    template <class F, class... A>
+    concept invocable = requires(F f, A... a) {
+        // TODO(on-keyday): use std::invoke instead of this
+        f(a...);
+    };
+}
+
+#ifdef FUTILS_FREESTD_STD_CPP
+namespace std {
+    using namespace futils::freestd;
+}
+#endif
