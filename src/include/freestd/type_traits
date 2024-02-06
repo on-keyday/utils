@@ -398,6 +398,35 @@ namespace futils::freestd {
     template <class T>
     constexpr bool is_move_constructible_v = is_move_constructible<T>::value;
 
+    template <class T>
+    struct is_constructible : bool_constant<__is_constructible(T)> {};
+
+    template <class T>
+    constexpr bool is_constructible_v = is_constructible<T>::value;
+
+    template <class T, class U>
+    struct is_convertible : bool_constant<__is_convertible(T, U)> {};
+
+    template <class T, class U>
+    constexpr bool is_convertible_v = is_convertible<T, U>::value;
+
+    namespace internal {
+        template <class F, class... A>
+        concept invocable = requires(F f, A... a) {
+            f(a...);
+        };
+
+    }  // namespace internal
+
+    template <class F, class... A>
+    struct invoke_result {
+        // TODO(on-keyday): support std::invoke patterns
+        using type = decltype(declval<F>()(declval<A>()...));
+    };
+
+    template <class F, class... A>
+    using invoke_result_t = typename invoke_result<F, A...>::type;
+
 }  // namespace futils::freestd
 
 #ifdef FUTILS_FREESTD_STD_CPP
