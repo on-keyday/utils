@@ -23,7 +23,7 @@ namespace futils::strutil {
             return N - 1;
         }
         constexpr size_t size() const {
-            return (head - tail) % N;
+            return head - tail;
         }
         constexpr bool empty() const {
             return head == tail;
@@ -33,19 +33,19 @@ namespace futils::strutil {
         }
 
         constexpr C& front() {
-            return buf[tail];
+            return buf[tail_index()];
         }
 
         constexpr const C& front() const {
-            return buf[tail];
+            return buf[tail_index()];
         }
 
         constexpr C& back() {
-            return buf[(head - 1) % N];
+            return buf[head_index(-1)];
         }
 
         constexpr const C& back() const {
-            return buf[(head - 1) % N];
+            return buf[head_index(-1)];
         }
 
         constexpr void push(C value) {
@@ -53,11 +53,11 @@ namespace futils::strutil {
             if (full()) {
                 return;
             }
-            buf[head] = value;
-            head = (head + 1) % N;
-            if (head == tail) {
-                tail = (tail + 1) % N;
+            if (empty()) {
+                clear();
             }
+            buf[head_index()] = value;
+            head++;
         }
 
         constexpr void pop() {
@@ -65,14 +65,22 @@ namespace futils::strutil {
             if (empty()) {
                 return;
             }
-            tail = (tail + 1) % N;
+            tail++;
+        }
+
+        constexpr size_t head_index(int offset = 0) const {
+            return (head + offset) % N;
+        }
+
+        constexpr size_t tail_index(int offset = 0) const {
+            return (tail + offset) % N;
         }
 
         constexpr C& operator[](size_t index) {
-            return buf[(tail + index) % N];
+            return buf[tail_index(index)];
         }
         constexpr const C& operator[](size_t index) const {
-            return buf[(tail + index) % N];
+            return buf[tail_index(index)];
         }
 
         constexpr void clear() {
@@ -81,29 +89,29 @@ namespace futils::strutil {
 
         constexpr void copy_to(C (&dest)[N]) const {
             for (size_t i = 0; i < size(); ++i) {
-                dest[i] = buf[(tail + i) % N];
+                dest[i] = buf[tail_index(i)];
             }
             dest[size()] = '\0';
         }
 
         constexpr C* head_ptr() {
-            return buf + head;
+            return buf + head_index();
         }
 
         constexpr const C* head_ptr() const {
-            return buf + head;
+            return buf + head_index();
         }
 
         constexpr C* tail_ptr() {
-            return buf + tail;
+            return buf + tail_index();
         }
 
         constexpr const C* tail_ptr() const {
-            return buf + tail;
+            return buf + tail_index();
         }
 
         constexpr bool liner() const {
-            return tail + size() <= N;
+            return tail_ptr() < head_ptr() || (head_ptr() == buf && tail_index(size() - 1) == N - 1);
         }
     };
 
@@ -143,72 +151,76 @@ namespace futils::strutil {
             // |a|b|c| |
             //  t     h
             if (!b.full()) {
-                return false;
+                throw "full error";
             }
             if (b.size() != 3) {
-                return false;
+                throw "size error";
             }
             if (b.front() != 'a') {
-                return false;
+                throw "front error";
             }
             if (b.back() != 'c') {
-                return false;
+                throw "back error";
             }
             b.pop();
             // | |b|c| |
             //    t   h
             if (b.size() != 2) {
-                return false;
+                throw "size error";
             }
             if (b.front() != 'b') {
-                return false;
+                throw "front error";
             }
             if (b.back() != 'c') {
-                return false;
+                throw "back error";
             }
             b.push('d');
             // | |b|c|d|
             //  h t
             if (b.size() != 3) {
-                return false;
+                throw "size error";
             }
             if (b.front() != 'b') {
-                return false;
+                throw "front error";
             }
             if (b.back() != 'd') {
-                return false;
+                throw "back error";
+            }
+            auto ptr = b.tail_ptr();
+            if (ptr[0] != 'b' || ptr[1] != 'c' || ptr[2] != 'd') {
+                throw "tail_ptr error";
             }
             if (!b.liner()) {
-                return false;
+                throw "liner error";
             }
             char dest[4];
             b.copy_to(dest);
             if (dest[0] != 'b' || dest[1] != 'c' || dest[2] != 'd' || dest[3] != '\0') {
-                return false;
+                throw "copy_to error";
             }
-            auto ptr = b.tail_ptr();
+            ptr = b.tail_ptr();
             if (ptr[0] != 'b' || ptr[1] != 'c' || ptr[2] != 'd') {
-                return false;
+                throw "tail_ptr error";
             }
             b.pop();
             b.push('e');
             // |e| |c|d|
             //    h t
             if (b.size() != 3) {
-                return false;
+                throw "size error";
             }
             if (b.front() != 'c') {
-                return false;
+                throw "front error";
             }
             if (b.back() != 'e') {
-                return false;
+                throw "back error";
             }
             if (b.liner()) {
-                return false;
+                throw "liner error";
             }
             b.copy_to(dest);
             if (dest[0] != 'c' || dest[1] != 'd' || dest[2] != 'e' || dest[3] != '\0') {
-                return false;
+                throw "copy_to error";
             }
             b.pop();
             b.pop();
@@ -217,17 +229,17 @@ namespace futils::strutil {
             //  h
             //  t
             if (!b.empty()) {
-                return false;
+                throw "empty error";
             }
             b.push('e');
             if (b.size() != 1) {
-                return false;
+                throw "size error";
             }
             if (b.front() != 'e') {
-                return false;
+                throw "front error";
             }
             if (b.back() != 'e') {
-                return false;
+                throw "back error";
             }
             return true;
         }
