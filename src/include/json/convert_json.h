@@ -165,6 +165,10 @@ namespace futils {
                         using param_t = typename futils::helper::template_of_t<T>::template param_at<0>;
                         if constexpr (std::is_default_constructible_v<param_t> &&
                                       std::is_convertible_v<param_t, T>) {
+                            if (js.is_null()) {
+                                t = {};
+                                return true;  // null
+                            }
                             if (!any(flag & FromFlag::not_init_null_obj) && !t) {
                                 t = param_t{};
                             }
