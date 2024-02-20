@@ -10,7 +10,6 @@
 #pragma once
 
 #include "jsonbase.h"
-// #include "../helper/sfinae.h"
 #include "iterator.h"
 
 namespace futils {
@@ -20,6 +19,7 @@ namespace futils {
             force_element = 0x1,
             allow_null_obj_array = 0x2,
             not_clear_string = 0x4,
+            not_init_null_obj = 0x8,
         };
 
         DEFINE_ENUM_FLAGOP(FromFlag)
@@ -161,6 +161,15 @@ namespace futils {
                     return js.is_null();
                 }
                 else if constexpr (derefable<T>) {
+                    if constexpr (futils::helper::is_template<T>) {
+                        using param_t = typename futils::helper::template_of_t<T>::template param_at<0>;
+                        if constexpr (std::is_default_constructible_v<param_t> &&
+                                      std::is_convertible_v<param_t, T>) {
+                            if (!any(flag & FromFlag::not_init_null_obj) && !t) {
+                                t = param_t{};
+                            }
+                        }
+                    }
                     if (!t) {
                         return false;
                     }
@@ -301,10 +310,15 @@ namespace futils {
                   class String2, template <class...> class Vec2, template <class...> class Object2>
         bool convert_to_json(const JSONBase<String1, Vec1, Object1>& t, const JSONBase<String2, Vec2, Object2>& json);
 
+        template <class String1, template <class...> class Vec1, template <class...> class Object1>
+        bool convert_to_json(const JSONBase<String1, Vec1, Object1>& from, JSONBase<String1, Vec1, Object1>& to) {
+            to = from;  // copy
+            return true;
+        }
+
         template <class T, class String, template <class...> class Vec, template <class...> class Object>
         bool convert_from_json(const JSONBase<String, Vec, Object>& json, T& t, FromFlag flag = FromFlag::none) {
             return internal::dispatch_from_json(t, json, flag);
-            // return internal::FromJSONHelper<String, Vec, Object>::invoke(t, json, flag);
         }
 
         template <class T, class JSON>
@@ -319,6 +333,12 @@ namespace futils {
         template <class String1, template <class...> class Vec1, template <class...> class Object1,
                   class String2, template <class...> class Vec2, template <class...> class Object2>
         bool convert_from_json(const JSONBase<String1, Vec1, Object1>& t, const JSONBase<String2, Vec2, Object2>& json, FromFlag flag = FromFlag::none);
+
+        template <class String1, template <class...> class Vec1, template <class...> class Object1>
+        bool convert_from_json(const JSONBase<String1, Vec1, Object1>& from, JSONBase<String1, Vec1, Object1>& to, FromFlag flag = FromFlag::none) {
+            to = from;  // copy
+            return true;
+        }
 
 #define JSON_PARAM_BEGIN(base, json)                       \
     {                                                      \

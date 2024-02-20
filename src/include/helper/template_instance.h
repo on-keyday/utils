@@ -82,6 +82,8 @@ namespace futils {
 
             template <class... V>
             using rebind = Templ<V...>;
+
+            static constexpr size_t arg_count = sizeof...(U);
         };
 
         template <class T>
