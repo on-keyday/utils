@@ -161,10 +161,10 @@ namespace futils {
                     return js.is_null();
                 }
                 else if constexpr (derefable<T>) {
-                    if constexpr (futils::helper::is_template<T>) {
-                        using param_t = typename futils::helper::template_of_t<T>::template param_at<0>;
+                    if constexpr (futils::helper::is_template<T_cv>) {
+                        using param_t = typename futils::helper::template_of_t<T_cv>::template param_at<0>;
                         if constexpr (std::is_default_constructible_v<param_t> &&
-                                      std::is_convertible_v<param_t, T>) {
+                                      std::is_convertible_v<param_t, T_cv>) {
                             if (js.is_null()) {
                                 t = {};
                                 return true;  // null
