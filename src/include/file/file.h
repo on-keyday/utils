@@ -529,9 +529,6 @@ namespace futils::file {
                 if (!cb(*res)) {
                     return {};
                 }
-                if (res->size() < bulk_buffer.size()) {
-                    return {};
-                }
             }
         }
 
