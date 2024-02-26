@@ -521,12 +521,12 @@ namespace futils::file {
             while (true) {
                 auto res = read_file(bulk_buffer, n);
                 if (!res) {
-                    return res.error();
+                    return res.transform([](auto&&) {});
                 }
                 if (res->empty()) {
                     return {};
                 }
-                if (!cb(res.value())) {
+                if (!cb(*res)) {
                     return {};
                 }
                 if (res->size() < bulk_buffer.size()) {
