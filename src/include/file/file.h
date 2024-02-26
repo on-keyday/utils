@@ -512,6 +512,29 @@ namespace futils::file {
         file_result<view::basic_rvec<wrap::path_char>> write_console(view::basic_rvec<wrap::path_char> w) const;
 
         file_result<view::wvec> read_file(view::wvec w, NonBlockContext* n = nullptr) const;
+
+        file_result<void> read_all(auto&& cb, view::wvec bulk_buffer = {}, NonBlockContext* n = nullptr) const {
+            if (bulk_buffer.empty()) {
+                byte buffer[4096];
+                return read_all(cb, view::wvec(buffer, 4096), n);
+            }
+            while (true) {
+                auto res = read_file(bulk_buffer, n);
+                if (!res) {
+                    return res.error();
+                }
+                if (res->empty()) {
+                    return {};
+                }
+                if (!cb(res.value())) {
+                    return {};
+                }
+                if (res->size() < bulk_buffer.size()) {
+                    return {};
+                }
+            }
+        }
+
         file_result<view::basic_wvec<wrap::path_char>> read_console(view::basic_wvec<wrap::path_char> w) const;
 
         file_result<void> seek(std::int64_t offset, SeekPoint point) const;
