@@ -53,10 +53,10 @@ namespace futils::file {
         }
         std::uint32_t share = 0;
         if (flag.share_read()) {
-            share |= FILE_SHARE_WRITE;
+            share |= FILE_SHARE_READ;
         }
         if (flag.share_write()) {
-            share |= FILE_SHARE_READ;
+            share |= FILE_SHARE_WRITE;
         }
         if (flag.share_delete()) {
             share |= FILE_SHARE_DELETE;

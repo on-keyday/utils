@@ -27,7 +27,7 @@ namespace futils {
                 if (f) {
                     return helper::either::unexpected(FileError{.method = "View::open", .err_code = map_os_error_code(ErrorCode::already_open)});
                 }
-                auto p = File::open(path, O_READ | O_CLOSE_ON_EXEC);
+                auto p = File::open(path, O_READ | O_SHARE_READ | O_CLOSE_ON_EXEC);
                 if (!p) {
                     return helper::either::unexpected(p.error());
                 }
