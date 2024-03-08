@@ -26,6 +26,7 @@
 #include <sys/un.h>
 #ifdef FUTILS_PLATFORM_LINUX
 #include <sys/epoll.h>
+#include <linux/if.h>
 #endif
 #ifdef GAI_WAIT  // XXX(on-keyday): hack for getaddrinfo_a
 #define FNET_HAS_ASYNC_GETADDRINFO

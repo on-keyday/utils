@@ -21,18 +21,36 @@ namespace futils {
             ipv4,
             ipv6,
             unix_path,
+            link_layer,
             opaque,
         };
 
         struct NetAddr;
 
+        struct LinkLayerInfoInternal {
+            std::uint16_t hardware_type = 0;
+            std::uint8_t packet_type = 0;
+            std::uint8_t addr_len = 0;
+            std::uint32_t ifindex = 0;
+            byte addr[8]{};
+        };
+
+        struct LinkLayerInfo : LinkLayerInfoInternal {
+            std::uint16_t protocol = 0;
+        };
+
+        constexpr auto sizeof_link_layer_info = sizeof(LinkLayerInfoInternal);
+        static_assert(sizeof_link_layer_info == 16);
+
         namespace internal {
             constexpr bool NetAddrOnHeap(NetAddrType type) {
                 return type != NetAddrType::ipv4 &&
                        type != NetAddrType::ipv6 &&
+                       type != NetAddrType::link_layer &&
                        type != NetAddrType::null;
             }
             constexpr NetAddr make_netaddr(NetAddrType type, view::rvec b);
+            constexpr NetAddr make_netaddr(NetAddrType type, LinkLayerInfo&& info);
 
         }  // namespace internal
 
@@ -71,11 +89,13 @@ namespace futils {
         struct NetAddr {
            private:
             friend constexpr NetAddr internal::make_netaddr(NetAddrType, view::rvec);
+            friend constexpr NetAddr internal::make_netaddr(NetAddrType type, LinkLayerInfo&& info);
             union {
                 byte bdata[16]{};
                 storage fdata;
+                LinkLayerInfoInternal link_layer_info;
             };
-            NetPort place_for_port = 0;
+            NetPort place_for_port_or_protocol = 0;
             NetAddrType type_ = NetAddrType::null;
             friend struct NetAddrPort;
 
@@ -96,7 +116,7 @@ namespace futils {
                 else {
                     data_copy(from.bdata, from.size());
                 }
-                place_for_port = from.place_for_port;
+                place_for_port_or_protocol = from.place_for_port_or_protocol;
                 type_ = from.type_;
             }
 
@@ -108,9 +128,9 @@ namespace futils {
                     data_copy(from.bdata, from.size());
                 }
                 type_ = from.type_;
-                place_for_port = from.place_for_port;
+                place_for_port_or_protocol = from.place_for_port_or_protocol;
                 from.type_ = NetAddrType::null;
-                from.place_for_port = 0;
+                from.place_for_port_or_protocol = 0;
             }
 
             constexpr void destruct() {
@@ -206,18 +226,20 @@ namespace futils {
             }
         };
 
+        constexpr auto sizeof_NetAddr = sizeof(NetAddr);
+
         struct NetAddrPort {
             NetAddr addr;
             constexpr NetPort& port() noexcept {
-                return addr.place_for_port;
+                return addr.place_for_port_or_protocol;
             }
 
             constexpr const NetPort& port() const noexcept {
-                return addr.place_for_port;
+                return addr.place_for_port_or_protocol;
             }
 
             constexpr void port(NetPort p) noexcept {
-                addr.place_for_port = p;
+                addr.place_for_port_or_protocol = p;
             }
 
             template <class Str>
@@ -262,6 +284,14 @@ namespace futils {
                 else {
                     addr.data_copy(b.data(), b.size());
                 }
+                addr.type_ = type;
+                return addr;
+            }
+
+            constexpr NetAddr make_netaddr(NetAddrType type, LinkLayerInfo&& info) {
+                NetAddr addr;
+                addr.link_layer_info = static_cast<LinkLayerInfoInternal&&>(info);
+                addr.place_for_port_or_protocol = info.protocol;
                 addr.type_ = type;
                 return addr;
             }
@@ -327,6 +357,12 @@ namespace futils {
                 return unexpect("not valid IPv6 address", error::Category::lib, error::fnet_address_error);
             }
             return ipv6(d.first.addr);
+        }
+
+        constexpr NetAddrPort link_layer(LinkLayerInfo&& info) {
+            NetAddrPort naddr;
+            naddr.addr = internal::make_netaddr(NetAddrType::link_layer, static_cast<LinkLayerInfo&&>(info));
+            return naddr;
         }
 
         // SockAttr is basic attributes to make socket or search address

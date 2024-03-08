@@ -73,6 +73,16 @@ namespace futils {
                 memcpy(p->sun_path, naddr.addr.data(), naddr.addr.size());
                 addrlen = sizeof(sockaddr_un);
             }
+            else if (naddr.addr.type() == NetAddrType::link_layer) {
+#ifdef FUTILS_PLATFORM_LINUX
+                auto p = reinterpret_cast<sockaddr_ll*>(addr);
+                *p = {};
+                p->sll_family = AF_PACKET;
+                p->sll_protocol = naddr.port().u16();
+                p->sll_ifindex = naddr.addr.size();
+                addrlen = sizeof(sockaddr_ll);
+#endif
+            }
             else {
                 return {nullptr, 0};
             }
