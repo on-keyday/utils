@@ -342,6 +342,8 @@ namespace futils {
 
         using rvec = basic_rvec<byte>;
         using wvec = basic_wvec<byte>;
+        using rcvec = basic_rvec<char>;
+        using wcvec = basic_wvec<char>;
         template <class D>
         using storage_vec = basic_storage_vec<D, byte>;
 

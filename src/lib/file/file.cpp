@@ -137,6 +137,8 @@ namespace futils::file {
         switch (code) {
             case ErrorCode::already_open:
                 return ERROR_ALREADY_EXISTS;
+            case ErrorCode::broken_pipe:
+                return ERROR_BROKEN_PIPE;
             default:
                 return -1;
         }
@@ -555,6 +557,8 @@ namespace futils::file {
         switch (code) {
             case ErrorCode::already_open:
                 return EEXIST;
+            case ErrorCode::broken_pipe:
+                return EPIPE;
             default:
                 return -1;
         }

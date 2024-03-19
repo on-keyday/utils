@@ -292,6 +292,7 @@ namespace futils::file {
     futils_DLL_EXPORT void STDCALL format_os_error(helper::IPushBacker<> pb, std::int64_t code);
     enum class ErrorCode {
         already_open,
+        broken_pipe,
     };
 
     futils_DLL_EXPORT std::int64_t STDCALL map_os_error_code(ErrorCode code);
@@ -521,6 +522,10 @@ namespace futils::file {
             while (true) {
                 auto res = read_file(bulk_buffer, n);
                 if (!res) {
+                    const auto epipe = map_os_error_code(ErrorCode::broken_pipe);
+                    if (res.error().code() == epipe) {
+                        return {};
+                    }
                     return res.transform([](auto&&) {});
                 }
                 if (res->empty()) {
