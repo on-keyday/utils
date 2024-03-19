@@ -40,6 +40,7 @@ namespace futils::comb2::composite {
 
     constexpr auto c_str = make_string(lit('"'), lit('"') | eol, strlit);
     constexpr auto char_str = make_string(lit('\''), lit('\'') | eol, strlit);
+    constexpr auto js_regex_str = make_string(lit('/'), lit('/') | eol, strlit);
     constexpr auto go_raw_str = make_string(lit('`'), lit('`'), uany);
     constexpr auto py_doc_str_double = make_string(lit("\"\"\""), lit("\"\"\""), uany);
     constexpr auto py_doc_str_single = make_string(lit("'''"), lit("'''"), uany);
