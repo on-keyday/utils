@@ -38,6 +38,10 @@ namespace futils::comb2::composite {
         return quote & *(not_(end_cond) & inner) & +quote;
     }
 
+    constexpr auto make_weak_string(auto quote, auto end_cond, auto inner) {
+        return quote & *(not_(end_cond) & inner) & quote;
+    }
+
     constexpr auto c_str = make_string(lit('"'), lit('"') | eol, strlit);
     constexpr auto char_str = make_string(lit('\''), lit('\'') | eol, strlit);
     constexpr auto js_regex_str = make_string(lit('/'), lit('/') | eol, strlit);

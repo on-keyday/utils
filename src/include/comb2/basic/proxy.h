@@ -53,10 +53,14 @@ namespace futils::comb2 {
         }()
         */
 
-#define method_proxy(method)                                                                                      \
+#define method_proxy(method)                                                                                       \
     proxy([](auto&& seq, auto&& ctx, auto&& rec) -> ::futils::comb2::Status { return rec.method(seq, ctx, rec); }, \
           [](auto&& seq, auto&& ctx, auto&& rec) { ::futils::comb2::ctxs::context_call_must_match_error(seq, ctx, rec.method, rec); })
 
 #define decl_method_proxy(method) decltype(method##_) method
+
+#define conditional_method(cond, default_status, method)                         \
+    proxy([](auto&& seq, auto&& ctx, auto&& rec) -> ::futils::comb2::Status { if(!rec.cond) { return default_status; }  return method(seq, ctx, rec); }, \
+          [](auto&& seq, auto&& ctx, auto&& rec) { ::futils::comb2::ctxs::context_call_must_match_error(seq, ctx, method, rec); })
     }  // namespace ops
 }  // namespace futils::comb2
