@@ -207,6 +207,7 @@ namespace futils {
             }
 
             [[nodiscard]] constexpr auto indent_scope_ex(std::uint32_t i = 1) {
+                w.indent(i);
                 return helper::defer_ex([this, i] {
                     w.indent(-i);
                 });

@@ -77,5 +77,5 @@ namespace futils::fnet::low {
         }
     };
 
-    fnet_dll_export(Device*) network_devices(size_t count);
+    fnet_dll_export(Device*) network_devices(size_t* count);
 }  // namespace futils::fnet::low
