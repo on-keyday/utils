@@ -1,0 +1,18 @@
+enum Poll<T> {
+    Pending,
+    Ready(T)
+}
+
+
+enum Result<T,E> {
+    Ok(T),
+    Err(E)
+}
+
+enum ErrorBase {
+    None,
+    OutOfMemory,
+    Code(std::uint64_t),
+    ConstantMessage(const char*),
+    Reference(internal::ErrorWrapper*),
+}

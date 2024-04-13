@@ -195,6 +195,8 @@ add_executable(oslbgen "src/tool/oslbgen/main.cpp"
 
 add_executable(ping "src/tool/ping/main.cpp")
 
+add_executable(enumgen "src/tool/enumgen/main.cpp")
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "lib")
@@ -383,6 +385,8 @@ target_link_libraries(unidump futils)
 target_link_libraries(oslbgen futils)
 target_link_libraries(langc futils)
 target_link_libraries(ping futils fnet coro)
+target_link_libraries(enumgen futils)
+
 
 if(LLVM_FOUND)
 message(STATUS "LLVM found")

@@ -1,0 +1,19 @@
+use <error/error.h>
+
+mod futils::thread::poll {
+    enum Result<T,E> {
+        Ok(T),
+        Err(E),
+    }
+
+    enum Poll<T> {
+        Pending,
+        Ready(T)
+    }
+
+    enum TaskState<F,R> {
+        Running(F),
+        Finished(Result<R,error::Error<>>),
+        Consumed,
+    }
+}
