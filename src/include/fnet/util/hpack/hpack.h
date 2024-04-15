@@ -135,8 +135,8 @@ namespace futils {
             return true;
         }
 
-        template <class T, class Table, class OnModify = OnModifyTable>
-        constexpr HpkErr encode_table_size_update(binary::expand_writer<T>& w, std::uint32_t new_size, Table& table, OnModify&& on_modify_entry = OnModify{}) {
+        template <class Table, class OnModify = OnModifyTable>
+        constexpr HpkErr encode_table_size_update(binary::writer& w, std::uint32_t new_size, Table& table, OnModify&& on_modify_entry = OnModify{}) {
             auto err = hpack::encode_integer<5>(w, new_size, match(Field::dyn_table_update));
             if (err != HpackError::none) {
                 return err;
@@ -144,8 +144,8 @@ namespace futils {
             return update_table(new_size, table, on_modify_entry) ? HpackError::none : HpackError::internal;
         }
 
-        template <class String, class Table, class T, class OnModify = OnModifyTable>
-        constexpr HpkErr encode_field(binary::expand_writer<T>& w, Table& table, auto&& key, auto&& value, std::uint32_t table_size_limit, bool adddymap = false, OnModify&& on_modify_entry = OnModify{}) {
+        template <class String, class Table, class OnModify = OnModifyTable>
+        constexpr HpkErr encode_field(binary::writer& w, Table& table, auto&& key, auto&& value, std::uint32_t table_size_limit, bool adddymap = false, OnModify&& on_modify_entry = OnModify{}) {
             HpackError err = HpackError::none;
             size_t index = 0;
             // search table entry
@@ -204,7 +204,7 @@ namespace futils {
 
         template <class String, class Table, class OnModify = OnModifyTable>
         constexpr HpkErr encode(String& dst, Table& table, auto&& header, std::uint32_t table_size_limit, bool adddymap = false, OnModify&& on_modify_entry = OnModify{}) {
-            binary::expand_writer<String&> w(dst);
+            binary::writer w(binary::resizable_buffer_writer<String>(), std::addressof(dst));
             for (auto& kv : header) {
                 auto err = encode_field<String>(w, table, get<0>(kv), get<1>(kv), table_size_limit, adddymap, on_modify_entry);
                 if (err != HpackError::none) {

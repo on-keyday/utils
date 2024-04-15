@@ -144,8 +144,7 @@ namespace futils {
         // 1: ok
         // 0: invalid tree
         // -1: no input
-        template <class T>
-        int read_huffman_code(const huffman::DecodeTree*& result, const huffman::DecodeTable& table, binary::bit_reader<T>& r) {
+        constexpr int read_huffman_code(const huffman::DecodeTree*& result, const huffman::DecodeTable& table, binary::bit_reader& r) {
             result = table.get_root();
             while (true) {
                 if (!result) {
@@ -163,8 +162,7 @@ namespace futils {
             return 0;
         }
 
-        template <class T>
-        DeflateError read_dynamic_table(DynHuffmanHeader& head, const huffman::DecodeTable& root, binary::bit_reader<T>& r, std::uint16_t litlen, std::uint16_t dist) {
+        constexpr DeflateError read_dynamic_table(DynHuffmanHeader& head, const huffman::DecodeTable& root, binary::bit_reader& r, std::uint16_t litlen, std::uint16_t dist) {
             const huffman::DecodeTree* cur = nullptr;
             constexpr auto size = deflate_huffman_size + deflate_distance_huffman_size;
             huffman::CanonicalTable<deflate_huffman_size> codeh;
@@ -258,8 +256,7 @@ namespace futils {
             return DeflateError::none;
         }
 
-        template <class T>
-        DeflateError read_dyn_huffman_header(DynHuffmanHeader& h, binary::bit_reader<T>& r) {
+        constexpr DeflateError read_dyn_huffman_header(DynHuffmanHeader& h, binary::bit_reader& r) {
             std::uint16_t hlit = 0, hdist = 0, hclen = 0;
             if (!r.read(hlit, 5, false) ||
                 !r.read(hdist, 5, false) ||
@@ -295,8 +292,8 @@ namespace futils {
             return DeflateError::none;
         }
 
-        template <class Out, class T>
-        DeflateError decode_block(Out& out, const huffman::DecodeTable& litlen, const huffman::DecodeTable& dist, binary::bit_reader<T>& r) {
+        template <class Out>
+        constexpr DeflateError decode_block(Out& out, const huffman::DecodeTable& litlen, const huffman::DecodeTable& dist, binary::bit_reader& r) {
             const huffman::DecodeTree* value;
             auto read_litlen = [&] {
                 switch (read_huffman_code(value, litlen, r)) {
@@ -361,8 +358,8 @@ namespace futils {
             return DeflateError::none;
         }
 
-        template <class Out, class T>
-        DeflateError decode_deflate(Out& out, binary::bit_reader<T>& r) {
+        template <class Out>
+        DeflateError decode_deflate(Out& out, binary::bit_reader& r) {
             r.set_direction(true);
             bool fin = false;
             while (!fin) {
@@ -380,11 +377,10 @@ namespace futils {
                         if (!r.skip_align()) {
                             return DeflateError::input_length;
                         }
-                        auto& bs = r.get_base();
-                        if (!bs.check_input(4)) {
+                        auto& br = r.get_base();
+                        if (!br.load_stream(4)) {
                             return DeflateError::input_length;
                         }
-                        auto br = bs.reader().clone();
                         std::uint16_t len = 0, nlen = 0;
                         if (!binary::read_num(br, len, false) ||
                             !binary::read_num(br, nlen, false)) {
@@ -393,17 +389,14 @@ namespace futils {
                         if (std::uint16_t(~len) != nlen) {
                             return DeflateError::non_compressed_len;
                         }
-                        bs.offset(4);
-                        if (!bs.check_input(len)) {
+                        if (!br.load_stream(len)) {
                             return DeflateError::input_length;
                         }
-                        br = bs.reader().clone();
-                        auto [data, ok] = br.read(len);
+                        auto [data, ok] = br.read_direct(len);
                         if (!ok) {
                             return DeflateError::internal_bug;
                         }
                         strutil::append(out, data);
-                        bs.offset(len);
                         break;
                     }
                     case 0b01: {

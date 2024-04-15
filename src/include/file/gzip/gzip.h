@@ -209,39 +209,35 @@ namespace futils::file::gzip {
         }
     };
 
-    template <class T, class Out>
-    deflate::DeflateError decode_gzip(Out& out, GZipHeader& head, binary::bit_reader<T>& r) {
-        binary::expand_reader<T>& base = r.get_base();
-        if (!base.check_input(20)) {
+    template <class Out>
+    deflate::DeflateError decode_gzip(Out& out, GZipHeader& head, binary::bit_reader& r) {
+        binary::reader& base = r.get_base();
+        if (!base.load_stream(20)) {
             return deflate::DeflateError::input_length;
         }
-        auto br = base.reader().clone();
-        while (!head.parse_header(br)) {
+        while (!head.parse_header(base)) {
             if (!head.valid()) {
                 return deflate::DeflateError::invalid_header;
             }
-            if (!base.check_input(10)) {
+            if (!base.load_stream(10)) {
                 return deflate::DeflateError::input_length;
             }
         }
         if (head.cm != CompressionMethod::deflate) {
             return deflate::DeflateError::invalid_header;
         }
-        base.offset(br.offset() - base.offset());
         if (auto err = deflate::decode_deflate(out, r); err != deflate::DeflateError::none) {
             return err;
         }
         if (!r.skip_align()) {
             return deflate::DeflateError::input_length;
         }
-        if (!base.check_input(8)) {
+        if (!base.load_stream(8)) {
             return deflate::DeflateError::input_length;
         }
-        br = base.reader().clone();
-        if (!head.parse_trailer(br)) {
+        if (!head.parse_trailer(base)) {
             return deflate::DeflateError::input_length;
         }
-        base.offset(br.offset() - base.offset());
         if (out.size() % (~std::uint32_t(0)) != head.isize) {
             return deflate::DeflateError::broken_data;
         }

@@ -46,7 +46,7 @@ namespace futils {
         };
 
         template <class T, class C>
-        struct basic_expand_reader {
+        struct [[deprecated]] basic_expand_reader {
            private:
             T buf;
             basic_reader<C> r;

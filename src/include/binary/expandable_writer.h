@@ -16,7 +16,7 @@ namespace futils {
         };
 
         template <class T, class C>
-        struct basic_expand_writer {
+        struct [[deprecated]] basic_expand_writer {
            private:
             T buf;
             basic_writer<C> w;

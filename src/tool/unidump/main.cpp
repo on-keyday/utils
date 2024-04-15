@@ -102,7 +102,7 @@ int Main(Flags& flags, futils::cmdline::option::Context& ctx) {
         }
     }
     std::string out;
-    futils::binary::expand_writer<std::string&> w{out};
+    futils::binary::writer w{futils::binary::resizable_buffer_writer<std::string>(), &out};
     if (!unicodedata::bin::serialize_unicodedata(w, data)) {
         cerr << "failed to serialize unicode data\n";
         return -1;

@@ -70,7 +70,7 @@ namespace futils {
 
         template <class C>
         constexpr bool write_terminated(basic_writer<C>& w, view::basic_rvec<C> data, C term = 0) {
-            if (has_term(data)) {
+            if (has_term(data, term)) {
                 return false;
             }
             return w.write(data) &&

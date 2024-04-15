@@ -15,7 +15,7 @@ namespace futils {
 
             struct Conn {
                 stream::ConnState state;
-                binary::expand_writer<flex_storage> send_buffer;
+                binary::StreamingBuffer<flex_storage> send_buffer;
 
                 slib::deque<std::pair<flex_storage, flex_storage>> encode_table;
                 slib::deque<std::pair<flex_storage, flex_storage>> decode_table;
@@ -23,7 +23,7 @@ namespace futils {
 
                private:
                 Error write_frame(const frame::Frame& f, const char* err_msg) {
-                    if (!frame::render_frame(send_buffer, p)) {
+                    if (!send_buffer.stream([&](auto& w) { return render_frame(w, f); })) {
                         return Error{H2Error::internal, false, err_msg};
                     }
                     return no_error;
@@ -146,12 +146,14 @@ namespace futils {
 
                 Error send_settings(auto&& set_settings) {
                     frame::SettingsFrame f;
-                    binary::expand_writer<flex_storage> s;
-                    auto key_value = [&](std::uint16_t key, std::uint32_t value) {
-                        return binary::write_num(s, key) && binary::write_num(s, value);
-                    };
-                    set_settings(key_value);
-                    f.settings = s.written();
+                    binary::StreamingBuffer<flex_storage> tmp;
+                    tmp.stream([&](auto& s) {
+                        auto key_value = [&](std::uint16_t key, std::uint32_t value) {
+                            return binary::write_num(s, key) && binary::write_num(s, value);
+                        };
+                        set_settings(key_value);
+                        f.settings = s.written();
+                    });
                     if (auto err = state.on_send_frame(f)) {
                         return err;
                     }
@@ -172,7 +174,7 @@ namespace futils {
                     f.id = conn_id;
                     f.code = code;
                     f.debug = debug;
-                    f.processed_id = state.max_processed;
+                    f.processed_id = state.get_max_processed();
                     if (auto err = state.on_send_frame(f)) {
                         return err;
                     }

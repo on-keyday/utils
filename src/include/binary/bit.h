@@ -12,12 +12,12 @@
 namespace futils {
     namespace binary {
 
-        template <class T, class C>
+        template <class C>
         struct basic_bit_writer {
            private:
             byte bits = 0;
             byte index = 0;
-            basic_expand_writer<T, C> target;
+            basic_writer<C> target;
             bool from_lsb = false;
 
            public:
@@ -26,7 +26,7 @@ namespace futils {
 
             constexpr basic_bit_writer() = default;
 
-            constexpr binary::basic_expand_writer<T, C>& get_base() {
+            constexpr binary::basic_writer<C>& get_base() {
                 return target;
             }
 
@@ -78,11 +78,11 @@ namespace futils {
             }
         };
 
-        template <class T, class C>
+        template <class C>
         struct basic_bit_reader {
            private:
             byte index = 0;
-            binary::basic_expand_reader<T, C> target;
+            binary::basic_reader<C> target;
             bool from_lsb = false;
 
            public:
@@ -91,7 +91,7 @@ namespace futils {
 
             constexpr basic_bit_reader() = default;
 
-            constexpr binary::basic_expand_reader<T, C>& get_base() {
+            constexpr binary::basic_reader<C>& get_base() {
                 return target;
             }
 
@@ -132,7 +132,7 @@ namespace futils {
             constexpr bool read(bool& fit) {
                 const auto mask = current_mask();
                 if (target.remain().size() == 0) {
-                    if (!target.check_input(1)) {
+                    if (!target.load_stream(1)) {
                         return false;
                     }
                 }
@@ -175,11 +175,9 @@ namespace futils {
             }
         };
 
-        template <class T>
-        using bit_reader = basic_bit_reader<T, byte>;
+        using bit_reader = basic_bit_reader<byte>;
 
-        template <class T>
-        using bit_writer = basic_bit_writer<T, byte>;
+        using bit_writer = basic_bit_writer<byte>;
 
     }  // namespace binary
 }  // namespace futils

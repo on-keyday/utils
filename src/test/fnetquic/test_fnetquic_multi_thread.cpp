@@ -146,7 +146,7 @@ void thread(QCTX ctx, RecvChan c, int i) {
         std::ofstream of(path + "html", std::ios_base::out | std::ios_base::binary);
         futils::file::gzip::GZipHeader gh;
         std::string dec;
-        futils::binary::bit_reader<std::string&> in{text};
+        futils::binary::bit_reader in{text};
         futils::binary::reader tmpr{futils::view::rvec(text).substr(0, text.size() - 4)};
         std::uint32_t reserve = 0;
         futils::binary::read_num(tmpr, reserve, false);

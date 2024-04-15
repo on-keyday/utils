@@ -886,6 +886,10 @@ namespace futils {
                 }
                 return s.can_send_frame(f);
             }
+
+            ID get_max_processed() {
+                return max_processed;
+            }
         };
 
         constexpr size_t get_sendable_size(ConnState& c, StreamState& s) {

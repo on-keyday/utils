@@ -794,23 +794,18 @@ namespace futils {
 #undef F
             }
 
-            template <class T>
-            constexpr bool render_frame(binary::expand_writer<T>& ew, const auto& frame) {
+            constexpr bool render_frame(binary::writer& ew, const auto& frame) {
                 const auto len = 9 + frame.data_len();
-                ew.maybe_expand(len);
-                auto w = ew.writer();
-                if (w.remain().size() < len) {
+                if (!ew.prepare_stream(len)) {
                     return false;
                 }
-                if (!frame.render(w)) {
+                if (!frame.render(ew)) {
                     return false;
                 }
-                ew.offset(len);
                 return true;
             }
 
-            template <class T>
-            constexpr bool render_frame(binary::expand_writer<T>& w, const Frame& frame) {
+            constexpr bool render_frame(binary::writer& w, const Frame& frame) {
 #define F(FrameI)              \
     case frame_typeof<FrameI>: \
         return render_frame(w, static_cast<const FrameI&>(frame));

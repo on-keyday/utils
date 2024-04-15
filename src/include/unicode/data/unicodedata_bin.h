@@ -360,8 +360,8 @@ namespace futils {
             return true;
         }
 
-        template <class T, class C, class String>
-        inline bool serialize_unicodedata(binary::basic_expand_writer<T, C>& w, const UnicodeData<String>& data, int version = enable_version) {
+        template <class C, class String>
+        inline bool serialize_unicodedata(binary::basic_writer<C>& w, const UnicodeData<String>& data, int version = enable_version) {
             auto write_version = [&] {
                 return w.write('U', 1) &&
                        w.write('D', 1) &&

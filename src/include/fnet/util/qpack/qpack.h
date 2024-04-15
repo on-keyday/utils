@@ -57,8 +57,8 @@ namespace futils {
             fields::FieldEncodeContext<TypeConfig> enc;
             fields::FieldDecodeContext<TypeConfig> dec;
             using String = typename TypeConfig::string;
-            binary::expand_writer<String> enc_stream;
-            binary::expand_writer<String> dec_stream;
+            binary::StreamingBuffer<String> enc_stream;
+            binary::StreamingBuffer<String> dec_stream;
             std::uint64_t expires_delta = 0;
 
             QpackError read_encoder_stream(binary::reader& r) {
@@ -105,7 +105,9 @@ namespace futils {
                 if (auto err = enc.update_capacity(capa); err != QpackError::none) {
                     return err;
                 }
-                return encoder::render_capacity(enc_stream, capa);
+                return enc_stream.stream([&](auto& enc_stream) {
+                    return encoder::render_capacity(enc_stream, capa);
+                });
             }
 
             QpackError add_entry(auto&& head, auto&& value) {
@@ -127,7 +129,9 @@ namespace futils {
                             return enc.get_dropped() > d_refs.head_value;
                         },
                         [&](std::uint64_t new_ref) {
-                            return encoder::render_duplicate(enc_stream, d_refs.head_value);
+                            return enc_stream.stream([&](auto& enc_stream) {
+                                return encoder::render_duplicate(enc_stream, d_refs.head_value);
+                            });
                         });
                     if (err != QpackError::dynamic_ref_exists) {
                         return err;
@@ -140,7 +144,9 @@ namespace futils {
                             return false;
                         },
                         [&](std::uint64_t new_ref) {
-                            return encoder::render_insert_index_literal(enc_stream, s_refs.head, true, value);
+                            return enc_stream.stream([&](auto& enc_stream) {
+                                return encoder::render_insert_index_literal(enc_stream, s_refs.head, true, value);
+                            });
                         });
                     if (err != QpackError::dynamic_ref_exists) {
                         return err;
@@ -157,7 +163,9 @@ namespace futils {
                             return enc.get_dropped() > d_refs.head;
                         },
                         [&](std::uint64_t new_ref) {
-                            return encoder::render_insert_index_literal(enc_stream, d_refs.head_value, false, value);
+                            return enc_stream.stream([&](auto& enc_stream) {
+                                return encoder::render_insert_index_literal(enc_stream, d_refs.head_value, false, value);
+                            });
                         });
                     if (err != QpackError::dynamic_ref_exists) {
                         return err;
@@ -167,12 +175,13 @@ namespace futils {
                     head, value,
                     [] { return false; },
                     [&](std::uint64_t new_ref) {
-                        return encoder::render_insert_literal(enc_stream, head, value);
+                        return enc_stream.stream([&](auto& enc_stream) {
+                            return encoder::render_insert_literal(enc_stream, head, value);
+                        });
                     });
             }
 
-            template <class T>
-            QpackError write_key_value(StreamID id, binary::expand_writer<T>& w, const fields::SectionPrefix& prefix, auto&& key, auto&& value, FieldPolicy policy, std::uint64_t* max_ref) {
+            constexpr QpackError write_key_value(StreamID id, binary::writer& w, const fields::SectionPrefix& prefix, auto&& key, auto&& value, FieldPolicy policy, std::uint64_t* max_ref) {
                 fields::Reference s_refs;
                 fields::Reference d_refs;
                 auto set_max_ref = [&](std::uint64_t ref) {
@@ -291,7 +300,10 @@ namespace futils {
                             return enc.get_dropped() > d_refs.head_value;
                         },
                         [&](std::uint64_t new_ref) {
-                            if (auto err = encoder::render_duplicate(enc_stream, d_refs.head_value); err != QpackError::none) {
+                            if (auto err = enc_stream.stream([&](auto& enc_stream) {
+                                    return encoder::render_duplicate(enc_stream, d_refs.head_value);
+                                });
+                                err != QpackError::none) {
                                 return err;
                             }
                             if (auto err = fields::render_field_line_dynamic_index(prefix, w, new_ref); err != QpackError::none) {
@@ -316,7 +328,10 @@ namespace futils {
                             return enc.get_dropped() > d_refs.head;
                         },
                         [&](std::uint64_t new_ref) {
-                            if (auto err = encoder::render_insert_index_literal(enc_stream, d_refs.head_value, false, value); err != QpackError::none) {
+                            if (auto err = enc_stream.stream([&](auto& enc_stream) {
+                                    return encoder::render_insert_index_literal(enc_stream, d_refs.head_value, false, value);
+                                });
+                                err != QpackError::none) {
                                 return err;
                             }
                             if (auto err = fields::render_field_line_dynamic_index(prefix, w, new_ref); err != QpackError::none) {
@@ -334,7 +349,10 @@ namespace futils {
                     key, value,
                     [] { return false; },
                     [&](std::uint64_t new_ref) {
-                        if (auto err = encoder::render_insert_literal(enc_stream, key, value); err != QpackError::none) {
+                        if (auto err = enc_stream.stream([&](auto& enc_stream) {
+                                return encoder::render_insert_literal(enc_stream, key, value);
+                            });
+                            err != QpackError::none) {
                             return err;
                         }
                         if (auto err = fields::render_field_line_dynamic_index(prefix, w, new_ref); err != QpackError::none) {
@@ -353,55 +371,57 @@ namespace futils {
             // write should be void(add_entry,add_field)
             // add_entry is bool(header,value)
             // add_field is bool(header,value,FieldPolicy policy=FieldPolicy::proior_static)
-            template <class T, class H>
-            QpackError write_header(StreamID id, binary::expand_writer<T>& w, H&& write) {
+            template <class H>
+            QpackError write_header(StreamID id, binary::writer& w, H&& write) {
                 fields::SectionPrefix prefix;
                 prefix.base = enc.get_inserted();
-                binary::expand_writer<typename TypeConfig::string> tw;
-                QpackError err = QpackError::none;
-                std::uint64_t max_ref = fields::no_ref;
-                auto add_field = [&](auto&& head, auto&& value, FieldPolicy policy = FieldPolicy::prior_static) {
+                binary::StreamingBuffer<typename TypeConfig::string> tmp_buf;
+             return   tmp_buf.stream([&](auto& tw) {
+                    QpackError err = QpackError::none;
+                    std::uint64_t max_ref = fields::no_ref;
+                    auto add_field = [&](auto&& head, auto&& value, FieldPolicy policy = FieldPolicy::prior_static) {
+                        if (err != QpackError::none) {
+                            return false;
+                        }
+                        err = write_key_value(id, tw, prefix, head, value, policy, &max_ref);
+                        return err == QpackError::none;
+                    };
+                    auto add_encoder_entry = [&](auto&& head, auto&& value) {
+                        if (err != QpackError::none) {
+                            return false;
+                        }
+                        err = add_entry(head, value);
+                        bool inserted = err == QpackError::none;
+                        if (err == QpackError::dynamic_ref_exists) {
+                            err = QpackError::none;
+                        }
+                        return inserted;
+                    };
+                    write(add_encoder_entry, add_field);
                     if (err != QpackError::none) {
-                        return false;
+                        return err;
                     }
-                    err = write_key_value(id, tw, prefix, head, value, policy, &max_ref);
-                    return err == QpackError::none;
-                };
-                auto add_encoder_entry = [&](auto&& head, auto&& value) {
+                    if (tw.written().size() == 0) {
+                        return QpackError::output_length;
+                    }
+                    if (max_ref == fields::no_ref) {
+                        prefix.base = 0;
+                        prefix.required_insert_count = 0;
+                    }
+                    else {
+                        prefix.required_insert_count = max_ref + 1;
+                    }
+                    fields::EncodedSectionPrefix enc_prefix;
+                    enc_prefix.encode(prefix, enc.get_max_capacity());
+                    err = enc_prefix.render(w);
                     if (err != QpackError::none) {
-                        return false;
+                        return err;
                     }
-                    err = add_entry(head, value);
-                    bool inserted = err == QpackError::none;
-                    if (err == QpackError::dynamic_ref_exists) {
-                        err = QpackError::none;
+                    if (!w.write(tw.written())) {
+                        return QpackError::output_length;
                     }
-                    return inserted;
-                };
-                write(add_encoder_entry, add_field);
-                if (err != QpackError::none) {
-                    return err;
-                }
-                if (tw.written().size() == 0) {
-                    return QpackError::output_length;
-                }
-                if (max_ref == fields::no_ref) {
-                    prefix.base = 0;
-                    prefix.required_insert_count = 0;
-                }
-                else {
-                    prefix.required_insert_count = max_ref + 1;
-                }
-                fields::EncodedSectionPrefix enc_prefix;
-                enc_prefix.encode(prefix, enc.get_max_capacity());
-                err = enc_prefix.render(w);
-                if (err != QpackError::none) {
-                    return err;
-                }
-                if (!w.write(tw.written())) {
-                    return QpackError::output_length;
-                }
-                return QpackError::none;
+                    return QpackError::none;
+                });
             }
 
             QpackError read_header(StreamID id, binary::reader& r, auto&& read) {
@@ -426,7 +446,9 @@ namespace futils {
                     read(field);
                     field = {};
                 }
-                return decoder::render_instruction(dec, dec_stream, decoder::Instruction::section_ack, id);
+                return dec_stream.stream([&](auto& dec_stream) {
+                    return decoder::render_instruction(dec, dec_stream, decoder::Instruction::section_ack, id);
+                });
             }
         };
 

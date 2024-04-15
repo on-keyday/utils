@@ -73,24 +73,21 @@ namespace futils {
             std::uint64_t capacity = 0;
         };
 
-        template <class T>
-        constexpr QpackError render_capacity(binary::expand_writer<T>& w, std::uint64_t capacity) {
+        constexpr QpackError render_capacity(binary::writer& w, std::uint64_t capacity) {
             if (auto err = hpack::encode_integer<5>(w, capacity, match(Instruction::dyn_table_capacity)); err != hpack::HpackError::none) {
                 return internal::convert_hpack_error(err);
             }
             return QpackError::none;
         }
 
-        template <class T>
-        constexpr QpackError render_duplicate(binary::expand_writer<T>& w, std::uint64_t index) {
+        constexpr QpackError render_duplicate(binary::writer& w, std::uint64_t index) {
             if (auto err = hpack::encode_integer<5>(w, index, match(Instruction::duplicate)); err != hpack::HpackError::none) {
                 return internal::convert_hpack_error(err);
             }
             return QpackError::none;
         }
 
-        template <class T>
-        constexpr QpackError render_insert_index_literal(binary::expand_writer<T>& w, std::uint64_t index, bool is_static, auto&& value) {
+        constexpr QpackError render_insert_index_literal(binary::writer& w, std::uint64_t index, bool is_static, auto&& value) {
             if (auto err = hpack::encode_integer<6>(w, index, match(Instruction::insert_with_name_ref) | (is_static ? 0x40 : 0)); err != hpack::HpackError::none) {
                 return internal::convert_hpack_error(err);
             }
@@ -100,8 +97,7 @@ namespace futils {
             return QpackError::none;
         }
 
-        template <class T>
-        constexpr QpackError render_insert_literal(binary::expand_writer<T>& w, auto&& head, auto&& value) {
+        constexpr QpackError render_insert_literal(binary::writer& w, auto&& head, auto&& value) {
             if (auto err = hpack::encode_string<5>(w, head, match(Instruction::insert_with_literal_name), 0x20); err != hpack::HpackError::none) {
                 return internal::convert_hpack_error(err);
             }

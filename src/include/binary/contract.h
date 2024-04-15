@@ -79,17 +79,30 @@ namespace futils::binary::internal {
         // direct_drop() drops n bytes from the buffer directly using memory copy
         // this operation may be unsafe because buf.data() may be read-only memory
         // caller must ensure that buf is writable
-        constexpr bool direct_drop(size_t drop, Vec<C>& old_range) {
+        constexpr bool direct_drop(size_t drop, Vec<C>* old_range = nullptr) {
             if (drop > require_drop_n) {
                 return false;
             }
             auto wbuf = view::basic_wvec<C>(const_cast<C*>(buf.data()), buf.size());
             constexpr auto copy_ = view::make_copy_fn<C>();
             copy_(wbuf, buf.substr(drop));
-            old_range = buf;
+            if (old_range) {
+                *old_range = buf;
+            }
             buf = buf.substr(0, buf.size() - drop);
             index -= drop;
             require_drop_n -= drop;
+            return true;
+        }
+
+        // replace_buffer() replaces the buffer with new_buf
+        // new_buf must have the same size as the current buffer
+        // and the buffer contents must be as same as the current buffer
+        constexpr bool replace_buffer(Vec<C> new_buf) {
+            if (buf.size() != new_buf.size()) {
+                return false;
+            }
+            buf = new_buf;
             return true;
         }
 
@@ -102,6 +115,22 @@ namespace futils::binary::internal {
             index -= drop;
             buf = new_buf;
         }
+    };
+
+    template <class T, class C>
+    concept ResizableBuffer = requires(T& n, size_t s) {
+        { n.resize(s) };
+        { view::basic_wvec<C>(n) };
+    };
+
+    template <class T>
+    concept has_max_size = requires(T t) {
+        { t.max_size() } -> std::convertible_to<size_t>;
+    };
+
+    template <class T>
+    concept resize_returns_bool = requires(T t, size_t s) {
+        { t.resize(s) } -> std::convertible_to<bool>;
     };
 
 }  // namespace futils::binary::internal

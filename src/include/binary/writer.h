@@ -245,6 +245,68 @@ namespace futils {
 
         using writer = basic_writer<byte>;
 
+        namespace internal {
+            template <class C, ResizableBuffer<C> T>
+            struct ResizableBufferWriteStream {
+                constexpr static bool full(void* ctx, size_t offset) {
+                    auto self = static_cast<T*>(ctx);
+                    if constexpr (internal::has_max_size<T>) {
+                        return offset == self->max_size();
+                    }
+                    return false;
+                }
+
+                constexpr static void write(void* ctx, WriteContract<C> c) {
+                    auto self = static_cast<T*>(ctx);
+                    self->resize(c.least_new_buffer_size());
+                    c.set_new_buffer(*self);
+                }
+
+                constexpr static void commit(void* ctx, CommitContract<C> c) {
+                    auto self = static_cast<T*>(ctx);
+                    c.direct_drop(c.require_drop());
+                    self->resize(c.buffer().size());
+                    c.replace_buffer(*self);
+                }
+
+                constexpr static WriteStreamHandler<C> handler = {
+                    .full = full,
+                    .write = write,
+                    .commit = commit,
+                };
+            };
+        }  // namespace internal
+
+        template <class T, class C = byte>
+        const WriteStreamHandler<C>* resizable_buffer_writer() {
+            return &internal::ResizableBufferWriteStream<C, T>::handler;
+        }
+
+        template <class T, class C = byte>
+        struct StreamingBuffer {
+           private:
+            T buffer;
+            size_t offset = 0;
+
+           public:
+            constexpr auto stream(auto&& cb) {
+                basic_writer<C> w{resizable_buffer_writer<T>(), &buffer, buffer};
+                w.reset(offset);
+                // exception safe
+                // to prevent #include <helper/defer.h>
+                struct L {
+                    basic_writer<C>* w;
+                    size_t* offset;
+                    L(size_t* offset, basic_writer<C>* w)
+                        : offset(offset), w(w) {}
+                    ~L() {
+                        *offset = w->offset();
+                    }
+                } l{&offset, &w};
+                return cb(w);
+            }
+        };
+
         namespace test {
             struct ArrayStreamWriter {
                 static constexpr auto N = 100;

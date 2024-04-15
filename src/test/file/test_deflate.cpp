@@ -36,9 +36,11 @@ int main() {
     if (!view.open("./ignore/dump0.gz")) {
         return -1;
     }
-    Input input{view};
+    if (!view.data()) {
+        return -1;
+    }
     futils::file::gzip::GZipHeader head;
-    futils::binary::bit_reader<Input&> bitr{input};
+    futils::binary::bit_reader bitr{view};
     std::string out;
     auto err = futils::file::gzip::decode_gzip(out, head, bitr);
     assert(err == futils::file::gzip::deflate::DeflateError::none);

@@ -47,8 +47,8 @@ namespace futils {
             return (ret + 7) / 8;
         }
 
-        template <class T, class String, class C>
-        constexpr void encode_huffman(binary::basic_bit_writer<T, C>& vec, const String& in) {
+        template <class String, class C>
+        constexpr void encode_huffman(binary::basic_bit_writer<C>& vec, const String& in) {
             size_t size = 0;
             if constexpr (std::is_pointer_v<std::decay_t<decltype(in)>>) {
                 size = futils::strlen(in);
@@ -64,8 +64,8 @@ namespace futils {
             }
         }
 
-        template <class T, class C>
-        constexpr HpkErr decode_huffman_achar(binary::basic_bit_reader<T, C>& r,
+        template <class C>
+        constexpr HpkErr decode_huffman_achar(binary::basic_bit_reader<C>& r,
                                               const file::gzip::huffman::DecodeTree*& fin,
                                               std::uint32_t& allone) {
             auto& table = huffman::decode_tree.table();
@@ -87,15 +87,15 @@ namespace futils {
             }
         }
 
-        template <class T, class Out, class C>
-        constexpr HpkErr decode_huffman(Out& res, binary::basic_bit_reader<T, C>& r) {
-            while (r.get_base().check_input(1)) {
+        template <class Out, class C>
+        constexpr HpkErr decode_huffman(Out& res, binary::basic_bit_reader<C>& r) {
+            while (r.get_base().load_stream(1)) {
                 const file::gzip::huffman::DecodeTree* fin = nullptr;
                 std::uint32_t allone = 1;
                 auto tmp = decode_huffman_achar(r, fin, allone);
                 if (tmp != HpackError::none) {
                     if (tmp == HpackError::too_short_number) {
-                        if (r.get_base().check_input(1) && allone - 1 > 7) {
+                        if (r.get_base().load_stream(1) && allone - 1 > 7) {
                             return HpackError::too_large_number;
                         }
                         break;
@@ -143,8 +143,8 @@ namespace futils {
             return true;
         }
 
-        template <size_t n, class T, class C>
-        constexpr HpkErr encode_integer(binary::basic_expand_writer<T, C>& w, size_t value, std::uint8_t firstmask) {
+        template <size_t n, class C>
+        constexpr HpkErr encode_integer(binary::basic_writer<C>& w, size_t value, std::uint8_t firstmask) {
             static_assert(n > 0 && n <= 8, "invalid range");
             constexpr std::uint8_t msk = static_cast<std::uint8_t>(~0) >> (8 - n);
             if (firstmask & msk) {
@@ -165,8 +165,8 @@ namespace futils {
             return true;
         }
 
-        template <size_t prefixed = 7, class T, class String, class C, class F1 = C, class F2 = C>
-        constexpr HpkErr encode_string(binary::basic_expand_writer<T, C>& w, const String& value, F1 common_prefix = 0, F2 flag_huffman = 0x80) {
+        template <size_t prefixed = 7, class String, class C, class F1 = C, class F2 = C>
+        constexpr HpkErr encode_string(binary::basic_writer<C>& w, const String& value, F1 common_prefix = 0, F2 flag_huffman = 0x80) {
             size_t size = 0;
             if constexpr (std::is_pointer_v<std::decay_t<decltype(value)>>) {
                 size = futils::strlen(value);
@@ -179,11 +179,10 @@ namespace futils {
                 if (err != HpackError::none) {
                     return err;
                 }
-                w.expand(huflen);
-                if (w.remain().size() != huflen) {
+                if (!w.prepare_stream(huflen)) {
                     return HpackError::output_length;
                 }
-                binary::basic_bit_writer<view::basic_wvec<C>, C> vec{w.remain()};
+                binary::basic_bit_writer<C> vec{w.remain()};
                 encode_huffman(vec, value);
                 w.offset(huflen);
                 return HpackError::none;
@@ -211,12 +210,12 @@ namespace futils {
             if (err != HpackError::none) {
                 return err;
             }
-            auto [d, ok] = r.read(size);
+            auto [d, ok] = r.read_direct(size);
             if (!ok) {
                 return HpackError::input_length;
             }
             if (*first_mask & flag_huffman) {
-                binary::basic_bit_reader<view::basic_rvec<C>, C> r(d);
+                binary::basic_bit_reader<C> r(d);
                 return decode_huffman(str, r);
             }
             else {

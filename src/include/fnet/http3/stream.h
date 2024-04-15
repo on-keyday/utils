@@ -118,8 +118,7 @@ namespace futils {
                 return true;
             }
 
-            template <class String>
-            bool write_field_section(quic::stream::StreamID id, binary::expand_writer<String>& w, auto&& write) {
+            bool write_field_section(quic::stream::StreamID id, binary::writer& w, auto&& write) {
                 auto locked = lock();
                 auto err = table.write_header(id, w, [&](auto&& add_entry, auto&& add_field) {
                     auto add_entry_wrap = qpack::http3_entry_validate_wrapper(add_entry);
@@ -157,11 +156,17 @@ namespace futils {
                 if (q->sender.is_fin()) {
                     return false;
                 }
-                binary::expand_writer<String> w;
-                if (!conn->write_field_section(stream->sender.id(), w, write)) {
+                binary::StreamingBuffer<String> buf;
+                view::wvec section;
+                if (!buf.stream([&](auto& w) {
+                        if (!conn->write_field_section(stream->sender.id(), w, write)) {
+                            return false;
+                        }
+                        section = w.written();
+                        return true;
+                    })) {
                     return false;
                 }
-                auto section = w.written();
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::HEADER, section.size());
                 auto res = q->sender.add_multi_data(false, true, header, section);
@@ -273,11 +278,17 @@ namespace futils {
                 if (!quic::varint::write(id_w, push_id)) {
                     return false;
                 }
-                binary::expand_writer<String> w;
-                if (!conn->write_field_section(stream->sender.id(), w, write)) {
+                binary::StreamingBuffer<String> buf;
+                view::wvec section;
+                if (!buf.stream([&](auto& w) {
+                        if (!conn->write_field_section(stream->sender.id(), w, write)) {
+                            return false;
+                        }
+                        section = w.written();
+                        return true;
+                    })) {
                     return false;
                 }
-                auto section = w.written();
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::PUSH_PROMISE, quic::varint::len(push_id) + section.size());
                 auto res = q->sender.add_multi_data(false, true, header, id_w.written(), section);

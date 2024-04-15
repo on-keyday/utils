@@ -58,8 +58,8 @@ namespace futils {
             return Instruction::undefined;
         }
 
-        template <class Table, class T>
-        constexpr QpackError render_instruction(fields::FieldDecodeContext<Table>& ctx, binary::expand_writer<T>& w, Instruction istr, std::uint64_t value) {
+        template <class Table>
+        constexpr QpackError render_instruction(fields::FieldDecodeContext<Table>& ctx, binary::writer& w, Instruction istr, std::uint64_t value) {
             switch (istr) {
                 default:
                     return QpackError::undefined_instruction;

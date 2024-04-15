@@ -105,8 +105,7 @@ namespace futils {
                 delta_base = prefix.encode_delta_base();
             }
 
-            template <class T>
-            constexpr QpackError render(binary::expand_writer<T>& w) const {
+            constexpr QpackError render(binary::writer& w) const {
                 if (auto err = hpack::encode_integer<8>(w, encoded_insert_count, 0); err != hpack::HpackError::none) {
                     return internal::convert_hpack_error(err);
                 }
@@ -181,24 +180,21 @@ namespace futils {
             return FieldType::undefined;
         }
 
-        template <class T>
-        constexpr QpackError render_field_line_index(binary::expand_writer<T>& w, std::uint64_t index, bool is_static) {
+        constexpr QpackError render_field_line_index(binary::writer& w, std::uint64_t index, bool is_static) {
             if (auto err = hpack::encode_integer<6>(w, index, match(FieldType::index) | (is_static ? 0x40 : 0)); err != hpack::HpackError::none) {
                 return internal::convert_hpack_error(err);
             }
             return QpackError::none;
         }
 
-        template <class T>
-        constexpr QpackError render_field_line_post_base_index(binary::expand_writer<T>& w, std::uint64_t index) {
+        constexpr QpackError render_field_line_post_base_index(binary::writer& w, std::uint64_t index) {
             if (auto err = hpack::encode_integer<4>(w, index, match(FieldType::post_base_index)); err != hpack::HpackError::none) {
                 return internal::convert_hpack_error(err);
             }
             return QpackError::none;
         }
 
-        template <class T>
-        constexpr QpackError render_field_line_index_literal(binary::expand_writer<T>& w, std::uint64_t index, bool is_static, auto&& value, bool must_forward_as_literal = false) {
+        constexpr QpackError render_field_line_index_literal(binary::writer& w, std::uint64_t index, bool is_static, auto&& value, bool must_forward_as_literal = false) {
             if (auto err = hpack::encode_integer<4>(w, index, match(FieldType::literal_with_name_ref) | (is_static ? 0x10 : 0) | (must_forward_as_literal ? 0x20 : 0)); err != hpack::HpackError::none) {
                 return internal::convert_hpack_error(err);
             }
@@ -208,8 +204,7 @@ namespace futils {
             return QpackError::none;
         }
 
-        template <class T>
-        constexpr QpackError render_field_line_post_base_index_literal(binary::expand_writer<T>& w, std::uint64_t index, auto&& value, bool must_forward_as_literal = false) {
+        constexpr QpackError render_field_line_post_base_index_literal(binary::writer& w, std::uint64_t index, auto&& value, bool must_forward_as_literal = false) {
             if (auto err = hpack::encode_integer<3>(w, index, match(FieldType::literal_with_post_base_name_ref) | (must_forward_as_literal ? 0x08 : 0)); err != hpack::HpackError::none) {
                 return internal::convert_hpack_error(err);
             }
@@ -219,8 +214,7 @@ namespace futils {
             return QpackError::none;
         }
 
-        template <class T>
-        constexpr QpackError render_field_line_literal(binary::expand_writer<T>& w, auto&& head, auto&& value, bool must_forward_as_literal = false) {
+        constexpr QpackError render_field_line_literal(binary::writer& w, auto&& head, auto&& value, bool must_forward_as_literal = false) {
             if (auto err = hpack::encode_string<3>(w, head, match(FieldType::literal_with_literal_name) | (must_forward_as_literal ? 0x10 : 0), 0x08);
                 err != hpack::HpackError::none) {
                 return internal::convert_hpack_error(err);
@@ -231,8 +225,7 @@ namespace futils {
             return QpackError::none;
         }
 
-        template <class T>
-        constexpr QpackError render_field_line_dynamic_index(const SectionPrefix& prefix, binary::expand_writer<T>& w, std::uint64_t abs_index) {
+        constexpr QpackError render_field_line_dynamic_index(const SectionPrefix& prefix, binary::writer& w, std::uint64_t abs_index) {
             auto src_index = abs_index;
             // large............small
             // |n-1|n-2|n-3|...|d
@@ -250,8 +243,7 @@ namespace futils {
             }
         }
 
-        template <class T>
-        constexpr QpackError render_field_line_dynamic_index_literal(const SectionPrefix& prefix, binary::expand_writer<T>& w, std::uint64_t abs_index, auto&& value, bool must_forward_as_literal = false) {
+        constexpr QpackError render_field_line_dynamic_index_literal(const SectionPrefix& prefix, binary::writer& w, std::uint64_t abs_index, auto&& value, bool must_forward_as_literal = false) {
             auto src_index = abs_index;
             // large............small
             // |n-1|n-2|n-3|...|d

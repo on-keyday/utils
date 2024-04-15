@@ -36,7 +36,7 @@ int main() {
     res = unicodedata::text::parse_emoji_data_text(seq3, data);
     assert(res == unicodedata::text::ParseError::none);
     std::string binary;
-    futils::binary::expand_writer<std::string&> w{binary};
+    futils::binary::writer w{futils::binary::resizable_buffer_writer<std::string>(), &binary};
     unicodedata::bin::serialize_unicodedata(w, data);
     futils::binary::reader r{binary};
     unicodedata::UnicodeData<futils::view::rvec> red;

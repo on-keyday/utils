@@ -19,10 +19,12 @@ using rvec = futils::view::basic_rvec<char>;
 
 constexpr bool encode_decode(const char* base) {
     auto in = rvec(base);
-    futils::binary::basic_bit_writer<string, char> w{};
+    string buf;
+    buf.resize(in.size() * 2);
+    futils::binary::basic_bit_writer<char> w{buf};
     futils::hpack::encode_huffman(w, in);
     auto encoded = w.get_base().written();
-    futils::binary::basic_bit_reader<rvec, char> d{encoded};
+    futils::binary::basic_bit_reader<char> d{encoded};
     string val;
     return futils::hpack::decode_huffman(val, d) && val == in;
 }
@@ -30,7 +32,7 @@ constexpr bool encode_decode(const char* base) {
 template <size_t s>
 constexpr bool decode(futils::fnet::quic::crypto::KeyMaterial<s> data, const char* expect) {
     auto v = futils::view::wvec(data.material);
-    futils::binary::bit_reader<futils::view::wvec> d{v};
+    futils::binary::bit_reader d{v};
     string val;
     return futils::hpack::decode_huffman(val, d) && val == rvec(expect);
 }
@@ -80,7 +82,7 @@ void check_header_compression_resize(std::uint32_t new_size, Tables& table) {
         ;
     };
     table.encode_size_limit = new_size;
-    futils::binary::expand_writer<std::string&> w{payload};
+    futils::binary::writer w{futils::binary::resizable_buffer_writer<std::string>(), &payload};
     auto err = futils::hpack::encode_table_size_update(w, new_size, table.encode_table, on_modify);
     assert(err == futils::hpack::HpackError::none);
     err = futils::hpack::decode<std::string>(

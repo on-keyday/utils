@@ -10,117 +10,6 @@
 #include "contract.h"
 namespace futils {
     namespace binary {
-        template <class T, class C>
-        concept ResizableBuffer = requires(T& n, size_t s) {
-            { n.resize(s) };
-            { view::basic_wvec<C>(n) };
-        };
-
-        template <class T>
-        concept has_max_size = requires(T t) {
-            { t.max_size() } -> std::convertible_to<size_t>;
-        };
-
-        template <class T>
-        concept resize_returns_bool = requires(T t, size_t s) {
-            { t.resize(s) } -> std::convertible_to<bool>;
-        };
-
-        /*
-        template <class C>
-        struct ReadContract {
-           private:
-            size_t request = 0;
-            view::basic_rvec<C>& buf;
-            size_t index = 0;
-
-           public:
-            constexpr ReadContract(view::basic_rvec<C>& buf, size_t index, size_t request)
-                : buf(buf), index(index), request(request) {
-                assert(index <= buf.size() && (request > buf.size() - index));
-            }
-
-            constexpr size_t remaining() const noexcept {
-                return buf.size() - index;
-            }
-
-            constexpr size_t requested() const noexcept {
-                return request;
-            }
-
-            constexpr size_t offset() const noexcept {
-                return index;
-            }
-
-            constexpr size_t least_requested() const noexcept {
-                return request - remaining();
-            }
-
-            constexpr size_t least_new_buffer_size() const noexcept {
-                return buf.size() + least_requested();
-            }
-
-            constexpr view::basic_rvec<C> buffer() const noexcept {
-                return buf;
-            }
-
-            constexpr bool set_new_buffer(view::basic_rvec<C> new_buf) noexcept {
-                if (new_buf.size() < buf.size()) {
-                    return false;
-                }
-                buf = new_buf;
-                return true;
-            }
-        };
-
-        template <class C>
-        struct DiscardContract {
-           private:
-            size_t& index;
-            size_t require_drop_n = 0;
-            view::basic_rvec<C>& buf;
-
-           public:
-            constexpr DiscardContract(view::basic_rvec<C>& buf, size_t& index, size_t require_drop)
-                : buf(buf), index(index), require_drop_n(require_drop) {
-                assert(index < buf.size() && require_drop <= index);
-            }
-
-            constexpr view::basic_rvec<C> buffer() const noexcept {
-                return buf;
-            }
-
-            constexpr size_t require_drop() const noexcept {
-                return require_drop_n;
-            }
-
-            // direct_drop() drops n bytes from the buffer directly using memory copy
-            // this operation may be unsafe because buf.data() may be read-only memory
-            // caller must ensure that buf is writable
-            constexpr bool direct_drop(size_t drop, view::basic_rvec<C>& old_range) {
-                if (drop > require_drop_n) {
-                    return false;
-                }
-                auto wbuf = view::basic_wvec<C>(const_cast<C*>(buf.data()), buf.size());
-                constexpr auto copy_ = view::make_copy_fn<C>();
-                copy_(wbuf, buf.substr(drop));
-                old_range = buf;
-                buf = buf.substr(0, buf.size() - drop);
-                index -= drop;
-                require_drop_n -= drop;
-                return true;
-            }
-
-            // set_new_buffer() drops n bytes from the buffer and set new buffer
-            constexpr bool set_new_buffer(view::basic_rvec<C> new_buf, size_t drop) noexcept {
-                if (drop > require_drop_n) {
-                    return false;
-                }
-                require_drop_n -= drop;
-                index -= drop;
-                buf = new_buf;
-            }
-        };*/
 
         template <class C>
         using ReadContract = internal::IncreaseContract<C, view::basic_rvec>;
@@ -366,15 +255,15 @@ namespace futils {
                 return copy_(buf, read_best_internal(buf.size())) == 0;
             }
 
-            template <ResizableBuffer<C> B>
+            template <internal::ResizableBuffer<C> B>
             constexpr bool read_best(B& buf, size_t n) noexcept(noexcept(buf.resize(0))) {
-                if constexpr (has_max_size<B>) {
+                if constexpr (internal::has_max_size<B>) {
                     if (buf.max_size() < r.size() - index) {
                         return false;
                     }
                 }
                 auto data = read_best_internal(n);
-                if constexpr (resize_returns_bool<B>) {
+                if constexpr (internal::resize_returns_bool<B>) {
                     if (!buf.resize(data.size())) {
                         return false;
                     }
@@ -433,9 +322,9 @@ namespace futils {
                 return copy_(buf, data) == 0;
             }
 
-            template <ResizableBuffer<C> B>
+            template <internal::ResizableBuffer<C> B>
             constexpr bool read(B& buf, size_t n) noexcept(noexcept(buf.resize(0))) {
-                if constexpr (has_max_size<B>) {
+                if constexpr (internal::has_max_size<B>) {
                     if (n > buf.max_size()) {
                         return false;
                     }
@@ -444,7 +333,7 @@ namespace futils {
                 if (!ok) {
                     return false;
                 }
-                if constexpr (resize_returns_bool<B>) {
+                if constexpr (internal::resize_returns_bool<B>) {
                     if (!buf.resize(data.size())) {
                         return false;
                     }

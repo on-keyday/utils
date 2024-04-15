@@ -40,7 +40,8 @@ int main() {
     print(futils::qpack::header::internal::header_hash_table);
 
     futils::qpack::Context<futils::qpack::TypeConfig<>> ctx;
-    futils::binary::expand_writer<std::string> w;
+    std::string buf;
+    futils::binary::writer w{futils::binary::resizable_buffer_writer<std::string>(), &buf};
     ctx.enc.set_max_capacity(2000);
     ctx.update_capacity(2000);
     ctx.write_header(0, w, [&](auto&& add_entry, auto&& add_field) {
@@ -50,9 +51,10 @@ int main() {
         add_field("cookie", "I want to eat cookie", futils::qpack::FieldPolicy::prior_dynamic);
         add_field("purpose", "sightseeing");
         add_field("set-cookie", "cookie is very very fun", futils::qpack::FieldPolicy::no_dynamic);
+        add_field("set-cookie", "symbols: !@#$%^&*()_+{}|:\"<>?`-=[]\\;',./", futils::qpack::FieldPolicy::no_dynamic);
     });
 
-    futils::binary::reader r{ctx.enc_stream.written()};
+    futils::binary::reader r{ctx.enc_stream.stream([&](auto& s) { return s.written(); })};
     ctx.dec.set_max_capacity(2000);
     ctx.read_encoder_stream(r);
     r.reset_buffer(w.written());
