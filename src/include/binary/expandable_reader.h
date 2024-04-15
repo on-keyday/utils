@@ -102,7 +102,7 @@ namespace futils {
                     else {
                         buf.input(expect);
                     }
-                    r.reset(buf, r.offset());
+                    r.reset_buffer(buf, r.offset());
                     return true;
                 }
                 return false;
@@ -144,7 +144,7 @@ namespace futils {
                 return r.read(data);
             }
 
-            constexpr C top() const {
+            constexpr C top() /*const*/ {
                 return r.top();
             }
 

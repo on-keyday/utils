@@ -212,7 +212,7 @@ namespace futils {
                     }
                 }
                 auto offset = r.offset();
-                r.reset(hdrs.encoded_field);
+                r.reset_buffer(hdrs.encoded_field);
                 auto err = conn->read_field_section(stream->receiver.id(), r, read);
                 if (!err) {
                     return false;

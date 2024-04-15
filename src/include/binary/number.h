@@ -16,7 +16,7 @@ namespace futils {
     namespace binary {
         template <class T, class C>
         constexpr bool read_num(basic_reader<C>& r, T& val, bool be = true) {
-            auto [data, ok] = r.read(sizeof(T));
+            auto [data, ok] = r.read_direct(sizeof(T));
             if (!ok) {
                 return false;
             }
@@ -49,7 +49,7 @@ namespace futils {
         constexpr bool read_num_bulk(basic_reader<C>& r, bool be, T&... val) {
             constexpr size_t size = (... + sizeof(val));
             view::basic_rvec<C> data;
-            if (!r.read(data, size)) {
+            if (!r.read_direct(data, size)) {
                 return false;
             }
             constexpr auto b = internal::bulk_array<T...>();

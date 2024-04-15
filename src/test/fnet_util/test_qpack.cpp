@@ -14,7 +14,7 @@ int main() {
     auto copy = futils::qpack::header::predefined_headers<>;
     for (auto i = 0; i < 99; i++) {
         futils::wrap::cout_wrap() << i << " " << copy.table[i].first << ": "
-                                 << copy.table[i].second << "\n";
+                                  << copy.table[i].second << "\n";
     }
     futils::wrap::cout_wrap() << "\n";
 
@@ -55,7 +55,7 @@ int main() {
     futils::binary::reader r{ctx.enc_stream.written()};
     ctx.dec.set_max_capacity(2000);
     ctx.read_encoder_stream(r);
-    r.reset(w.written());
+    r.reset_buffer(w.written());
     ctx.read_header(0, r, [](auto&& field) {
         futils::wrap::cout_wrap() << field.key << ": " << field.value << "\n";
     });

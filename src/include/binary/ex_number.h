@@ -31,7 +31,7 @@ namespace futils {
             if (w.remain().size() < sizeof(V)) {
                 w.expand(sizeof(V));
             }
-            auto bw = w.writer();
+            auto bw = w.writer().clone();
             if (!write_num(bw, val, be)) {
                 return false;
             }

@@ -441,7 +441,7 @@ namespace futils {
 
                 // use copy
                 // restore when payload rendered and succeeded
-                auto copy = w;
+                auto copy = w.clone();
 
                 // render packet according to write mode
                 packet::CryptoPacket plain;
@@ -545,7 +545,7 @@ namespace futils {
 
                 status.consume_packet_number(pn_space);
                 connIDs.on_packet_sent();
-                w = copy;  // restore
+                w = std::move(copy);  // restore
 
                 return true;
             }

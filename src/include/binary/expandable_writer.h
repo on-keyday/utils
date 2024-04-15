@@ -28,7 +28,7 @@ namespace futils {
             constexpr basic_expand_writer(auto&& value)
                 : buf(std::forward<decltype(value)>(value)), w(buf) {}
 
-            constexpr basic_writer<C> writer() const {
+            constexpr const basic_writer<C>& writer() const {
                 return w;
             }
 
@@ -36,7 +36,7 @@ namespace futils {
             constexpr void resize(size_t size) {
                 if constexpr (has_resize<T>) {
                     buf.resize(size);
-                    w.reset(buf, w.offset());
+                    w.reset_buffer(buf, w.offset());
                 }
             }
 

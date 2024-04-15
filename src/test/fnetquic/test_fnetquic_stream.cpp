@@ -125,7 +125,7 @@ int main() {
     locals = {};  // clear this
     auto res = stream_1->sender.detect_ack_lost();
     assert(res == IOResult::no_data);
-    r.reset(w.written());
+    r.reset_buffer(w.written());
     frame::parse_frame<std::vector>(r, [&](frame::Frame& f, bool err) {
         assert(!err);
         auto [res, e] = conn_local->recv(f);
@@ -136,7 +136,7 @@ int main() {
     });
     res = stream_1->sender.detect_ack_lost();
     assert(res == IOResult::no_data);
-    r.reset(w.written());
+    r.reset_buffer(w.written());
     peers.get()->ack();
     peers = {};  // clear this
     frame::parse_frame<std::vector>(r, [&](frame::Frame& f, bool err) {

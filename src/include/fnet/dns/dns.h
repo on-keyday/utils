@@ -386,7 +386,7 @@ namespace futils {
                     if (range_begin <= next.data() && next.data() < range_end) {
                         return false;  // anti pattern 3: loop or self reference
                     }
-                    r.reset(next);
+                    r.reset_buffer(next);
                     continue;
                 }
                 total += 1 + len;

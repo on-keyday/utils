@@ -77,7 +77,7 @@ namespace futils {
             for (; j < peer.addr.size(); j++) {
                 d.data[18 + j] = peer.addr.data()[i];
             }
-            w.reset(view::wvec(d.data + 34, 2));
+            w.reset_buffer(view::wvec(d.data + 34, 2));
             binary::write_num(w, peer.port().u16());
             return d;
         }
