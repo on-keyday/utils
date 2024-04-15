@@ -31,6 +31,12 @@ namespace futils {
 #define as_c(ptr) static_cast<C*>(ptr)
 #define get_winhandle(c) (c->is_main() ? as_handle(c->handle) : as_handle(c->main_->handle))
 
+        static thread_local C* running_coro = nullptr;
+
+        C* get_current() {
+            return running_coro;
+        }
+
         void C::coro_sub(C* c) {
             c->state = CState::running;
             const auto h = helper::defer([c] {
@@ -40,6 +46,7 @@ namespace futils {
                 }
             });
             try {
+                running_coro = c;
                 c->coroutine(c, c->user);
             } catch (...) {
                 as_handle(c->main_->handle)->except = std::current_exception();
@@ -156,17 +163,19 @@ namespace futils {
             this->state = CState::suspend;
             const auto d = helper::defer([&] {
                 this->state = CState::running;
+                running_coro = this;
             });
             h->current = nullptr;
             h->fetch_tasks();
             auto next = h->running.pop();
-            h->running.push(this);
+            bool must_suc = h->running.push(this);
+            assert(must_suc);
             h->current = next;
+            running_coro = next;
             if (next == nullptr) {
                 SwitchToFiber(h->main_fiber);
                 return;
             }
-
             SwitchToFiber(next->handle);
         }
 
@@ -186,6 +195,7 @@ namespace futils {
                 h->resource.free(h->current);
             }
             h->current = nullptr;
+            running_coro = nullptr;
             if (h->except) {
                 auto v = std::exchange(h->except, nullptr);
                 std::rethrow_exception(v);

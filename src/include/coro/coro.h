@@ -139,5 +139,31 @@ namespace futils {
             return c;
         }
 
+        // thread local state
+        coro_DLL_EXPORT(C*) get_current();
+        inline void* get_thread_context() {
+            auto c = get_current();
+            if (!c) {
+                return nullptr;
+            }
+            return c->get_thread_context();
+        }
+        inline void* set_thread_context(void* v) {
+            auto c = get_current();
+            if (!c) {
+                return nullptr;
+            }
+            return c->set_thread_context(v);
+        }
+        // suspend the current coroutine
+        inline bool suspend() {
+            auto c = get_current();
+            if (!c) {
+                return false;
+            }
+            c->suspend();
+            return true;
+        }
+
     }  // namespace coro
 }  // namespace futils

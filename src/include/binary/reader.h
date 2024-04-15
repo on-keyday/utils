@@ -10,6 +10,22 @@
 
 namespace futils {
     namespace binary {
+        template <class T, class C>
+        concept ResizableBuffer = requires(T& n, size_t s) {
+            { n.resize(s) };
+            { view::basic_wvec<C>(n) };
+        };
+
+        template <class T>
+        concept has_max_size = requires(T t) {
+            { t.max_size() } -> std::convertible_to<size_t>;
+        };
+
+        template <class T>
+        concept resize_returns_bool = requires(T t, size_t s) {
+            { t.resize(s) } -> std::convertible_to<bool>;
+        };
+
         template <class C>
         struct basic_reader {
            private:
@@ -75,6 +91,29 @@ namespace futils {
                     return false;
                 }
                 return true;
+            }
+
+            template <ResizableBuffer<C> B>
+            constexpr bool read(B& buf, size_t n) noexcept(noexcept(buf.resize(0))) {
+                if constexpr (has_max_size<B>) {
+                    if (n > buf.max_size()) {
+                        return false;
+                    }
+                }
+                auto [data, ok] = read(n);
+                if (!ok) {
+                    return false;
+                }
+                if constexpr (resize_returns_bool<B>) {
+                    if (!buf.resize(data.size())) {
+                        return false;
+                    }
+                }
+                else {
+                    buf.resize(data.size());
+                }
+                constexpr auto copy_ = view::make_copy_fn<C>();
+                return copy_(buf, data) == 0;
             }
 
             // read() reads n bytes strictly or doesn't read if not enough remaining data.
