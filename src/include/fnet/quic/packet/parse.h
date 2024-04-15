@@ -36,7 +36,7 @@ namespace futils {
             auto flags = PacketFlags{r.top()};
             if (flags.is_long()) {
                 std::uint32_t version = 0;
-                auto peek = r.peeker();
+                auto peek = r.clone();
                 peek.offset(1);
                 if (!binary::read_num(peek, version, true)) {
                     Packet packet;
@@ -85,11 +85,11 @@ namespace futils {
 #undef PACKET
             }
             {
-                auto peek = r.peeker();
+                auto peek = r.clone();
                 StatelessReset reset;
                 if (reset.parse(peek)) {
                     if (is_stateless_reset(reset)) {
-                        r = peek;
+                        r = std::move(peek);
                         return invoke_cb(PacketType::StatelessReset, reset, false, true);
                     }
                 }

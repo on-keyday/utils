@@ -219,17 +219,17 @@ namespace futils {
 
                 constexpr std::pair<binary::reader, bool> parse_and_subreader(binary::reader& r, FrameIDMode mode) noexcept {
                     if (!parse(r)) {
-                        return {{view::rvec{}}, false};
+                        return {binary::reader(view::rvec()), false};
                     }
                     switch (mode) {
                         case FrameIDMode::conn: {
                             if (id != 0) {
-                                return {view::rvec{}, false};
+                                return {binary::reader(view::rvec()), false};
                             }
                         } break;
                         case FrameIDMode::stream: {
                             if (id == 0) {
-                                return {view::rvec{}, false};
+                                return {binary::reader(view::rvec()), false};
                             }
                         } break;
                         default:
@@ -237,9 +237,9 @@ namespace futils {
                     }
                     auto [data, ok] = r.read(len);
                     if (!ok) {
-                        return {view::rvec{}, false};
+                        return {binary::reader(view::rvec()), false};
                     }
-                    return {{data}, true};
+                    return {binary::reader(data), true};
                 }
 
                public:
@@ -730,7 +730,7 @@ namespace futils {
                 if (r.remain().size() < 9) {
                     return no_error;  // no buffer
                 }
-                auto peek = r.peeker();
+                auto peek = r.clone();
                 std::uint32_t len = 0;
                 binary::read_uint24(peek, len);
                 if (9 + len > limit) {
@@ -749,7 +749,7 @@ namespace futils {
         FrameT frame;                    \
         if (auto err = frame.parse(r)) { \
             cb(frame, unknown, err);     \
-            r = peek;                    \
+            r = std::move(peek);         \
             return err;                  \
         }                                \
         cb(frame, unknown, no_error);    \

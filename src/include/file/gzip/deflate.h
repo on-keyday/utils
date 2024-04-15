@@ -384,7 +384,7 @@ namespace futils {
                         if (!bs.check_input(4)) {
                             return DeflateError::input_length;
                         }
-                        auto br = bs.reader();
+                        auto br = bs.reader().clone();
                         std::uint16_t len = 0, nlen = 0;
                         if (!binary::read_num(br, len, false) ||
                             !binary::read_num(br, nlen, false)) {
@@ -397,7 +397,7 @@ namespace futils {
                         if (!bs.check_input(len)) {
                             return DeflateError::input_length;
                         }
-                        br = bs.reader();
+                        br = bs.reader().clone();
                         auto [data, ok] = br.read(len);
                         if (!ok) {
                             return DeflateError::internal_bug;

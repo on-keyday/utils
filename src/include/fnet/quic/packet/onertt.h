@@ -23,7 +23,7 @@ namespace futils {
             constexpr bool parse(binary::reader& r, auto&& get_dstID_len) noexcept {
                 size_t len = 0;
                 return Packet::parse_check(r, PacketType::OneRTT) &&
-                       get_dstID_len(r.peeker(), &len) &&
+                       get_dstID_len(r.clone(), &len) &&
                        r.read(dstID, len);
             }
 

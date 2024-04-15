@@ -80,7 +80,7 @@ namespace futils::file::gzip {
                 }
             }
             if (flag & FNAME) {
-                auto peek = r.peeker();
+                auto peek = r.clone();
                 while (peek.top() != 0) {
                     peek.offset(1);
                 }
@@ -93,7 +93,7 @@ namespace futils::file::gzip {
                 r.offset(1);  // ignore zero
             }
             if (flag & FCOMMENT) {
-                auto peek = r.peeker();
+                auto peek = r.clone();
                 while (peek.top() != 0) {
                     peek.offset(1);
                 }
@@ -215,7 +215,7 @@ namespace futils::file::gzip {
         if (!base.check_input(20)) {
             return deflate::DeflateError::input_length;
         }
-        auto br = base.reader();
+        auto br = base.reader().clone();
         while (!head.parse_header(br)) {
             if (!head.valid()) {
                 return deflate::DeflateError::invalid_header;
@@ -237,7 +237,7 @@ namespace futils::file::gzip {
         if (!base.check_input(8)) {
             return deflate::DeflateError::input_length;
         }
-        br = base.reader();
+        br = base.reader().clone();
         if (!head.parse_trailer(br)) {
             return deflate::DeflateError::input_length;
         }

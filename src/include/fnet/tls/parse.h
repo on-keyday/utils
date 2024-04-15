@@ -818,14 +818,14 @@ namespace futils {
                 constexpr std::pair<binary::reader, bool> parse_msg(binary::reader& r) {
                     HandshakeType type;
                     std::uint32_t value;
-                    auto p = r.peeker();
+                    auto p = r.clone();
                     if (!binary::read_num(p, type) ||
                         type != msg_type ||
                         !binary::read_uint24(p, value)) {
-                        return {{view::rvec{}}, false};
+                        return {binary::reader{view::rvec{}}, false};
                     }
                     length = value;
-                    r = p;
+                    r = std::move(p);
                     auto [data, ok] = r.read(length);
                     return {data, ok};
                 }

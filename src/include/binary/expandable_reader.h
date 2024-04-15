@@ -58,7 +58,7 @@ namespace futils {
             constexpr basic_expand_reader(auto&& value)
                 : buf(std::forward<decltype(value)>(value)), r(buf) {}
 
-            constexpr basic_reader<C> reader() const {
+            constexpr const basic_reader<C>& reader() const {
                 return r;
             }
 

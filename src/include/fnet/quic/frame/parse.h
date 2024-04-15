@@ -29,7 +29,7 @@ namespace futils {
                 }
                 return true;
             };
-            auto peek = r.peeker();
+            auto peek = r.clone();
             Frame f;
             if (!f.parse(peek)) {
                 return false;
