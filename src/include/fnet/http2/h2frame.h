@@ -13,8 +13,7 @@
 #include "../../binary/number.h"
 #include "../../strutil/append.h"
 #include "stream_id.h"
-#include "../../binary/expandable_writer.h"
-#include "../../binary/ex_number.h"
+#include <binary/writer.h>
 
 namespace futils {
     namespace fnet::http2 {

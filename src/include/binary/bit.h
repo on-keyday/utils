@@ -6,8 +6,8 @@
 */
 
 #pragma once
-#include <binary/expandable_reader.h>
-#include <binary/expandable_writer.h>
+#include <binary/reader.h>
+#include <binary/writer.h>
 
 namespace futils {
     namespace binary {

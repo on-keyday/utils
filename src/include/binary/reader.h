@@ -157,6 +157,14 @@ namespace futils {
                 destroy();
             }
 
+            constexpr void* context() const noexcept {
+                return ctx;
+            }
+
+            constexpr const ReadStreamHandler<C>* stream_handler() const noexcept {
+                return handler;
+            }
+
             constexpr void reset(size_t pos = 0) {
                 if (r.size() < pos) {
                     stream_read(pos - r.size());

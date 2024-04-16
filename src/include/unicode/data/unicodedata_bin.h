@@ -6,10 +6,9 @@
 */
 
 #pragma once
-#include "../../binary/number.h"
-#include "../../binary/ex_number.h"
+#include <binary/number.h>
 #include "unicodedata.h"
-#include "../../binary/ex_term.h"
+#include <binary/term.h>
 
 namespace futils {
     namespace unicode::data::bin {

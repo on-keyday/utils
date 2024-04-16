@@ -10,7 +10,7 @@
 #include <fnet/socket.h>
 #include <fnet/addrinfo.h>
 #include <fnet/dns/records.h>
-#include <binary/expandable_writer.h>
+#include <binary/writer.h>
 #include <vector>
 #include <string>
 using namespace futils;

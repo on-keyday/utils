@@ -10,7 +10,7 @@
 #include <wrap/light/enum.h>
 #include <strutil/equal.h>
 #include <binary/number.h>
-#include <binary/expandable_writer.h>
+#include <binary/writer.h>
 #include "hpack_huffman_table.h"
 #include <binary/bit.h>
 

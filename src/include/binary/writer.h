@@ -97,6 +97,14 @@ namespace futils {
                 destroy();
             }
 
+            constexpr void* context() const noexcept {
+                return ctx;
+            }
+
+            constexpr const WriteStreamHandler<C>* stream_handler() const noexcept {
+                return handler;
+            }
+
             constexpr basic_writer(const basic_writer& o) = delete;
             constexpr basic_writer(basic_writer&& o) noexcept
                 : w(o.w),
