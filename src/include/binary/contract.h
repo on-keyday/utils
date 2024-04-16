@@ -114,6 +114,7 @@ namespace futils::binary::internal {
             require_drop_n -= drop;
             index -= drop;
             buf = new_buf;
+            return true;
         }
     };
 
