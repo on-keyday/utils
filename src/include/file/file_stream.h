@@ -15,13 +15,14 @@ namespace futils::file {
     namespace internal {
         template <class F>
         concept as_file =
-            std::is_same_v<F, File> || std::is_same_v<F, File&>;
+            std::is_same_v<F, File> || std::is_same_v<F, File&> ||
+            std::is_same_v<F, const File&>;
 
         static_assert(as_file<File> && as_file<File&>);
 
     }  // namespace internal
 
-    template <class B, internal::as_file F = File&>
+    template <class B, internal::as_file F = const File&>
     struct FileStream {
         F file;
         B buffer;
@@ -31,7 +32,7 @@ namespace futils::file {
        private:
         static bool file_empty(void* ctx, size_t index) {
             auto self = static_cast<FileStream*>(ctx);
-            File& f = self->file;
+            const File& f = self->file;
             auto s = f.stat();
             if (!s) {
                 self->error = s.error();
@@ -48,7 +49,7 @@ namespace futils::file {
             auto cur = c.buffer().size();
             auto next = c.least_new_buffer_size();
             auto self = static_cast<FileStream*>(ctx);
-            File& f = self->file;
+            const File& f = self->file;
             self->buffer.resize(next);
             auto buffer = view::wvec(self->buffer).substr(cur, req);
             auto read = f.read_file(buffer);
