@@ -64,10 +64,10 @@ namespace futils {
 
         template <class T, class C>
         constexpr bool write_num(basic_writer<C>& w, T val, bool be = true) {
-            auto rem = w.remain();
-            if (rem.size() < sizeof(T)) {
+            if (!w.prepare_stream(sizeof(T))) {
                 return false;
             }
+            auto rem = w.remain();
             write_into(rem, val, be);
             w.offset(sizeof(T));
             return true;
