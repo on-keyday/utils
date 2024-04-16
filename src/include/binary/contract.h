@@ -133,4 +133,15 @@ namespace futils::binary::internal {
         { t.resize(s) } -> std::convertible_to<bool>;
     };
 
+    template <class T>
+    constexpr bool resize_buffer(T& buf, size_t size) {
+        if constexpr (resize_returns_bool<T>) {
+            return buf.resize(size);
+        }
+        else {
+            buf.resize(size);
+            return true;
+        }
+    }
+
 }  // namespace futils::binary::internal

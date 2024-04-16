@@ -38,9 +38,9 @@ namespace futils::file {
                 return true;
             }
             if (s->mode.pipe() || s->mode.terminal() || s->mode.socket()) {
-                return eof;
+                return self->eof;
             }
-            return eof || index >= s->size;
+            return self->eof || index >= s->size;
         }
 
         static void file_read(void* ctx, binary::ReadContract<byte> c) {
@@ -53,7 +53,7 @@ namespace futils::file {
             auto buffer = view::wvec(self->buffer).substr(cur, req);
             auto read = f.read_file(buffer);
             if (!read || read->empty()) {
-                eof = true;
+                self->eof = true;
                 self->error = read.error();
                 return;
             }

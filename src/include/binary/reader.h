@@ -270,14 +270,11 @@ namespace futils {
                         return false;
                     }
                 }
+                auto save = index;
                 auto data = read_best_internal(n);
-                if constexpr (internal::resize_returns_bool<B>) {
-                    if (!buf.resize(data.size())) {
-                        return false;
-                    }
-                }
-                else {
-                    buf.resize(data.size());
+                if (!internal::resize_buffer(buf, data.size())) {
+                    index = save;
+                    return false;
                 }
                 constexpr auto copy_ = view::make_copy_fn<C>();
                 return copy_(buf, data) == 0;
@@ -337,20 +334,63 @@ namespace futils {
                         return false;
                     }
                 }
+                auto save = index;
                 auto [data, ok] = read_internal(n);
                 if (!ok) {
                     return false;
                 }
-                if constexpr (internal::resize_returns_bool<B>) {
-                    if (!buf.resize(data.size())) {
-                        return false;
-                    }
-                }
-                else {
-                    buf.resize(data.size());
+                if (!internal::resize_buffer(buf, data.size())) {
+                    index = save;
+                    return false;
                 }
                 constexpr auto copy_ = view::make_copy_fn<C>();
                 return copy_(buf, data) == 0;
+            }
+
+           private:
+            template <internal::ResizableBuffer<C> B>
+            constexpr bool read_until_eof_no_stream(B& buf) {
+                auto save = index;
+                auto to_read = remain().size();
+                auto direct = read_best_internal(to_read);
+                assert(direct.size() == to_read);
+                if (!internal::resize_buffer(buf, to_read)) {
+                    index = save;
+                    return false;
+                }
+                constexpr auto copy_ = view::make_copy_fn<C>();
+                copy_(buf, direct);
+                return true;
+            }
+
+           public:
+            constexpr bool read_until_eof(view::basic_rvec<C>& data) {
+                if (is_stream()) {
+                    return false;
+                }
+                data = read_best_internal(remain().size());
+                return true;
+            }
+
+            template <internal::ResizableBuffer<C> B>
+            constexpr bool read_until_eof(B& buf, size_t rate = 1024, bool should_discard = false) {
+                if (!is_stream()) {
+                    return read_until_eof_no_stream(buf);
+                }
+                while (true) {
+                    auto data = read_best_internal(rate);
+                    if (data.empty()) {
+                        return true;
+                    }
+                    if (!internal::resize_buffer(buf, buf.size() + data.size())) {
+                        return false;
+                    }
+                    constexpr auto copy_ = view::make_copy_fn<C>();
+                    copy_(view::basic_wvec<C>(buf).substr(buf.size() - data.size()), data);
+                    if (should_discard) {
+                        discard();
+                    }
+                }
             }
 
             // top() returns the first element of the buffer
