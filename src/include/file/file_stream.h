@@ -7,6 +7,7 @@
 
 #pragma once
 #include <binary/reader.h>
+#include <binary/writer.h>
 #include "file.h"
 
 namespace futils::file {
@@ -60,6 +61,38 @@ namespace futils::file {
             c.set_new_buffer(self->buffer);
         }
 
+        static void increase_buffer(void* ctx, binary::WriteContract<byte> c) {
+            auto self = static_cast<FileStream*>(ctx);
+            auto req = c.least_requested();
+            auto cur = c.buffer().size();
+            auto next = c.least_new_buffer_size();
+            self->buffer.resize(next);
+            c.set_new_buffer(self->buffer);
+        }
+
+        static void file_commit(void* ctx, binary::CommitContract<byte> c) {
+            auto buf = c.buffer();
+            auto to_commit = buf.substr(0, c.require_drop());
+            auto self = static_cast<FileStream*>(ctx);
+            auto written = self->file.write_file(to_commit);
+            if (!written) {
+                self->error = written.error();
+                self->eof = true;
+                return;
+            }
+            if (buf.size() == c.require_drop()) {
+                c.set_new_buffer(self->buffer, c.require_drop());
+                return;
+            }
+            c.direct_drop(c.require_drop());
+            self->buffer.resize(c.buffer().size());
+            c.replace_buffer(self->buffer);
+        }
+
+        static void finalize(void* ctx, binary::CommitContract<byte> c) {
+            file_commit(ctx, c);
+        }
+
         static void discard_buffer(void* ctx, binary::DiscardContract<byte> c) {
             auto self = static_cast<FileStream*>(ctx);
             c.direct_drop(c.require_drop());
@@ -73,9 +106,23 @@ namespace futils::file {
             .discard = discard_buffer,
         };
 
+        static constexpr binary::WriteStreamHandler<byte> write_handler = {
+            .full = [](void* self, size_t) {
+                auto fs = static_cast<FileStream*>(self);
+                return fs->eof;
+            },
+            .write = increase_buffer,
+            .commit = file_commit,
+            .finalize = finalize,
+        };
+
        public:
         static auto get_read_handler() {
             return &read_handler;
+        }
+
+        static auto get_write_handler() {
+            return &write_handler;
         }
     };
 }  // namespace futils::file

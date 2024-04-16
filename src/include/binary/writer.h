@@ -26,7 +26,7 @@ namespace futils {
             void (*write)(void* ctx, WriteContract<C>) = nullptr;
             void (*commit)(void* ctx, CommitContract<C>) = nullptr;
             // maybe null
-            void (*destroy)(void* ctx) = nullptr;
+            void (*destroy)(void* ctx, CommitContract<C>) = nullptr;
             // maybe null
             // if clone is null, ctx and buf will shallow copied
             // implementation MUST guarantee safety of shallow copy if clone is null
@@ -49,7 +49,7 @@ namespace futils {
 
             constexpr void destroy() {
                 if (handler && handler->destroy) {
-                    handler->destroy(ctx);
+                    handler->destroy(ctx, CommitContract<C>{w, index, index});
                 }
             }
 

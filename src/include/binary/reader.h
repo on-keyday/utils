@@ -29,7 +29,7 @@ namespace futils {
             // maybe null
             void (*discard)(void* ctx, DiscardContract<C> c) = nullptr;
             // maybe null
-            void (*destroy)(void* ctx, view::basic_rvec<C> buf) = nullptr;
+            void (*destroy)(void* ctx, DiscardContract<C> c) = nullptr;
             // maybe null
             // if clone is null, ctx and buf will shallow copied
             // implementation MUST guarantee safety of shallow copy if clone is null
@@ -60,7 +60,7 @@ namespace futils {
 
             constexpr void destroy() {
                 if (handler && handler->destroy) {
-                    handler->destroy(this->ctx, r);
+                    handler->destroy(this->ctx, DiscardContract<C>(r, index, index));
                 }
             }
 
