@@ -141,8 +141,8 @@ namespace futils {
             }
 
             constexpr void reset(size_t pos = 0) {
-                if (r.size() < pos) {
-                    stream_read(pos - r.size());
+                if (w.size() < pos) {
+                    stream_write(pos - w.size());
                 }
                 if (w.size() < pos) {
                     index = w.size();

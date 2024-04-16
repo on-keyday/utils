@@ -114,7 +114,7 @@ namespace futils::file {
             },
             .write = increase_buffer,
             .commit = file_commit,
-            .finalize = finalize,
+            .destroy = finalize,
         };
 
        public:
