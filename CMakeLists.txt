@@ -41,6 +41,8 @@ else()
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
     set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
+    add_compile_options("-fconstexpr-steps=2147483647")
+
     if(WASI_SDK_PREFIX)
       add_compile_definitions(_WASI_EMULATED_MMAN)
       set("${CMAKE_CXX_FLAGS} -lwasi-emulated-mman")
