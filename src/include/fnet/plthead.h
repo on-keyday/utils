@@ -27,6 +27,8 @@
 #ifdef FUTILS_PLATFORM_LINUX
 #include <sys/epoll.h>
 #include <linux/if.h>
+#include <netpacket/packet.h>
+#include <net/ethernet.h>
 #endif
 #ifdef GAI_WAIT  // XXX(on-keyday): hack for getaddrinfo_a
 #define FNET_HAS_ASYNC_GETADDRINFO
