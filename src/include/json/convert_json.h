@@ -11,6 +11,7 @@
 
 #include "jsonbase.h"
 #include "iterator.h"
+#include <helper/template_instance.h>
 
 namespace futils {
     namespace json {

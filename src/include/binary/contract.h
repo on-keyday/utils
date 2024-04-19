@@ -65,7 +65,7 @@ namespace futils::binary::internal {
        public:
         constexpr DecreaseContract(Vec<C>& buf, size_t& index, size_t require_drop)
             : buf(buf), index(index), require_drop_n(require_drop) {
-            assert(index < buf.size() && require_drop <= index);
+            assert(index <= buf.size() && require_drop <= index);
         }
 
         constexpr Vec<C> buffer() const noexcept {
