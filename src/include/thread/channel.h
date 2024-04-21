@@ -116,10 +116,10 @@ namespace futils {
             }
 
             ChanState unlock_load(T& t) {
-                if (!check_close()) {
-                    return ChanStateValue::closed;
-                }
                 if (que.size() == 0) {
+                    if (!check_close()) {
+                        return ChanStateValue::closed;
+                    }
                     write_blocking.unlock();
                     return ChanStateValue::empty;
                 }

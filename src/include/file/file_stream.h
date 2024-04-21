@@ -55,7 +55,9 @@ namespace futils::file {
             auto read = f.read_file(buffer);
             if (!read || read->empty()) {
                 self->eof = true;
-                self->error = read.error();
+                if (!read) {
+                    self->error = read.error();
+                }
                 return;
             }
             self->buffer.resize(cur + read->size());
