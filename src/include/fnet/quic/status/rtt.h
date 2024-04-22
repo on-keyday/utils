@@ -63,6 +63,7 @@ namespace futils {
                     first_ack_sample_ = config.clock.now();
                 }
                 else {
+                    min_rtt = min_(min_rtt, latest_rtt_);
                     if (peer_max_ack_delay_ >= 0) {
                         ack_delay = min_(ack_delay, time::utime_t(peer_max_ack_delay_));
                     }
