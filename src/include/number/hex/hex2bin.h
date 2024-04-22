@@ -18,7 +18,7 @@
 namespace futils::number::hex {
     namespace parser {
         using namespace futils::comb2;
-        using namespace ops;
+        using ops::operator|, ops::operator&, ops::operator*, ops::operator-,ops::str,ops::eos;
         namespace cps = composite;
 
         constexpr auto comment = cps::shell_comment;
