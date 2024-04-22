@@ -28,6 +28,8 @@ namespace futils::file {
         B buffer;
         FileError error;
         bool eof = false;
+        size_t last_read = 0;
+        size_t last_expected = 0;
 
        private:
         static bool file_empty(void* ctx, size_t index) {
@@ -52,6 +54,8 @@ namespace futils::file {
             const File& f = self->file;
             self->buffer.resize(next);
             auto buffer = view::wvec(self->buffer).substr(cur, req);
+            self->last_expected = req;
+            self->last_read = 0;
             auto read = f.read_file(buffer);
             if (!read || read->empty()) {
                 self->eof = true;
@@ -60,6 +64,7 @@ namespace futils::file {
                 }
                 return;
             }
+            self->last_read = read->size();
             self->buffer.resize(cur + read->size());
             c.set_new_buffer(self->buffer);
         }
