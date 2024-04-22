@@ -128,6 +128,7 @@ add_executable(derive2 "src/test/math/test_derive2.cpp")
 add_executable(fft "src/test/math/test_fft.cpp")
 add_executable(time_origin "src/test/timer/test_time_origin.cpp")
 add_executable(io_stream "src/test/binary/test_io_stream.cpp")
+add_executable(hexfilter "src/test/number/test_hexfilter.cpp")
 
 # tests(fnet)
 add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")
