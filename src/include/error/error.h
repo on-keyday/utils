@@ -796,4 +796,22 @@ namespace futils::error {
             return !has_error();
         }
     };
+
+    template <class Err = Error<>>
+    struct ErrList {
+        Err err;
+        Err before;
+
+        constexpr void error(auto&& pb) {
+            if (before) {
+                before.error(pb);
+                pb.push_back(',');
+            }
+            err.error(pb);
+        }
+
+        constexpr Err unwrap() {
+            return before;
+        }
+    };
 }  // namespace futils::error
