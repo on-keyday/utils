@@ -8,6 +8,7 @@
 #include <comb2/composite/comment.h>
 #include <comb2/composite/string.h>
 #include <comb2/composite/range.h>
+#include <comb2/basic/logic.h>
 #include <comb2/basic/group.h>
 #include <comb2/lexctx.h>
 #include <view/concat.h>
