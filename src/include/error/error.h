@@ -814,4 +814,12 @@ namespace futils::error {
             return before;
         }
     };
+
+    template <class S>
+    struct StrError {
+        S str;
+        constexpr void error(auto&& pb) {
+            strutil::append(pb, str);
+        }
+    };
 }  // namespace futils::error
