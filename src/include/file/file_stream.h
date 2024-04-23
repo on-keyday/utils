@@ -20,11 +20,23 @@ namespace futils::file {
 
         static_assert(as_file<File> && as_file<File&>);
 
+        template <class L>
+        concept locker = requires(L l) {
+            { l.lock() };
+            { l.unlock() };
+        };
+
+        struct empty_lock {
+            void lock() const {}
+            void unlock() const {}
+        };
+
     }  // namespace internal
 
-    template <class B, internal::as_file F = const File&>
+    template <class B, internal::as_file F = const File&, internal::locker L = internal::empty_lock>
     struct FileStream {
         F file;
+        L lock;
         B buffer;
         FileError error;
         bool eof = false;
@@ -56,6 +68,8 @@ namespace futils::file {
             auto buffer = view::wvec(self->buffer).substr(cur, req);
             self->last_expected = req;
             self->last_read = 0;
+            self->lock.lock();
+            auto d = helper::defer([&] { self->lock.unlock(); });
             while (buffer.size() > 0) {
                 auto read = f.read_file(buffer);
                 if (!read || read->empty()) {
@@ -69,6 +83,7 @@ namespace futils::file {
                 self->last_read += read->size();
                 buffer = buffer.substr(read->size());
             }
+            d.execute();
             self->buffer.resize(cur + self->last_read);
             c.set_new_buffer(self->buffer);
         }
@@ -88,6 +103,8 @@ namespace futils::file {
             auto buf = c.buffer();
             auto to_commit = buf.substr(0, c.require_drop());
             size_t total_written = 0;
+            self->lock.lock();
+            auto d = helper::defer([&] { self->lock.unlock(); });
             while (to_commit.size() > 0) {
                 auto written = self->file.write_file(to_commit);
                 if (!written) {
@@ -98,6 +115,7 @@ namespace futils::file {
                 total_written += written->size();
                 to_commit = to_commit.substr(written->size());
             }
+            d.execute();
             if (buf.size() == total_written) {
                 c.set_new_buffer(self->buffer, total_written);
                 return;
