@@ -87,6 +87,7 @@ namespace futils::file {
             if (self->eof) return;
             auto buf = c.buffer();
             auto to_commit = buf.substr(0, c.require_drop());
+            size_t total_written = 0;
             while (to_commit.size() > 0) {
                 auto written = self->file.write_file(to_commit);
                 if (!written) {
@@ -94,14 +95,14 @@ namespace futils::file {
                     self->eof = true;
                     break;
                 }
+                total_written += written->size();
                 to_commit = to_commit.substr(written->size());
             }
-            auto dropped = c.require_drop() - to_commit.size();
-            if (buf.size() == dropped) {
-                c.set_new_buffer(self->buffer, dropped);
+            if (buf.size() == total_written) {
+                c.set_new_buffer(self->buffer, total_written);
                 return;
             }
-            c.direct_drop(dropped);
+            c.direct_drop(total_written);
             self->buffer.resize(c.buffer().size());
             c.replace_buffer(self->buffer);
         }
