@@ -83,10 +83,10 @@ namespace futils::file {
         }
 
         static void file_commit(void* ctx, binary::CommitContract<byte> c) {
+            auto self = static_cast<FileStream*>(ctx);
             if (self->eof) return;
             auto buf = c.buffer();
             auto to_commit = buf.substr(0, c.require_drop());
-            auto self = static_cast<FileStream*>(ctx);
             while (to_commit.size() > 0) {
                 auto written = self->file.write_file(to_commit);
                 if (!written) {
