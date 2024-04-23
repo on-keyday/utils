@@ -121,7 +121,7 @@ namespace futils {
                     GET_VALUE(unsigned long long)
                     GET_VALUE(char32_t)
                     GET_VALUE(char16_t)
-#ifdef __cpp_char8_t
+#if defined(__cpp_char8_t)
                     GET_VALUE(char8_t)
 #endif
 
