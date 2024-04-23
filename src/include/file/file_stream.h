@@ -83,20 +83,25 @@ namespace futils::file {
         }
 
         static void file_commit(void* ctx, binary::CommitContract<byte> c) {
+            if (self->eof) return;
             auto buf = c.buffer();
             auto to_commit = buf.substr(0, c.require_drop());
             auto self = static_cast<FileStream*>(ctx);
-            auto written = self->file.write_file(to_commit);
-            if (!written) {
-                self->error = written.error();
-                self->eof = true;
+            while (to_commit.size() > 0) {
+                auto written = self->file.write_file(to_commit);
+                if (!written) {
+                    self->error = written.error();
+                    self->eof = true;
+                    break;
+                }
+                to_commit = to_commit.substr(written->size());
+            }
+            auto dropped = c.require_drop() - to_commit.size();
+            if (buf.size() == dropped) {
+                c.set_new_buffer(self->buffer, dropped);
                 return;
             }
-            if (buf.size() == c.require_drop()) {
-                c.set_new_buffer(self->buffer, c.require_drop());
-                return;
-            }
-            c.direct_drop(c.require_drop());
+            c.direct_drop(dropped);
             self->buffer.resize(c.buffer().size());
             c.replace_buffer(self->buffer);
         }
