@@ -509,9 +509,11 @@ namespace futils::file {
         // use m.temporary() as private mapping flag
         file_result<MMap> mmap(Mode m) const;
 
+        // returns remaining bytes
         file_result<view::rvec> write_file(view::rvec w, NonBlockContext* n = nullptr) const;
         file_result<view::basic_rvec<wrap::path_char>> write_console(view::basic_rvec<wrap::path_char> w) const;
 
+        // returns read bytes
         file_result<view::wvec> read_file(view::wvec w, NonBlockContext* n = nullptr) const;
 
         file_result<void> read_all(auto&& cb, view::wvec bulk_buffer = {}, NonBlockContext* n = nullptr) const {
