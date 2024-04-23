@@ -156,7 +156,7 @@ namespace futils {
                 if (q->sender.is_fin()) {
                     return false;
                 }
-                binary::StreamingBuffer<String> buf;
+                binary::WriteStreamingBuffer<String> buf;
                 view::wvec section;
                 if (!buf.stream([&](auto& w) {
                         if (!conn->write_field_section(stream->sender.id(), w, write)) {
@@ -278,7 +278,7 @@ namespace futils {
                 if (!quic::varint::write(id_w, push_id)) {
                     return false;
                 }
-                binary::StreamingBuffer<String> buf;
+                binary::WriteStreamingBuffer<String> buf;
                 view::wvec section;
                 if (!buf.stream([&](auto& w) {
                         if (!conn->write_field_section(stream->sender.id(), w, write)) {

@@ -401,6 +401,46 @@ namespace futils {
 
         using reader = basic_reader<byte>;
 
+        template <class T, class C = byte>
+        struct ReadStreamingBuffer {
+           private:
+            T buffer;
+            size_t offset = 0;
+            // clang-format off
+            static constexpr ReadStreamHandler handler = {
+                .empty = [](void* t, size_t offset) {
+                    auto self = static_cast<T*>(t);
+                    return offset == self->size(); 
+                },
+                .discard = [](void* t, DiscardContract<C> c) {
+                    auto self = static_cast<T*>(t);
+                    auto drop = c.require_drop(); 
+                    c.direct_drop(drop);
+                    self->resize(c.buffer().size());
+                    c.replace_buffer(*self); 
+                },
+            };
+            // clang-format on
+
+           public:
+            constexpr auto stream(auto&& cb) {
+                basic_reader<C> r{&handler, &buffer, buffer};
+                r.reset(offset);
+                // exception safe
+                // to prevent #include <helper/defer.h>
+                struct L {
+                    basic_reader<C>* r;
+                    size_t* offset;
+                    L(size_t* offset, basic_reader<C>* r)
+                        : offset(offset), r(r) {}
+                    ~L() {
+                        *offset = r->offset();
+                    }
+                } l{&offset, &r};
+                return cb(r);
+            }
+        };
+
         namespace test {
             struct ArrayStreamReader {
                 static constexpr auto N = 100;

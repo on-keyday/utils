@@ -294,7 +294,7 @@ namespace futils {
         }
 
         template <class T, class C = byte>
-        struct StreamingBuffer {
+        struct WriteStreamingBuffer {
            private:
             T buffer;
             size_t offset = 0;

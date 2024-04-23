@@ -57,8 +57,8 @@ namespace futils {
             fields::FieldEncodeContext<TypeConfig> enc;
             fields::FieldDecodeContext<TypeConfig> dec;
             using String = typename TypeConfig::string;
-            binary::StreamingBuffer<String> enc_stream;
-            binary::StreamingBuffer<String> dec_stream;
+            binary::WriteStreamingBuffer<String> enc_stream;
+            binary::WriteStreamingBuffer<String> dec_stream;
             std::uint64_t expires_delta = 0;
 
             QpackError read_encoder_stream(binary::reader& r) {
@@ -375,8 +375,8 @@ namespace futils {
             QpackError write_header(StreamID id, binary::writer& w, H&& write) {
                 fields::SectionPrefix prefix;
                 prefix.base = enc.get_inserted();
-                binary::StreamingBuffer<typename TypeConfig::string> tmp_buf;
-             return   tmp_buf.stream([&](auto& tw) {
+                binary::WriteStreamingBuffer<typename TypeConfig::string> tmp_buf;
+                return tmp_buf.stream([&](auto& tw) {
                     QpackError err = QpackError::none;
                     std::uint64_t max_ref = fields::no_ref;
                     auto add_field = [&](auto&& head, auto&& value, FieldPolicy policy = FieldPolicy::prior_static) {

@@ -15,7 +15,7 @@ namespace futils {
 
             struct Conn {
                 stream::ConnState state;
-                binary::StreamingBuffer<flex_storage> send_buffer;
+                binary::WriteStreamingBuffer<flex_storage> send_buffer;
 
                 slib::deque<std::pair<flex_storage, flex_storage>> encode_table;
                 slib::deque<std::pair<flex_storage, flex_storage>> decode_table;
@@ -146,7 +146,7 @@ namespace futils {
 
                 Error send_settings(auto&& set_settings) {
                     frame::SettingsFrame f;
-                    binary::StreamingBuffer<flex_storage> tmp;
+                    binary::WriteStreamingBuffer<flex_storage> tmp;
                     tmp.stream([&](auto& s) {
                         auto key_value = [&](std::uint16_t key, std::uint32_t value) {
                             return binary::write_num(s, key) && binary::write_num(s, value);
