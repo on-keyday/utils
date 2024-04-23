@@ -117,6 +117,7 @@ namespace futils {
 
             bool equal(auto& a, auto& b) {
                 assert(false);
+                return false;
             }
         };
 
