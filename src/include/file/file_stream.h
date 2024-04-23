@@ -56,16 +56,20 @@ namespace futils::file {
             auto buffer = view::wvec(self->buffer).substr(cur, req);
             self->last_expected = req;
             self->last_read = 0;
-            auto read = f.read_file(buffer);
-            if (!read || read->empty()) {
-                self->eof = true;
-                if (!read) {
-                    self->error = read.error();
+            while (buffer.size() > 0) {
+                auto read = f.read_file(buffer);
+                if (!read || read->empty()) {
+                    self->eof = true;
+                    if (!read) {
+                        self->error = read.error();
+                        return;
+                    }
+                    break;
                 }
-                return;
+                self->last_read += read->size();
+                buffer = buffer.substr(read->size());
             }
-            self->last_read = read->size();
-            self->buffer.resize(cur + read->size());
+            self->buffer.resize(cur + self->last_read);
             c.set_new_buffer(self->buffer);
         }
 
