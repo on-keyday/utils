@@ -111,7 +111,7 @@ namespace futils::file {
                     self->eof = true;
                     break;
                 }
-                to_commit = remain;
+                to_commit = *remain;
             }
             d.execute();
             size_t total_written = buf.size() - to_commit.size();
