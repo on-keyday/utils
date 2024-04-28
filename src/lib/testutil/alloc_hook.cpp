@@ -63,8 +63,11 @@ namespace futils {
             auto res = base_alloc_hook(nAllocType, pvData, nSize, nBlockUse, lRequest, szFileName, nLine);
             long long delta = 0;
             auto save_log = [&](auto name) {
-                number::Array<char, 80> arr{0};
-                strutil::appends(arr, name, ":/size:");
+                number::Array<char, 110> arr{0};
+                strutil::appends(arr, name, ":/ptr:");
+                number::insert_space(arr, 2 * sizeof(std::uintptr_t), std::uintptr_t(pvData),16);
+                number::to_string(arr, std::uintptr_t(pvData),16);
+                strutil::appends(arr, "/size:");
                 number::insert_space(arr, 7, nSize);
                 number::to_string(arr, nSize);
                 strutil::appends(arr, "/req:");
@@ -107,14 +110,20 @@ namespace futils {
             }
             else if (nAllocType == _HOOK_FREE) {
                 if (pvData) {
-                    nSize = _msize_dbg(pvData, _NORMAL_BLOCK);
-                    _CrtIsMemoryBlock(pvData, nSize,
-                                      &lRequest, nullptr, nullptr);
-                    if (reqfirst == -1 || lRequest < reqfirst) {
-                        return res;
+                    const char* p = "dealoc";
+                    if (!_CrtIsValidHeapPointer(pvData)) {
+                        p = "invalid dealoc";
                     }
-                    total_alloced -= nSize;
-                    save_log("dealoc");
+                    else {
+                        nSize = _msize_dbg(pvData, _NORMAL_BLOCK);
+                        _CrtIsMemoryBlock(pvData, nSize,
+                                          &lRequest, nullptr, nullptr);
+                        if (reqfirst == -1 || lRequest < reqfirst) {
+                            return res;
+                        }
+                        total_alloced -= nSize;
+                    }
+                    save_log(p);
                     callback(HookType::dealloc);
                 }
             }
