@@ -154,7 +154,7 @@ namespace futils {
                         return strutil::default_equal(k, key) && strutil::default_equal(v, value);
                     },
                     index, table)) {
-                err = encode_integer<7>(w, index, 0x80);
+                err = encode_integer<7>(w, index, match(Field::index));
                 if (err != HpackError::none) {
                     return err;
                 }

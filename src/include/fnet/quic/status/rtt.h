@@ -71,11 +71,11 @@ namespace futils {
                     if (latest_rtt_ >= min_rtt + ack_delay) {
                         adjusted_rtt = latest_rtt_ - ack_delay;
                     }
-                    // 7/8 * smoothed_rtt + 1/8 * adjusted_rtt
-                    smoothed_rtt_ = (7 * smoothed_rtt_ + 1 * adjusted_rtt) >> 3;
                     auto rttvar_sample = abs(smoothed_rtt_ - adjusted_rtt);
                     // 3/4 * rttvar + 1/4 * rttvar_sample
                     rttvar_ = (3 * rttvar_ + 1 * rttvar_sample) >> 2;
+                    // 7/8 * smoothed_rtt + 1/8 * adjusted_rtt
+                    smoothed_rtt_ = (7 * smoothed_rtt_ + 1 * adjusted_rtt) >> 3;
                 }
                 return true;
             }

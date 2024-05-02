@@ -127,14 +127,11 @@ namespace futils {
                 return true;
             }
             std::uint64_t m = 0;
-            constexpr auto pow = [](std::uint64_t x) -> std::uint64_t {
-                return (std::uint64_t(0x1) << 63) >> ((sizeof(std::uint64_t) * 8 - 1) - x);
-            };
             do {
                 if (!r.read(view::basic_wvec<C>(&tmp, 1))) {
                     return HpackError::input_length;
                 }
-                value += (byte(tmp) & 0x7f) * pow(m);
+                value += (byte(tmp) & 0x7f) << m;
                 m += 7;
                 if (m > (sizeof(std::uint64_t) * 8 - 1)) {
                     return HpackError::too_large_number;

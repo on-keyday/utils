@@ -346,6 +346,7 @@ target_link_libraries(derive futils)
 target_link_libraries(stack_trace futils)
 target_link_libraries(derive2 futils)
 target_link_libraries(fft futils)
+target_link_libraries(hpack futils)
 
 # test(libfnet)
 target_link_libraries(fnet_socket fnet)

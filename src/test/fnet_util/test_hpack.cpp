@@ -14,6 +14,7 @@
 #include <memory>
 #include <map>
 #include <deque>
+#include <wrap/cout.h>
 using string = futils::number::Array<char, 100>;
 using rvec = futils::view::basic_rvec<char>;
 
@@ -40,7 +41,10 @@ constexpr bool decode(futils::fnet::quic::crypto::KeyMaterial<s> data, const cha
 void check_string_encoding() {
     static_assert(encode_decode("object identifier z"));
     static_assert(encode_decode("\x32\x44\xff"));
+    static_assert(encode_decode("custom-key"));
+    static_assert(encode_decode("custom-value"));
     bool d = encode_decode("object identifierz");
+    bool d2 = encode_decode("custom-key");
     static_assert(decode(futils::fnet::quic::crypto::make_material_from_bintext("d07abe941054d444a8200595040b8166e082a62d1bff"), "Mon, 21 Oct 2013 20:13:21 GMT"));
 }
 
@@ -122,6 +126,20 @@ void check_header_compression() {
         encode_header["abstract" + futils::number::to_string<std::string>(i)] = "object";
     }
     check_header_compression_part(encode_header, tables);
+    auto raw_table = futils::hpack::huffman::decode_tree.place();
+
+    for (size_t i = 0; i < futils::hpack::huffman::decode_tree.place_size(); i++) {
+        futils::wrap::cout_wrap() << raw_table[i].raw() << ",\n";
+    }
+
+    for (auto& codes : futils::hpack::huffman::codes.codes) {
+        futils::wrap::cout_wrap() << "Code{.code = " << codes.code << ", .bits = " << codes.bits << ", .literal =" << codes.literal << "},"
+                                  << "\n";
+    }
+
+    for (auto& hdr : futils::hpack::predefined_header) {
+        futils::wrap::cout_wrap() << "KeyValue{.key = \"" << hdr.first << "\", .value = \"" << hdr.second << "\"},\n";
+    }
 }
 
 int main() {

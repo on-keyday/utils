@@ -130,6 +130,11 @@ namespace futils {
             static_assert((mask_one >> mask_shift) == mask_zero);
 
            public:
+            // for debug
+            constexpr std::uint32_t raw() const {
+                return data;
+            }
+
             constexpr std::uint16_t one() const {
                 return std::uint16_t((data & mask_one) >> mask_shift);
             }
@@ -501,12 +506,12 @@ namespace futils {
         template <size_t nleaf, class Tree, class Table>
         struct StaticTableBase {
            private:
-            Tree place[(nleaf << 1) - 1];
+            Tree place_[(nleaf << 1) - 1];
             Table table_;
 
            public:
             constexpr StaticTableBase(auto&& fn) {
-                fn(table_, place, (nleaf << 1) - 1);
+                fn(table_, place_, (nleaf << 1) - 1);
                 if (!table_.has_table() && std::is_constant_evaluated()) {
                     throw "error";
                 }
@@ -514,6 +519,15 @@ namespace futils {
 
             constexpr const Table& table() const {
                 return table_;
+            }
+
+            // for debug
+            constexpr size_t place_size() const {
+                return (nleaf << 1) - 1;
+            }
+
+            constexpr const Tree* place() const {
+                return &place_[0];
             }
         };
 
