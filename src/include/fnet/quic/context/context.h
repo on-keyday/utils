@@ -288,6 +288,9 @@ namespace futils {
                         return wrap_io(err);
                     }
                 }
+                if (status.is_on_congestion_limited()) {
+                    return true;  // nothing to write
+                }
                 if (auto err = crypto.send(summary.type, summary.packet_number, waiters, fw);
                     err == IOResult::fatal) {
                     return wrap_io(err);

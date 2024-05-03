@@ -198,6 +198,10 @@ namespace futils {
             constexpr void on_connection_migration(const InternalConfig& config, const PayloadSize& psize) {
                 congestion_window = config.window_initial_factor * psize.current_max_payload_size();
             }
+
+            constexpr bool is_on_congestion_limited() const {
+                return congestion_window <= bytes_in_flight;
+            }
         };
 
         static_assert(sizeof(Congestion<NullAlgorithm>));

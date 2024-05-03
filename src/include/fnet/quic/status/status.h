@@ -453,9 +453,18 @@ namespace futils {
                 return idle.timeout(config, hs);
             }
 
+            // can_send notifies whether packet can be sent
+            // this function checks pacer and congestion control should send any and pto,
+            // but not check is_on_congestion_limited
+            // you should check is_on_congestion_limited after write ACK Frame
+            // because ACK frame can be sent even if congestion control is limited
             constexpr bool can_send(PacketNumberSpace space) const {
                 return pacer.can_send(config) || pto.is_probe_required(space) ||
                        cong.should_send_any_packet();
+            }
+
+            constexpr bool is_on_congestion_limited() const {
+                return cong.is_on_congestion_limited();
             }
 
             constexpr bool is_pto_probe_required(PacketNumberSpace space) const {
