@@ -70,8 +70,8 @@ namespace futils {
             constexpr auto sizeof_quic_stream_Conn = sizeof(Streams);
 
             template <bool auto_update = true>
-            std::shared_ptr<Context> make_quic(tls::TLSConfig&& conf, auto&& accept_callback) {
-                auto ctx = use_default_context<DefaultTypeConfig>(std::move(conf));
+            std::shared_ptr<Context> make_quic(tls::TLSConfig&& conf, auto&& accept_callback, log::ConnLogger logger = {}) {
+                auto ctx = use_default_context<DefaultTypeConfig>(std::move(conf), logger);
                 auto h = ctx->get_streams()->get_conn_handler();
                 using AcceptT = std::decay_t<decltype(accept_callback)>;
                 auto cb = std::allocate_shared<AcceptT>(glheap_allocator<AcceptT>(), std::move(accept_callback));

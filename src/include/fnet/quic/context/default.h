@@ -22,7 +22,7 @@ namespace futils {
             return true;
         }
 
-        Config use_default_config(tls::TLSConfig&& tls) {
+        Config use_default_config(tls::TLSConfig&& tls, log::ConnLogger log = {}) {
             Config config;
             config.tls_config = std::move(tls);
             config.connid_parameters.random = futils::fnet::quic::connid::Random{
@@ -45,13 +45,14 @@ namespace futils {
             config.transport_parameters.initial_max_stream_data_bidi_local = 100000;
             config.transport_parameters.initial_max_stream_data_bidi_remote = 100000;
             config.internal_parameters.ping_duration = 15000;
+            config.logger = log;
             return config;
         }
 
         template <class TConfig>
-        std::shared_ptr<Context<TConfig>> use_default_context(tls::TLSConfig&& c) {
+        std::shared_ptr<Context<TConfig>> use_default_context(tls::TLSConfig&& c, log::ConnLogger log = {}) {
             auto alc = std::allocate_shared<Context<TConfig>>(glheap_allocator<Context<TConfig>>{});
-            auto conf = use_default_config(std::move(c));
+            auto conf = use_default_config(std::move(c), log);
             if (!alc->init(std::move(conf))) {
                 return nullptr;
             }

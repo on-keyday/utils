@@ -293,6 +293,7 @@ namespace futils::file {
     enum class ErrorCode {
         already_open,
         broken_pipe,
+        interrupted,
     };
 
     futils_DLL_EXPORT std::int64_t STDCALL map_os_error_code(ErrorCode code);
@@ -512,6 +513,36 @@ namespace futils::file {
         // returns remaining bytes
         file_result<view::rvec> write_file(view::rvec w, NonBlockContext* n = nullptr) const;
         file_result<view::basic_rvec<wrap::path_char>> write_console(view::basic_rvec<wrap::path_char> w) const;
+
+        file_result<void> write_file_all(view::rvec w, NonBlockContext* n = nullptr) const {
+            while (w.size()) {
+                auto res = write_file(w, n);
+                if (!res) {
+                    const auto eintr = map_os_error_code(ErrorCode::interrupted);
+                    if (res.error().code() == eintr) {
+                        continue;
+                    }
+                    return res.transform([](auto&&) {});
+                }
+                w = *res;
+            }
+            return {};
+        }
+
+        file_result<void> write_console_all(view::basic_rvec<wrap::path_char> w) const {
+            while (w.size()) {
+                auto res = write_console(w);
+                if (!res) {
+                    const auto eintr = map_os_error_code(ErrorCode::interrupted);
+                    if (res.error().code() == eintr) {
+                        continue;
+                    }
+                    return res.transform([](auto&&) {});
+                }
+                w = *res;
+            }
+            return {};
+        }
 
         // returns read bytes
         file_result<view::wvec> read_file(view::wvec w, NonBlockContext* n = nullptr) const;

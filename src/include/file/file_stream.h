@@ -104,16 +104,13 @@ namespace futils::file {
             auto to_commit = buf.rsubstr(0, c.require_drop());
             self->lock.lock();
             auto d = helper::defer([&] { self->lock.unlock(); });
-            while (to_commit.size() > 0) {
-                auto remain = self->file.write_file(to_commit);
-                if (!remain) {
-                    self->error = remain.error();
-                    self->eof = true;
-                    break;
-                }
-                to_commit = *remain;
-            }
+            auto res = self->file.write_file_all(to_commit);
             d.execute();
+            if(!res){
+                self->error = res.error();
+                self->eof=true;
+                return;
+            }
             size_t total_written = buf.size() - to_commit.size();
             if (buf.size() == total_written) {
                 c.set_new_buffer(self->buffer, total_written);

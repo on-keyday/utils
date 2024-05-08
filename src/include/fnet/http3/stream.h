@@ -178,12 +178,12 @@ namespace futils {
 
            private:
             bool append_to_read_buf() {
+                Reader* re = reader.get();
+                bool one = false;
                 QuicStream* q = stream.get();
                 if (q->receiver.is_closed()) {
                     return false;
                 }
-                Reader* re = reader.get();
-                bool one = false;
                 while (true) {
                     auto [data, eof] = re->read_direct();
                     if (data.size() == 0 && !eof) {
@@ -196,6 +196,7 @@ namespace futils {
                         break;
                     }
                 }
+
                 return true;
             }
 

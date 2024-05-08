@@ -16,6 +16,7 @@
 #include "pack.h"
 #include "light/stream.h"
 #include <file/file.h>
+#include <helper/lock.h>
 
 namespace futils {
     namespace wrap {
@@ -30,7 +31,7 @@ namespace futils {
                 { t } -> view::internal::is_const_data<C>;
                 { std::size(t) } -> std::convertible_to<size_t>;
             };
-        }
+        }  // namespace internal
 
         struct futils_DLL_EXPORT UtfOut {
            private:
@@ -70,13 +71,16 @@ namespace futils {
                     if constexpr (sizeof(path_char) != 1) {
                         U16Buf s;
                         utf::convert<1, 2>(p, s);
-                        return file.write_console(s).transform([](auto) {});
+                        auto locked = helper::lock(lock);
+                        return file.write_console_all(s);
                     }
                     else {
-                        return file.write_console(p).transform([](auto) {});
+                        auto locked = helper::lock(lock);
+                        return file.write_console_all(p);
                     }
                 }
-                return file.write_file(p).transform([](auto) {});
+                auto locked = helper::lock(lock);
+                return file.write_file_all(p);
             }
 
             // write utf16 string to console. if console is not utf16, convert to utf8
@@ -84,15 +88,18 @@ namespace futils {
                 requires(internal::is_path_convertible<T, path_char>)
             file::file_result<void> write_no_hook(const T& p) {
                 if (file.is_tty()) {
-                    return file.write_console(p).transform([](auto) {});
+                    auto locked = helper::lock(lock);
+                    return file.write_console_all(p);
                 }
                 if constexpr (sizeof(path_char) != 1) {
                     U8Buf s;
                     utf::convert<2, 1>(p, s);
-                    return file.write_file(s).transform([](auto) {});
+                    auto locked = helper::lock(lock);
+                    return file.write_file_all(s);
                 }
                 else {
-                    return file.write_file(p).transform([](auto) {});
+                    auto locked = helper::lock(lock);
+                    return file.write_file_all(p);
                 }
             }
 

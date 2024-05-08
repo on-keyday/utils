@@ -80,7 +80,7 @@ namespace futils {
             };
             while (tls::handshake::parse_one(r, [&](const auto& hs, bool err) {
                 if (err) {
-                    strutil::append(out, "error at parsing...\n");
+                    strutil::append(out, "error at parsing handshake...\n");
                     return true;
                 }
                 typefield(hs.msg_type);

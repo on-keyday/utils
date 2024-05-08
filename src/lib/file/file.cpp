@@ -139,6 +139,8 @@ namespace futils::file {
                 return ERROR_ALREADY_EXISTS;
             case ErrorCode::broken_pipe:
                 return ERROR_BROKEN_PIPE;
+            case ErrorCode::interrupted:
+                return -1; // no
             default:
                 return -1;
         }
@@ -559,6 +561,8 @@ namespace futils::file {
                 return EEXIST;
             case ErrorCode::broken_pipe:
                 return EPIPE;
+            case ErrorCode::interrupted:
+                return EINTR;
             default:
                 return -1;
         }
