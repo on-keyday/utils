@@ -702,6 +702,14 @@ namespace futils {
     }
 
            public:
+            // extended methods, used for testing
+            [[noreturn]] constexpr void throw_error() const {
+                if (has_value()) {
+                    throw bad_expected_access<void>();
+                }
+                throw bad_expected_access<E>(error());
+            }
+
             constexpr const T& value() const& {
                 must_copy(true);
                 return t_val;
@@ -1237,6 +1245,14 @@ namespace futils {
            public:
             constexpr ~expected() {
                 destruct();
+            }
+
+            // extended methods, used for testing
+            [[noreturn]] constexpr void throw_error() const {
+                if (has_value()) {
+                    throw bad_expected_access<void>();
+                }
+                throw bad_expected_access<E>(error());
             }
 
             constexpr void value() const& {

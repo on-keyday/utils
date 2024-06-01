@@ -21,6 +21,7 @@ namespace futils {
             packetnum::Value largest_acked_packet = packetnum::infinity;
             time::Time last_ack_eliciting_packet_sent_time_ = 0;
             std::uint64_t ack_eliciting_in_flight_sent_packet_count = 0;
+            std::uint64_t ecn_ce_counter = 0;
 
             constexpr void decrement_ack_eliciting_in_flight(packet::PacketStatus status) {
                 if (status.is_ack_eliciting() && status.is_byte_counted()) {
@@ -35,6 +36,7 @@ namespace futils {
                 largest_acked_packet = -1;
                 last_ack_eliciting_packet_sent_time_ = 0;
                 ack_eliciting_in_flight_sent_packet_count = 0;
+                ecn_ce_counter = 0;
             }
 
             constexpr void on_connection_migration() {
@@ -107,6 +109,14 @@ namespace futils {
                 ack_eliciting_in_flight_sent_packet_count = 0;
                 highest_sent = -1;
                 largest_acked_packet = -1;
+            }
+
+            constexpr bool is_ecn_ce_updated(std::uint64_t ecn_ce) {
+                if (ecn_ce > ecn_ce_counter) {
+                    ecn_ce_counter = ecn_ce;
+                    return true;
+                }
+                return false;
             }
         };
 

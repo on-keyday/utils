@@ -135,7 +135,9 @@ namespace futils {
 
             constexpr void process_ecn(PacketNumberIssuer& issuer, ECNCounts& ecn, time::Time time_sent) {
                 // TODO(on-keyday): add ecn info
-                cong.on_congestion_event(config, payload_size, time_sent);
+                if (issuer.is_ecn_ce_updated(ecn.ecn_ce)) {
+                    cong.on_congestion_event(config, payload_size, time_sent);
+                }
             }
 
            public:
@@ -326,7 +328,7 @@ namespace futils {
                         ACKRange range;
                         for (size_t i = 0; i < range_size; i++) {
                             auto r = ack_ranges[range_size - 1 - i];
-                            if (pn < r.largest) {
+                            if (pn <= r.largest) {
                                 range.largest = r.largest;
                                 range.smallest = r.smallest;
                                 break;

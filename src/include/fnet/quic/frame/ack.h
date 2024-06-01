@@ -319,6 +319,8 @@ namespace futils {
                 });
                 return ok;
             }
+
+            static_assert(check_ack());
         }  // namespace test
 
     }  // namespace fnet::quic::frame
