@@ -38,7 +38,7 @@ namespace futils {
                 return res;
             }
             const auto is_pow2 = (radix & (radix - 1)) == 0;
-            const auto log2_radix = binary::log2i(radix);
+            const auto log2_radix = binary::log2i(radix - 1);
             if (is_pow2) {
                 res = binary::log2i(pb.first_num) + (pb.count - 1) * log2_radix;
             }
