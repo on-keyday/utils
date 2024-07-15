@@ -162,8 +162,8 @@ namespace futils {
                 return true;
             }
 
-            constexpr void reset_index() {
-                index = 0;
+            constexpr void reset_index(byte i = 0) {
+                index = i % 8;
             }
 
             constexpr byte get_index() const {
