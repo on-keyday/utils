@@ -256,6 +256,7 @@ target_sources(futils
   "src/lib/wrap/wasi_stub.cpp"
   "src/lib/file/file.cpp"
   "src/lib/file/console.cpp"
+  "src/lib/jit/jit_memory.cpp"
 )
 
 
