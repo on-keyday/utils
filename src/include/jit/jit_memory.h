@@ -50,6 +50,11 @@ namespace futils::jit {
         constexpr futils::view::rvec get_memory() const {
             return memory;
         }
+
+        template <class R, class... Args>
+        constexpr auto as_function() const {
+            return reinterpret_cast<R (*)(Args...)>(const_cast<byte*>(memory.data()));
+        }
     };
 
     struct futils_DLL_EXPORT EditableMemory {
