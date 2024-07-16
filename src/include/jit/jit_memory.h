@@ -23,7 +23,9 @@ namespace futils::jit {
        public:
         constexpr ExecutableMemory()
             : memory() {}
-        ~ExecutableMemory();
+        ~ExecutableMemory() {
+            free();
+        }
 
         constexpr ExecutableMemory(const ExecutableMemory&) = delete;
 
