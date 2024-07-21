@@ -33,6 +33,7 @@ namespace futils::jit {
     void free_platform(void* p, size_t s) {
         VirtualFree(p, s, MEM_RELEASE);
     }
+
 #else
     void* allocate_platform(size_t s) {
         return mmap(nullptr, s, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);

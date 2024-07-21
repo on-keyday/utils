@@ -54,6 +54,8 @@ namespace futils::jit::x64 {
         CMP_REG_REG = 0x3B,
         JE_REL8 = 0x74,
         JNE_REL8 = 0x75,
+        CALL_REG = 0xFF,
+        JMP_REG = 0xFF,
     };
 
     enum Mod {
@@ -156,6 +158,20 @@ namespace futils::jit::x64 {
     constexpr bool emit_jne_rel8(binary::writer& w, int8_t offset) {
         return w.write(JNE_REL8, 1) &&
                w.write(offset, 1);
+    }
+
+    constexpr bool emit_call_reg(binary::writer& w, Register reg) {
+        auto rex_prefix = make_rex_prefix(1, 0, 0, reg >= EXTENDED_REGISTER);
+        return w.write(rex_prefix, 1) &&
+               w.write(CALL_REG, 1) &&
+               w.write(make_mod_rm(MOD_REG, 0b010, reg), 1);
+    }
+
+    constexpr bool emit_jmp_reg(binary::writer& w, Register reg) {
+        auto rex_prefix = make_rex_prefix(1, 0, 0, reg >= EXTENDED_REGISTER);
+        return w.write(rex_prefix, 1) &&
+               w.write(JMP_REG, 1) &&
+               w.write(make_mod_rm(MOD_REG, 0b100, reg), 1);
     }
 
 }  // namespace futils::jit::x64

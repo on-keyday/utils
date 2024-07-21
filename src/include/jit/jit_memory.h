@@ -54,8 +54,8 @@ namespace futils::jit {
         }
 
         template <class R, class... Args>
-        constexpr auto as_function() const {
-            return reinterpret_cast<R (*)(Args...)>(const_cast<byte*>(memory.data()));
+        constexpr auto as_function(size_t offset = 0) const {
+            return reinterpret_cast<R (*)(Args...)>(const_cast<byte*>(memory.data() + offset));
         }
     };
 
@@ -102,4 +102,5 @@ namespace futils::jit {
 
         ExecutableMemory make_executable();
     };
+
 }  // namespace futils::jit
