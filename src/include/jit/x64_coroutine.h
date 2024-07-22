@@ -48,7 +48,7 @@ namespace futils::jit::x64::coro {
         futils::jit::x64::emit_mov_reg_reg(w, futils::jit::x64::Register::RSP, rsp_saved);  // SAVE RSP
         futils::jit::x64::emit_mov_reg_reg(w, futils::jit::x64::Register::RBP, rbp_saved);  // SAVE RBP
         // change stack pointer to point to the bottom of the stack
-        auto stack_bottom = std::bit_cast<std::uint64_t>(full_memory.data() + full_memory.size());
+        auto stack_bottom = std::bit_cast<std::uintptr_t>(full_memory.data() + full_memory.size());
         auto next_instruction_pointer = stack_bottom - next_instruction_pointer_offset;
         auto next_stack_rbp = stack_bottom - next_stack_rbp_offset;
         auto next_stack_rsp = stack_bottom - next_stack_rsp_offset;
@@ -81,8 +81,8 @@ namespace futils::jit::x64::coro {
     }
 
     constexpr void write_coroutine_epilogue(futils::binary::writer& w, futils::view::wvec full_memory) {
-        auto initial_stack_pointer = std::bit_cast<std::uint64_t>(full_memory.data() + full_memory.size() - 8 * 5);
-        auto rbp_bottom = std::bit_cast<std::uint64_t>(full_memory.data() + full_memory.size()) - 8 * 3;
+        auto initial_stack_pointer = std::bit_cast<std::uintptr_t>(full_memory.data() + full_memory.size() - 8 * 5);
+        auto rbp_bottom = std::bit_cast<std::uintptr_t>(full_memory.data() + full_memory.size()) - 8 * 3;
         futils::jit::x64::emit_mov_reg_imm(w, futils::jit::x64::Register::RSP, initial_stack_pointer);
         futils::jit::x64::emit_mov_reg_imm(w, futils::jit::x64::Register::RBP, rbp_bottom);
         futils::jit::x64::emit_pop_reg(w, rbp_saved);  // POP RBP
@@ -94,19 +94,19 @@ namespace futils::jit::x64::coro {
 
     constexpr void write_save_instruction_pointer(futils::binary::writer& w, futils::view::wvec full_memory, std::uint64_t instruction_pointer) {
         futils::jit::x64::emit_mov_reg_imm(w, futils::jit::x64::Register::R9, instruction_pointer);
-        auto next_instruction_pointer_saved = std::bit_cast<std::uint64_t>(full_memory.data() + full_memory.size() - next_instruction_pointer_offset);
+        auto next_instruction_pointer_saved = std::bit_cast<std::uintptr_t>(full_memory.data() + full_memory.size() - next_instruction_pointer_offset);
         futils::jit::x64::emit_mov_reg_imm(w, futils::jit::x64::Register::R8, next_instruction_pointer_saved);
         futils::jit::x64::emit_mov_mem_reg(w, futils::jit::x64::Register::R9, futils::jit::x64::Register::R8);
     }
 
     constexpr void write_reset_next_rbp_rsp(futils::binary::writer& w, futils::view::wvec full_memory) {
-        auto next_stack_rbp_saved = std::bit_cast<std::uint64_t>(full_memory.data() + full_memory.size() - next_stack_rbp_offset);
-        auto initial_rsp = std::bit_cast<std::uint64_t>(full_memory.data() + full_memory.size() - original_rsp_offset);
-        auto initial_rbp = std::bit_cast<std::uint64_t>(full_memory.data() + full_memory.size() - original_rbp_offset);
+        auto next_stack_rbp_saved = std::bit_cast<std::uintptr_t>(full_memory.data() + full_memory.size() - next_stack_rbp_offset);
+        auto initial_rsp = std::bit_cast<std::uintptr_t>(full_memory.data() + full_memory.size() - original_rsp_offset);
+        auto initial_rbp = std::bit_cast<std::uintptr_t>(full_memory.data() + full_memory.size() - original_rbp_offset);
         futils::jit::x64::emit_mov_reg_imm(w, futils::jit::x64::Register::R8, next_stack_rbp_saved);
         futils::jit::x64::emit_mov_reg_imm(w, futils::jit::x64::Register::R9, initial_rbp);
         futils::jit::x64::emit_mov_mem_reg(w, futils::jit::x64::Register::R9, futils::jit::x64::Register::R8);
-        auto next_stack_rsp_saved = std::bit_cast<std::uint64_t>(full_memory.data() + full_memory.size() - next_stack_rsp_offset);
+        auto next_stack_rsp_saved = std::bit_cast<std::uintptr_t>(full_memory.data() + full_memory.size() - next_stack_rsp_offset);
         futils::jit::x64::emit_mov_reg_imm(w, futils::jit::x64::Register::R8, next_stack_rsp_saved);
         futils::jit::x64::emit_mov_reg_imm(w, futils::jit::x64::Register::R9, initial_rsp);
         futils::jit::x64::emit_mov_mem_reg(w, futils::jit::x64::Register::R9, futils::jit::x64::Register::R8);
@@ -114,10 +114,10 @@ namespace futils::jit::x64::coro {
 
     constexpr void write_save_instruction_pointer_rbp_rsp(futils::binary::writer& w, futils::view::wvec full_memory, std::uint64_t instruction_pointer) {
         write_save_instruction_pointer(w, full_memory, instruction_pointer);
-        auto next_stack_rbp_saved = std::bit_cast<std::uint64_t>(full_memory.data() + full_memory.size() - next_stack_rbp_offset);
+        auto next_stack_rbp_saved = std::bit_cast<std::uintptr_t>(full_memory.data() + full_memory.size() - next_stack_rbp_offset);
         futils::jit::x64::emit_mov_reg_imm(w, futils::jit::x64::Register::R8, next_stack_rbp_saved);
         futils::jit::x64::emit_mov_mem_reg(w, futils::jit::x64::Register::RBP, futils::jit::x64::Register::R8);
-        auto next_stack_rsp_saved = std::bit_cast<std::uint64_t>(full_memory.data() + full_memory.size() - next_stack_rsp_offset);
+        auto next_stack_rsp_saved = std::bit_cast<std::uintptr_t>(full_memory.data() + full_memory.size() - next_stack_rsp_offset);
         futils::jit::x64::emit_mov_reg_imm(w, futils::jit::x64::Register::R8, next_stack_rsp_saved);
         futils::jit::x64::emit_mov_mem_reg(w, futils::jit::x64::Register::RSP, futils::jit::x64::Register::R8);
     }
@@ -211,21 +211,21 @@ namespace futils::jit::x64::coro {
         // copy RAX to second argument register
         x64::emit_mov_reg_reg(w, x64::Register::RAX, x64::Register::RDX);
         // copy target function to thrird argument register
-        x64::emit_mov_reg_imm(w, x64::Register::R8, std::bit_cast<std::uint64_t>(f));
+        x64::emit_mov_reg_imm(w, x64::Register::R8, std::bit_cast<std::uintptr_t>(f));
         // copy stack bottom to fourth argument register
-        x64::emit_mov_reg_imm(w, x64::Register::R9, std::bit_cast<std::uint64_t>(stack_memory.data() + stack_memory.size() - sizeof(StackBottom)));
+        x64::emit_mov_reg_imm(w, x64::Register::R9, std::bit_cast<std::uintptr_t>(stack_memory.data() + stack_memory.size() - sizeof(StackBottom)));
 #else
         x64::emit_mov_reg_imm(w, x64::Register::RDI, 0);
         first_arg_relocation.end_offset = w.offset();
         // copy RAX to second argument register
         x64::emit_mov_reg_reg(w, x64::Register::RAX, x64::Register::RSI);
         // copy target function to thrird argument register
-        x64::emit_mov_reg_imm(w, x64::Register::RDX, std::bit_cast<std::uint64_t>(f));
+        x64::emit_mov_reg_imm(w, x64::Register::RDX, std::bit_cast<std::uintptr_t>(f));
         // copy stack bottom to fourth argument register
-        x64::emit_mov_reg_imm(w, x64::Register::RCX, std::bit_cast<std::uint64_t>(stack_memory.data() + stack_memory.size() - sizeof(StackBottom)));
+        x64::emit_mov_reg_imm(w, x64::Register::RCX, std::bit_cast<std::uintptr_t>(stack_memory.data() + stack_memory.size() - sizeof(StackBottom)));
 #endif
         auto t = trampoline;
-        x64::emit_mov_reg_imm(w, x64::Register::RAX, std::bit_cast<std::uint64_t>(t));
+        x64::emit_mov_reg_imm(w, x64::Register::RAX, std::bit_cast<std::uintptr_t>(t));
         x64::emit_call_reg(w, x64::Register::RAX);
         auto epilogue_relocation = RelocationEntry{EPILOGUE_RIP, 0, 0, w.offset()};
         auto reset_instruction_pointer_relocation = RelocationEntry{RESET_RIP, w.offset(), 0, initial_instruction_pointer};
