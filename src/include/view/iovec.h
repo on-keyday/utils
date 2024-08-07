@@ -483,5 +483,39 @@ namespace futils {
             static_assert(test_zero());
         }  // namespace test
 
+        template <class C>
+        struct basic_swap_wvec {
+            basic_wvec<C> w;
+
+            constexpr basic_swap_wvec() noexcept = default;
+            constexpr basic_swap_wvec(basic_wvec<C> w) noexcept
+                : w(w) {}
+
+            constexpr basic_swap_wvec(basic_swap_wvec&& in) noexcept
+                : w(in.w) {
+                in.w = {};
+            }
+
+            constexpr basic_swap_wvec& operator=(basic_swap_wvec&& in) noexcept {
+                if (this == &in) {
+                    return *this;
+                }
+                w = in.w;
+                in.w = {};
+                return *this;
+            }
+
+            constexpr basic_wvec<C> release() noexcept {
+                return std::exchange(w, {});
+            }
+
+            constexpr ~basic_swap_wvec() noexcept {
+                w = {};
+            }
+        };
+
+        using swap_wvec = basic_swap_wvec<byte>;
+        using swap_wcvec = basic_swap_wvec<char>;
+
     }  // namespace view
 }  // namespace futils
