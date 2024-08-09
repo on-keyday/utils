@@ -47,6 +47,57 @@ namespace futils {
             return bswap_direct(input);
         }
 
+        template <class T>
+        concept ptr_or_data = std::is_pointer_v<T> || std::is_array_v<T> || requires(T t) {
+            { t.data() };
+        };
+
+        template <class T>
+        constexpr auto get_ptr(T& t) {
+            if constexpr (std::is_pointer_v<T> || std::is_array_v<T>) {
+                return t;
+            }
+            else {
+                return t.data();
+            }
+        }
+
+        template <class T>
+        inline bool read_direct(auto& data, T& out) {
+            auto ptr = get_ptr(data);
+            if (std::uintptr_t(ptr) % alignof(T) != 0) {
+                return false;
+            }
+            out = *reinterpret_cast<const T*>(ptr);
+            return true;
+        }
+
+        template <class T>
+        inline bool write_direct(auto& data, T in) {
+            auto ptr = get_ptr(data);
+            if (std::uintptr_t(ptr) % alignof(T) != 0) {
+                return false;
+            }
+            *reinterpret_cast<T*>(ptr) = in;
+            return true;
+        }
+
+        template <std::endian e, class T>
+        inline bool write_direct_if_native(auto& data, T in) {
+            if constexpr (std::endian::native == e) {
+                return write_direct(data, in);
+            }
+            return false;
+        }
+
+        template <std::endian e, class T>
+        inline bool read_direct_if_native(auto& data, T& out) {
+            if constexpr (std::endian::native == e) {
+                return read_direct(data, out);
+            }
+            return false;
+        }
+
         template <class T, class Data = byte[sizeof(T)]>
         struct Buf {
             Data data_;
@@ -69,6 +120,11 @@ namespace futils {
 
             // encode `input` as big endian into `this->data`
             constexpr Buf& write_be(T input) {
+                if (!std::is_constant_evaluated()) {
+                    if (write_direct_if_native<std::endian::big>(data_, input)) {
+                        return *this;
+                    }
+                }
                 using U = uns_t<decltype(input)>;
                 U in = U(input);
                 for (size_t i = 0; i < sizeof(input); i++) {
@@ -79,6 +135,11 @@ namespace futils {
 
             // encode `input` as little endian into `this->data`
             constexpr Buf& write_le(T input) {
+                if (!std::is_constant_evaluated()) {
+                    if (write_direct_if_native<std::endian::little>(data_, input)) {
+                        return *this;
+                    }
+                }
                 using U = uns_t<decltype(input)>;
                 U in = U(input);
                 for (size_t i = 0; i < sizeof(input); i++) {
@@ -89,6 +150,11 @@ namespace futils {
 
             // read_be read big endian integer from `data`
             constexpr const Buf& read_be(T& output) const {
+                if (!std::is_constant_evaluated()) {
+                    if (read_direct_if_native<std::endian::big>(data_, output)) {
+                        return *this;
+                    }
+                }
                 using Out = uns_t<T>;
                 Out out = 0;
                 for (auto i = 0; i < sizeof(out); i++) {
@@ -109,6 +175,11 @@ namespace futils {
             constexpr const Buf& read_le(T& output) const {
                 using Out = uns_t<T>;
                 Out out = 0;
+                if (!std::is_constant_evaluated()) {
+                    if (read_direct_if_native<std::endian::little>(data_, output)) {
+                        return *this;
+                    }
+                }
                 for (auto i = 0; i < sizeof(out); i++) {
                     out |= Out(data_[i]) << (i * bit_per_byte);
                 }

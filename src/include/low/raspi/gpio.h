@@ -8,12 +8,9 @@
 #pragma once
 #include <view/iovec.h>
 #include <binary/flags.h>
+#include "gpio_bit.h"
 
 namespace futils::low::rpi {
-    struct Pin {
-       private:
-       public:
-    };
 
     struct GPIO {
        private:
@@ -24,6 +21,7 @@ namespace futils::low::rpi {
 
        public:
         constexpr GPIO() noexcept = default;
+        constexpr GPIO(GPIO&&) noexcept = default;
         static GPIO open() noexcept;
 
         constexpr explicit operator bool() const noexcept {
@@ -85,6 +83,31 @@ namespace futils::low::rpi {
         constexpr auto interrupt_status_offset(Interrupt interrupt) {
             return 0x10c + static_cast<size_t>(interrupt) * 12;
         }
+
+        struct GPIO {
+           private:
+            rpi::GPIO gpio;
+
+           public:
+            constexpr GPIO(rpi::GPIO&& gpio) noexcept
+                : gpio(std::move(gpio)) {}
+
+            constexpr StatusRegister status(size_t gpio_number) noexcept {
+                return StatusRegister{gpio[gpio_status_offset(gpio_number) / 4]};
+            }
+
+            constexpr ControlRegister control(size_t gpio_number) noexcept {
+                return ControlRegister{gpio[gpio_ctrl_offset(gpio_number) / 4]};
+            }
+
+            constexpr void status(StatusRegister status, size_t gpio_number) noexcept {
+                gpio[gpio_status_offset(gpio_number) / 4] = status.flags_0_.as_value();
+            }
+
+            constexpr void control(ControlRegister control, size_t gpio_number) noexcept {
+                gpio[gpio_ctrl_offset(gpio_number) / 4] = control.flags_1_.as_value();
+            }
+        };
 
     }  // namespace rp1
 }  // namespace futils::low::rpi
