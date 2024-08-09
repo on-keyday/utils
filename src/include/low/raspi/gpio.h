@@ -34,7 +34,7 @@ namespace futils::low::rpi {
             this->free();
         }
 
-        constexpr volatile uint32_t& operator[](size_t index) noexcept {
+        volatile uint32_t& operator[](size_t index) noexcept {
             return reinterpret_cast<volatile uint32_t*>(this->gpio_map.w.data())[index];
         }
     };

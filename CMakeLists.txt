@@ -223,12 +223,14 @@ add_library(fnet SHARED)
 add_library(fnetserv SHARED)
 add_library(coro SHARED)
 add_library(low SHARED)
+add_library(fraspi SHARED)
 elseif(FUTILS_BUILD_MODE STREQUAL "static")
 add_library(futils STATIC)
 add_library(fnet STATIC)
 add_library(fnetserv STATIC)
 add_library(coro STATIC)
 add_Library(low STATIC)
+add_library(fraspi STATIC)
 add_compile_definitions(FUTILS_AS_STATIC)
 else()
 message(FATAL_ERROR "FUTILS_BUILD_MODE must be shared or static")
@@ -320,6 +322,11 @@ endif()
 # low
 target_sources(low PRIVATE
   "src/lib/low/stack.cpp"
+)
+
+# fraspi
+target_sources(fraspi PRIVATE
+  "src/lib/low/raspi/gpio.cpp"
 )
 
 
@@ -417,6 +424,6 @@ set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXE
 install(DIRECTORY "${CMAKE_BINARY_DIR}/tool" DESTINATION "." OPTIONAL USE_SOURCE_PERMISSIONS )
 install(DIRECTORY "${CMAKE_BINARY_DIR}/lib" DESTINATION "." OPTIONAL USE_SOURCE_PERMISSIONS )
 install(DIRECTORY "${CMAKE_BINARY_DIR}/test" DESTINATION "." OPTIONAL USE_SOURCE_PERMISSIONS )
-install(TARGETS futils coro fnet fnetserv low DESTINATION "lib"  OPTIONAL)
-install(TARGETS futils coro fnet fnetserv low DESTINATION "test" OPTIONAL)
-install(TARGETS futils coro fnet fnetserv low DESTINATION "tool" OPTIONAL)
+install(TARGETS futils coro fnet fnetserv low fraspi DESTINATION "lib"  OPTIONAL)
+install(TARGETS futils coro fnet fnetserv low fraspi DESTINATION "test" OPTIONAL)
+install(TARGETS futils coro fnet fnetserv low fraspi DESTINATION "tool" OPTIONAL)

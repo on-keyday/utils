@@ -5,13 +5,15 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-#pragma once
+#include <platform/detect.h>
 #include <low/raspi/gpio.h>
+#ifdef FUTILS_PLATFORM_LINUX
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 
 namespace futils::low::rpi {
+
     int try_open_gpiomem() noexcept {
         const auto fd = ::open("/dev/gpiomem", O_RDWR | O_SYNC);
         if (fd >= 0) {
@@ -54,3 +56,14 @@ namespace futils::low::rpi {
     }
 
 }  // namespace futils::low::rpi
+#else
+namespace futils::low::rpi {
+    // stubs
+    GPIO GPIO::open() noexcept {
+        return GPIO{};
+    }
+
+    void GPIO::free() noexcept {
+    }
+}  // namespace futils::low::rpi
+#endif
