@@ -77,7 +77,7 @@ namespace futils::low::rpi::rp1 {
         return true;
     }
     struct ControlRegister {
-        ::futils::binary::flags_t<std::uint32_t, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 8, 4> flags_1_;
+        ::futils::binary::flags_t<std::uint32_t, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 7, 5> flags_1_;
         bits_flag_alias_method(flags_1_, 0, irq_over);
         bits_flag_alias_method(flags_1_, 1, reserveed1);
         bits_flag_alias_method(flags_1_, 2, irq_reset);
