@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <helper/defer.h>
 
 namespace futils::low::rpi {
 
@@ -39,9 +40,11 @@ namespace futils::low::rpi {
         if (gpio_fd < 0) {
             return GPIO{};
         }
+        const auto d = futils::helper::defer([&] {
+            ::close(gpio_fd);
+        });
         auto ptr = mmap(nullptr, block_size, PROT_READ | PROT_WRITE, MAP_SHARED, gpio_fd, 0);
         if (ptr == MAP_FAILED) {
-            ::close(gpio_fd);
             return GPIO{};
         }
         return GPIO{futils::view::wvec{static_cast<byte*>(ptr), block_size}};
