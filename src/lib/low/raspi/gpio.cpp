@@ -31,7 +31,7 @@ namespace futils::low::rpi {
         return -1;
     }
 
-    constexpr auto block_size = 4 * 1024;
+    constexpr auto block_size = 1 * 1024;
     constexpr auto periph_base = 0x20000000;
     constexpr auto io_bank_base_address = 0x400d0000;
 
