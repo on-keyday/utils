@@ -44,7 +44,7 @@ namespace futils::low::rpi {
             ::close(gpio_fd);
             return GPIO{};
         }
-        return GPIO{futils::view::wvec{ptr, block_size}};
+        return GPIO{futils::view::wvec{static_cast<byte*>(ptr), block_size}};
     }
 
     void GPIO::free() noexcept {
