@@ -43,7 +43,7 @@ namespace futils::low::rpi {
         const auto d = futils::helper::defer([&] {
             ::close(gpio_fd);
         });
-        auto ptr = mmap(nullptr, block_size, PROT_READ | PROT_WRITE, MAP_SHARED, gpio_fd, io_bank_base_address);
+        auto ptr = mmap(nullptr, block_size, PROT_READ | PROT_WRITE, MAP_SHARED, gpio_fd, 0);
         if (ptr == MAP_FAILED) {
             return GPIO{};
         }
