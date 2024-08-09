@@ -10,125 +10,127 @@
 #include <binary/float.h>
 #include <view/iovec.h>
 #include <binary/number.h>
-struct StatusRegister {
-    ::futils::binary::flags_t<std::uint32_t, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 2, 1, 1, 8> flags_0_;
-    bits_flag_alias_method(flags_0_, 0, reserved1);
-    bits_flag_alias_method(flags_0_, 1, irq_to_proc);
-    bits_flag_alias_method(flags_0_, 2, irq_combined);
-    bits_flag_alias_method(flags_0_, 3, event_db_level_high);
-    bits_flag_alias_method(flags_0_, 4, event_db_level_low);
-    bits_flag_alias_method(flags_0_, 5, event_f_edge_high);
-    bits_flag_alias_method(flags_0_, 6, event_f_edge_low);
-    bits_flag_alias_method(flags_0_, 7, event_level_high);
-    bits_flag_alias_method(flags_0_, 8, event_level_low);
-    bits_flag_alias_method(flags_0_, 9, event_edge_high);
-    bits_flag_alias_method(flags_0_, 10, event_edge_low);
-    bits_flag_alias_method(flags_0_, 11, into_peripheral);
-    bits_flag_alias_method(flags_0_, 12, input_filtered);
-    bits_flag_alias_method(flags_0_, 13, input_from_pad);
-    bits_flag_alias_method(flags_0_, 14, inis_direct);
-    bits_flag_alias_method(flags_0_, 15, reserved2);
-    bits_flag_alias_method(flags_0_, 16, output_enable_to_pad);
-    bits_flag_alias_method(flags_0_, 17, output_enable_from_peripheral);
-    bits_flag_alias_method(flags_0_, 18, reserved3);
-    bits_flag_alias_method(flags_0_, 19, output_to_pad);
-    bits_flag_alias_method(flags_0_, 20, output_from_peripheral);
-    bits_flag_alias_method(flags_0_, 21, reserved4);
-    bool encode(::futils::binary::writer& w) const;
-    bool decode(::futils::binary::reader& r);
-    static constexpr size_t fixed_header_size = 4;
-};
-inline bool StatusRegister::encode(::futils::binary::writer& w) const {
-    if (!::futils::binary::write_num(w, flags_0_.as_value(), false)) {
-        return false;
+namespace futils::low::rpi::rp1 {
+    struct StatusRegister {
+        ::futils::binary::flags_t<std::uint32_t, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 2, 1, 1, 8> flags_0_;
+        bits_flag_alias_method(flags_0_, 0, reserved1);
+        bits_flag_alias_method(flags_0_, 1, irq_to_proc);
+        bits_flag_alias_method(flags_0_, 2, irq_combined);
+        bits_flag_alias_method(flags_0_, 3, event_db_level_high);
+        bits_flag_alias_method(flags_0_, 4, event_db_level_low);
+        bits_flag_alias_method(flags_0_, 5, event_f_edge_high);
+        bits_flag_alias_method(flags_0_, 6, event_f_edge_low);
+        bits_flag_alias_method(flags_0_, 7, event_level_high);
+        bits_flag_alias_method(flags_0_, 8, event_level_low);
+        bits_flag_alias_method(flags_0_, 9, event_edge_high);
+        bits_flag_alias_method(flags_0_, 10, event_edge_low);
+        bits_flag_alias_method(flags_0_, 11, into_peripheral);
+        bits_flag_alias_method(flags_0_, 12, input_filtered);
+        bits_flag_alias_method(flags_0_, 13, input_from_pad);
+        bits_flag_alias_method(flags_0_, 14, inis_direct);
+        bits_flag_alias_method(flags_0_, 15, reserved2);
+        bits_flag_alias_method(flags_0_, 16, output_enable_to_pad);
+        bits_flag_alias_method(flags_0_, 17, output_enable_from_peripheral);
+        bits_flag_alias_method(flags_0_, 18, reserved3);
+        bits_flag_alias_method(flags_0_, 19, output_to_pad);
+        bits_flag_alias_method(flags_0_, 20, output_from_peripheral);
+        bits_flag_alias_method(flags_0_, 21, reserved4);
+        bool encode(::futils::binary::writer& w) const;
+        bool decode(::futils::binary::reader& r);
+        static constexpr size_t fixed_header_size = 4;
+    };
+    inline bool StatusRegister::encode(::futils::binary::writer& w) const {
+        if (!::futils::binary::write_num(w, flags_0_.as_value(), false)) {
+            return false;
+        }
+        return true;
     }
-    return true;
-}
-inline bool StatusRegister::decode(::futils::binary::reader& r) {
-    if (!::futils::binary::read_num(r, flags_0_.as_value(), false)) {
-        return false;
+    inline bool StatusRegister::decode(::futils::binary::reader& r) {
+        if (!::futils::binary::read_num(r, flags_0_.as_value(), false)) {
+            return false;
+        }
+        return true;
     }
-    return true;
-}
-struct ControlRegister {
-    ::futils::binary::flags_t<std::uint32_t, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 8, 4> flags_1_;
-    bits_flag_alias_method(flags_1_, 0, irq_over);
-    bits_flag_alias_method(flags_1_, 1, reserveed1);
-    bits_flag_alias_method(flags_1_, 2, irq_reset);
-    bits_flag_alias_method(flags_1_, 3, irq_masK_db_level_high);
-    bits_flag_alias_method(flags_1_, 4, irq_masK_db_level_low);
-    bits_flag_alias_method(flags_1_, 5, irq_masK_f_edge_high);
-    bits_flag_alias_method(flags_1_, 6, irq_masK_f_edge_low);
-    bits_flag_alias_method(flags_1_, 7, irq_masK_level_high);
-    bits_flag_alias_method(flags_1_, 8, irq_masK_level_low);
-    bits_flag_alias_method(flags_1_, 9, irq_masK_edge_high);
-    bits_flag_alias_method(flags_1_, 10, irq_masK_edge_low);
-    bits_flag_alias_method(flags_1_, 11, reserved2);
-    bits_flag_alias_method(flags_1_, 12, in_over);
-    bits_flag_alias_method(flags_1_, 13, out_enable_over);
-    bits_flag_alias_method(flags_1_, 14, out_over);
-    bits_flag_alias_method(flags_1_, 15, f_m);
-    bits_flag_alias_method(flags_1_, 16, func_sel);
-    bool encode(::futils::binary::writer& w) const;
-    bool decode(::futils::binary::reader& r);
-    static constexpr size_t fixed_header_size = 4;
-};
-inline bool ControlRegister::encode(::futils::binary::writer& w) const {
-    if (!::futils::binary::write_num(w, flags_1_.as_value(), false)) {
-        return false;
+    struct ControlRegister {
+        ::futils::binary::flags_t<std::uint32_t, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 8, 4> flags_1_;
+        bits_flag_alias_method(flags_1_, 0, irq_over);
+        bits_flag_alias_method(flags_1_, 1, reserveed1);
+        bits_flag_alias_method(flags_1_, 2, irq_reset);
+        bits_flag_alias_method(flags_1_, 3, irq_masK_db_level_high);
+        bits_flag_alias_method(flags_1_, 4, irq_masK_db_level_low);
+        bits_flag_alias_method(flags_1_, 5, irq_masK_f_edge_high);
+        bits_flag_alias_method(flags_1_, 6, irq_masK_f_edge_low);
+        bits_flag_alias_method(flags_1_, 7, irq_masK_level_high);
+        bits_flag_alias_method(flags_1_, 8, irq_masK_level_low);
+        bits_flag_alias_method(flags_1_, 9, irq_masK_edge_high);
+        bits_flag_alias_method(flags_1_, 10, irq_masK_edge_low);
+        bits_flag_alias_method(flags_1_, 11, reserved2);
+        bits_flag_alias_method(flags_1_, 12, in_over);
+        bits_flag_alias_method(flags_1_, 13, out_enable_over);
+        bits_flag_alias_method(flags_1_, 14, out_over);
+        bits_flag_alias_method(flags_1_, 15, f_m);
+        bits_flag_alias_method(flags_1_, 16, func_sel);
+        bool encode(::futils::binary::writer& w) const;
+        bool decode(::futils::binary::reader& r);
+        static constexpr size_t fixed_header_size = 4;
+    };
+    inline bool ControlRegister::encode(::futils::binary::writer& w) const {
+        if (!::futils::binary::write_num(w, flags_1_.as_value(), false)) {
+            return false;
+        }
+        return true;
     }
-    return true;
-}
-inline bool ControlRegister::decode(::futils::binary::reader& r) {
-    if (!::futils::binary::read_num(r, flags_1_.as_value(), false)) {
-        return false;
+    inline bool ControlRegister::decode(::futils::binary::reader& r) {
+        if (!::futils::binary::read_num(r, flags_1_.as_value(), false)) {
+            return false;
+        }
+        return true;
     }
-    return true;
-}
-struct GPIOs {
-    ::futils::binary::flags_t<std::uint32_t, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1> flags_2_;
-    bits_flag_alias_method(flags_2_, 0, reserved);
-    bits_flag_alias_method(flags_2_, 1, gpio27);
-    bits_flag_alias_method(flags_2_, 2, gpio26);
-    bits_flag_alias_method(flags_2_, 3, gpio25);
-    bits_flag_alias_method(flags_2_, 4, gpio24);
-    bits_flag_alias_method(flags_2_, 5, gpio23);
-    bits_flag_alias_method(flags_2_, 6, gpio22);
-    bits_flag_alias_method(flags_2_, 7, gpio21);
-    bits_flag_alias_method(flags_2_, 8, gpio20);
-    bits_flag_alias_method(flags_2_, 9, gpio19);
-    bits_flag_alias_method(flags_2_, 10, gpio18);
-    bits_flag_alias_method(flags_2_, 11, gpio17);
-    bits_flag_alias_method(flags_2_, 12, gpio16);
-    bits_flag_alias_method(flags_2_, 13, gpio15);
-    bits_flag_alias_method(flags_2_, 14, gpio14);
-    bits_flag_alias_method(flags_2_, 15, gpio13);
-    bits_flag_alias_method(flags_2_, 16, gpio12);
-    bits_flag_alias_method(flags_2_, 17, gpio11);
-    bits_flag_alias_method(flags_2_, 18, gpio10);
-    bits_flag_alias_method(flags_2_, 19, gpio9);
-    bits_flag_alias_method(flags_2_, 20, gpio8);
-    bits_flag_alias_method(flags_2_, 21, gpio7);
-    bits_flag_alias_method(flags_2_, 22, gpio6);
-    bits_flag_alias_method(flags_2_, 23, gpio5);
-    bits_flag_alias_method(flags_2_, 24, gpio4);
-    bits_flag_alias_method(flags_2_, 25, gpio3);
-    bits_flag_alias_method(flags_2_, 26, gpio2);
-    bits_flag_alias_method(flags_2_, 27, gpio1);
-    bits_flag_alias_method(flags_2_, 28, gpio0);
-    bool encode(::futils::binary::writer& w) const;
-    bool decode(::futils::binary::reader& r);
-    static constexpr size_t fixed_header_size = 4;
-};
-inline bool GPIOs::encode(::futils::binary::writer& w) const {
-    if (!::futils::binary::write_num(w, flags_2_.as_value(), false)) {
-        return false;
+    struct GPIOs {
+        ::futils::binary::flags_t<std::uint32_t, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1> flags_2_;
+        bits_flag_alias_method(flags_2_, 0, reserved);
+        bits_flag_alias_method(flags_2_, 1, gpio27);
+        bits_flag_alias_method(flags_2_, 2, gpio26);
+        bits_flag_alias_method(flags_2_, 3, gpio25);
+        bits_flag_alias_method(flags_2_, 4, gpio24);
+        bits_flag_alias_method(flags_2_, 5, gpio23);
+        bits_flag_alias_method(flags_2_, 6, gpio22);
+        bits_flag_alias_method(flags_2_, 7, gpio21);
+        bits_flag_alias_method(flags_2_, 8, gpio20);
+        bits_flag_alias_method(flags_2_, 9, gpio19);
+        bits_flag_alias_method(flags_2_, 10, gpio18);
+        bits_flag_alias_method(flags_2_, 11, gpio17);
+        bits_flag_alias_method(flags_2_, 12, gpio16);
+        bits_flag_alias_method(flags_2_, 13, gpio15);
+        bits_flag_alias_method(flags_2_, 14, gpio14);
+        bits_flag_alias_method(flags_2_, 15, gpio13);
+        bits_flag_alias_method(flags_2_, 16, gpio12);
+        bits_flag_alias_method(flags_2_, 17, gpio11);
+        bits_flag_alias_method(flags_2_, 18, gpio10);
+        bits_flag_alias_method(flags_2_, 19, gpio9);
+        bits_flag_alias_method(flags_2_, 20, gpio8);
+        bits_flag_alias_method(flags_2_, 21, gpio7);
+        bits_flag_alias_method(flags_2_, 22, gpio6);
+        bits_flag_alias_method(flags_2_, 23, gpio5);
+        bits_flag_alias_method(flags_2_, 24, gpio4);
+        bits_flag_alias_method(flags_2_, 25, gpio3);
+        bits_flag_alias_method(flags_2_, 26, gpio2);
+        bits_flag_alias_method(flags_2_, 27, gpio1);
+        bits_flag_alias_method(flags_2_, 28, gpio0);
+        bool encode(::futils::binary::writer& w) const;
+        bool decode(::futils::binary::reader& r);
+        static constexpr size_t fixed_header_size = 4;
+    };
+    inline bool GPIOs::encode(::futils::binary::writer& w) const {
+        if (!::futils::binary::write_num(w, flags_2_.as_value(), false)) {
+            return false;
+        }
+        return true;
     }
-    return true;
-}
-inline bool GPIOs::decode(::futils::binary::reader& r) {
-    if (!::futils::binary::read_num(r, flags_2_.as_value(), false)) {
-        return false;
+    inline bool GPIOs::decode(::futils::binary::reader& r) {
+        if (!::futils::binary::read_num(r, flags_2_.as_value(), false)) {
+            return false;
+        }
+        return true;
     }
-    return true;
-}
+}  // namespace futils::low::rpi::rp1
