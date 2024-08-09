@@ -92,19 +92,19 @@ namespace futils::low::rpi {
             constexpr GPIO(rpi::GPIO&& gpio) noexcept
                 : gpio(std::move(gpio)) {}
 
-            constexpr StatusRegister status(size_t gpio_number) noexcept {
+            StatusRegister status(size_t gpio_number) noexcept {
                 return StatusRegister{gpio[gpio_status_offset(gpio_number) / 4]};
             }
 
-            constexpr ControlRegister control(size_t gpio_number) noexcept {
+            ControlRegister control(size_t gpio_number) noexcept {
                 return ControlRegister{gpio[gpio_ctrl_offset(gpio_number) / 4]};
             }
 
-            constexpr void status(StatusRegister status, size_t gpio_number) noexcept {
+            void status(StatusRegister status, size_t gpio_number) noexcept {
                 gpio[gpio_status_offset(gpio_number) / 4] = status.flags_0_.as_value();
             }
 
-            constexpr void control(ControlRegister control, size_t gpio_number) noexcept {
+            void control(ControlRegister control, size_t gpio_number) noexcept {
                 gpio[gpio_ctrl_offset(gpio_number) / 4] = control.flags_1_.as_value();
             }
         };
