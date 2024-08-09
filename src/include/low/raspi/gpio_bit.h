@@ -38,6 +38,31 @@ namespace futils::low::rpi::rp1 {
         bool encode(::futils::binary::writer& w) const;
         bool decode(::futils::binary::reader& r);
         static constexpr size_t fixed_header_size = 4;
+        template <typename Visitor>
+        void visit(Visitor&& v) {
+            v(v, "reserved1", (*this).reserved1());
+            v(v, "irq_to_proc", (*this).irq_to_proc());
+            v(v, "irq_combined", (*this).irq_combined());
+            v(v, "event_db_level_high", (*this).event_db_level_high());
+            v(v, "event_db_level_low", (*this).event_db_level_low());
+            v(v, "event_f_edge_high", (*this).event_f_edge_high());
+            v(v, "event_f_edge_low", (*this).event_f_edge_low());
+            v(v, "event_level_high", (*this).event_level_high());
+            v(v, "event_level_low", (*this).event_level_low());
+            v(v, "event_edge_high", (*this).event_edge_high());
+            v(v, "event_edge_low", (*this).event_edge_low());
+            v(v, "into_peripheral", (*this).into_peripheral());
+            v(v, "input_filtered", (*this).input_filtered());
+            v(v, "input_from_pad", (*this).input_from_pad());
+            v(v, "inis_direct", (*this).inis_direct());
+            v(v, "reserved2", (*this).reserved2());
+            v(v, "output_enable_to_pad", (*this).output_enable_to_pad());
+            v(v, "output_enable_from_peripheral", (*this).output_enable_from_peripheral());
+            v(v, "reserved3", (*this).reserved3());
+            v(v, "output_to_pad", (*this).output_to_pad());
+            v(v, "output_from_peripheral", (*this).output_from_peripheral());
+            v(v, "reserved4", (*this).reserved4());
+        }
     };
     inline bool StatusRegister::encode(::futils::binary::writer& w) const {
         if (!::futils::binary::write_num(w, flags_0_.as_value(), false)) {
@@ -73,6 +98,26 @@ namespace futils::low::rpi::rp1 {
         bool encode(::futils::binary::writer& w) const;
         bool decode(::futils::binary::reader& r);
         static constexpr size_t fixed_header_size = 4;
+        template <typename Visitor>
+        void visit(Visitor&& v) {
+            v(v, "irq_over", (*this).irq_over());
+            v(v, "reserveed1", (*this).reserveed1());
+            v(v, "irq_reset", (*this).irq_reset());
+            v(v, "irq_masK_db_level_high", (*this).irq_masK_db_level_high());
+            v(v, "irq_masK_db_level_low", (*this).irq_masK_db_level_low());
+            v(v, "irq_masK_f_edge_high", (*this).irq_masK_f_edge_high());
+            v(v, "irq_masK_f_edge_low", (*this).irq_masK_f_edge_low());
+            v(v, "irq_masK_level_high", (*this).irq_masK_level_high());
+            v(v, "irq_masK_level_low", (*this).irq_masK_level_low());
+            v(v, "irq_masK_edge_high", (*this).irq_masK_edge_high());
+            v(v, "irq_masK_edge_low", (*this).irq_masK_edge_low());
+            v(v, "reserved2", (*this).reserved2());
+            v(v, "in_over", (*this).in_over());
+            v(v, "out_enable_over", (*this).out_enable_over());
+            v(v, "out_over", (*this).out_over());
+            v(v, "f_m", (*this).f_m());
+            v(v, "func_sel", (*this).func_sel());
+        }
     };
     inline bool ControlRegister::encode(::futils::binary::writer& w) const {
         if (!::futils::binary::write_num(w, flags_1_.as_value(), false)) {
@@ -120,6 +165,38 @@ namespace futils::low::rpi::rp1 {
         bool encode(::futils::binary::writer& w) const;
         bool decode(::futils::binary::reader& r);
         static constexpr size_t fixed_header_size = 4;
+        template <typename Visitor>
+        void visit(Visitor&& v) {
+            v(v, "reserved", (*this).reserved());
+            v(v, "gpio27", (*this).gpio27());
+            v(v, "gpio26", (*this).gpio26());
+            v(v, "gpio25", (*this).gpio25());
+            v(v, "gpio24", (*this).gpio24());
+            v(v, "gpio23", (*this).gpio23());
+            v(v, "gpio22", (*this).gpio22());
+            v(v, "gpio21", (*this).gpio21());
+            v(v, "gpio20", (*this).gpio20());
+            v(v, "gpio19", (*this).gpio19());
+            v(v, "gpio18", (*this).gpio18());
+            v(v, "gpio17", (*this).gpio17());
+            v(v, "gpio16", (*this).gpio16());
+            v(v, "gpio15", (*this).gpio15());
+            v(v, "gpio14", (*this).gpio14());
+            v(v, "gpio13", (*this).gpio13());
+            v(v, "gpio12", (*this).gpio12());
+            v(v, "gpio11", (*this).gpio11());
+            v(v, "gpio10", (*this).gpio10());
+            v(v, "gpio9", (*this).gpio9());
+            v(v, "gpio8", (*this).gpio8());
+            v(v, "gpio7", (*this).gpio7());
+            v(v, "gpio6", (*this).gpio6());
+            v(v, "gpio5", (*this).gpio5());
+            v(v, "gpio4", (*this).gpio4());
+            v(v, "gpio3", (*this).gpio3());
+            v(v, "gpio2", (*this).gpio2());
+            v(v, "gpio1", (*this).gpio1());
+            v(v, "gpio0", (*this).gpio0());
+        }
     };
     inline bool GPIOs::encode(::futils::binary::writer& w) const {
         if (!::futils::binary::write_num(w, flags_2_.as_value(), false)) {
