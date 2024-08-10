@@ -62,6 +62,10 @@ namespace futils::low::rpi {
             return gpio_number * 8 + 4;
         }
 
+        constexpr auto gpio_pads_offset(size_t gpio_number) {
+            return pads_bank0_offset + 4 + (gpio_number * 4);
+        }
+
         constexpr auto interrupt = 0x100;
         enum class Interrupt {
             proc0,
@@ -83,10 +87,10 @@ namespace futils::low::rpi {
 
         struct GPIO {
            private:
-            rpi::GPIO gpio;
+            rpi::GPIO gpio_;
 
             constexpr GPIO(rpi::GPIO&& gpio) noexcept
-                : gpio(std::move(gpio)) {}
+                : gpio_(std::move(gpio)) {}
 
            public:
             static GPIO open() noexcept {
@@ -94,27 +98,31 @@ namespace futils::low::rpi {
             }
 
             constexpr explicit operator bool() const noexcept {
-                return static_cast<bool>(this->gpio);
+                return static_cast<bool>(this->gpio_);
             }
 
             StatusRegister status(size_t gpio_number) noexcept {
-                return StatusRegister{gpio[gpio_status_offset(gpio_number) / 4]};
+                return StatusRegister{gpio_[gpio_status_offset(gpio_number) / 4]};
             }
 
             ControlRegister control(size_t gpio_number) noexcept {
-                return ControlRegister{gpio[gpio_ctrl_offset(gpio_number) / 4]};
+                return ControlRegister{gpio_[gpio_ctrl_offset(gpio_number) / 4]};
             }
 
             void control(ControlRegister control, size_t gpio_number) noexcept {
-                gpio[gpio_ctrl_offset(gpio_number) / 4] = control.flags_1_.as_value();
+                gpio_[gpio_ctrl_offset(gpio_number) / 4] = control.flags_1_.as_value();
             }
 
             VoltageSelect voltage() noexcept {
-                return VoltageSelect{gpio[pads_bank0_offset / 4]};
+                return VoltageSelect{gpio_[pads_bank0_offset / 4]};
             }
 
             GPIORegister gpio(size_t gpio_number) noexcept {
-                return GPIORegister{gpio[(pads_bank0_offset / 4) + 1 + gpio_number]};
+                return GPIORegister{gpio_[gpio_pads_offset(gpio_number) / 4]};
+            }
+
+            void gpio(GPIORegister gpio, size_t gpio_number) noexcept {
+                this->gpio_[gpio_pads_offset(gpio_number) / 4] = gpio.flags_4_.as_value();
             }
         };
 
