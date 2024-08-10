@@ -210,4 +210,66 @@ namespace futils::low::rpi::rp1 {
         }
         return true;
     }
+    struct VoltageSelect {
+        ::futils::binary::flags_t<std::uint32_t, 31, 1> flags_3_;
+        bits_flag_alias_method(flags_3_, 0, reserved);
+        bits_flag_alias_method(flags_3_, 1, voltage_select);
+        bool encode(::futils::binary::writer& w) const;
+        bool decode(::futils::binary::reader& r);
+        static constexpr size_t fixed_header_size = 4;
+        template <typename Visitor>
+        void visit(Visitor&& v) {
+            v(v, "reserved", (*this).reserved());
+            v(v, "voltage_select", (*this).voltage_select());
+        }
+    };
+    inline bool VoltageSelect::encode(::futils::binary::writer& w) const {
+        if (!::futils::binary::write_num(w, flags_3_.as_value(), false)) {
+            return false;
+        }
+        return true;
+    }
+    inline bool VoltageSelect::decode(::futils::binary::reader& r) {
+        if (!::futils::binary::read_num(r, flags_3_.as_value(), false)) {
+            return false;
+        }
+        return true;
+    }
+    struct GPIORegister {
+        ::futils::binary::flags_t<std::uint32_t, 24, 1, 1, 2, 1, 1, 1, 1> flags_4_;
+        bits_flag_alias_method(flags_4_, 0, reserved);
+        bits_flag_alias_method(flags_4_, 1, output_disabled);
+        bits_flag_alias_method(flags_4_, 2, input_enabled);
+        bits_flag_alias_method(flags_4_, 3, drive_strength);
+        bits_flag_alias_method(flags_4_, 4, pull_up_enabled);
+        bits_flag_alias_method(flags_4_, 5, pull_down_enabled);
+        bits_flag_alias_method(flags_4_, 6, schmitt_trigger_enabled);
+        bits_flag_alias_method(flags_4_, 7, slew_rate_fast);
+        bool encode(::futils::binary::writer& w) const;
+        bool decode(::futils::binary::reader& r);
+        static constexpr size_t fixed_header_size = 4;
+        template <typename Visitor>
+        void visit(Visitor&& v) {
+            v(v, "reserved", (*this).reserved());
+            v(v, "output_disabled", (*this).output_disabled());
+            v(v, "input_enabled", (*this).input_enabled());
+            v(v, "drive_strength", (*this).drive_strength());
+            v(v, "pull_up_enabled", (*this).pull_up_enabled());
+            v(v, "pull_down_enabled", (*this).pull_down_enabled());
+            v(v, "schmitt_trigger_enabled", (*this).schmitt_trigger_enabled());
+            v(v, "slew_rate_fast", (*this).slew_rate_fast());
+        }
+    };
+    inline bool GPIORegister::encode(::futils::binary::writer& w) const {
+        if (!::futils::binary::write_num(w, flags_4_.as_value(), false)) {
+            return false;
+        }
+        return true;
+    }
+    inline bool GPIORegister::decode(::futils::binary::reader& r) {
+        if (!::futils::binary::read_num(r, flags_4_.as_value(), false)) {
+            return false;
+        }
+        return true;
+    }
 }  // namespace futils::low::rpi::rp1
