@@ -51,6 +51,8 @@ namespace futils::low::rpi {
         constexpr auto pull_up = 2;
         constexpr auto pull_mask = 3;
 
+        constexpr auto max_gpio = 27;
+
         // https://datasheets.raspberrypi.com/rp1/rp1-peripherals.pdf
         constexpr auto gpio_status_offset(size_t gpio_number) {
             return gpio_number * 8;
