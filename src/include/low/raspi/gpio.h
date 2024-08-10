@@ -22,7 +22,7 @@ namespace futils::low::rpi {
        public:
         constexpr GPIO() noexcept = default;
         constexpr GPIO(GPIO&&) noexcept = default;
-        static GPIO open() noexcept;
+        static GPIO open(size_t block_size) noexcept;
 
         constexpr explicit operator bool() const noexcept {
             return !this->gpio_map.w.null();
@@ -40,21 +40,16 @@ namespace futils::low::rpi {
     };
 
     namespace rp1 {
+        // https://github.com/raspberrypi/utils/blob/master/pinctrl/gpiochip_rp1.c#L503
+        constexpr auto block_size = 0x30000;
+
+        // https://github.com/raspberrypi/utils/blob/master/pinctrl/gpiochip_rp1.c#L11
+        constexpr auto io_bank0_offset = 0;
+        constexpr auto pads_bank0_offset = 0x00020000;
         constexpr auto pull_none = 0;
         constexpr auto pull_down = 1;
         constexpr auto pull_up = 2;
         constexpr auto pull_mask = 3;
-
-        constexpr auto func_select_count = 9;
-        constexpr auto func_select_mask = 0xf;
-
-        constexpr auto bit_to_reg(size_t reg_number) {
-            return reg_number >> 5;  // reg_number / 32
-        }
-
-        constexpr auto bit_to_shift(size_t reg_number) {
-            return (reg_number & 0x1f);  // reg_number % 32
-        }
 
         // https://datasheets.raspberrypi.com/rp1/rp1-peripherals.pdf
         constexpr auto gpio_status_offset(size_t gpio_number) {
@@ -88,9 +83,17 @@ namespace futils::low::rpi {
            private:
             rpi::GPIO gpio;
 
-           public:
             constexpr GPIO(rpi::GPIO&& gpio) noexcept
                 : gpio(std::move(gpio)) {}
+
+           public:
+            static GPIO open() noexcept {
+                return GPIO{rpi::GPIO::open(block_size)};
+            }
+
+            constexpr explicit operator bool() const noexcept {
+                return static_cast<bool>(this->gpio);
+            }
 
             StatusRegister status(size_t gpio_number) noexcept {
                 return StatusRegister{gpio[gpio_status_offset(gpio_number) / 4]};
@@ -106,6 +109,10 @@ namespace futils::low::rpi {
 
             void control(ControlRegister control, size_t gpio_number) noexcept {
                 gpio[gpio_ctrl_offset(gpio_number) / 4] = control.flags_1_.as_value();
+            }
+
+            VoltageSelect voltage() {
+                return VoltageSelect{gpio[pads_bank0_offset / 4]};
             }
         };
 

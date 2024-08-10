@@ -31,12 +31,10 @@ namespace futils::low::rpi {
         return -1;
     }
 
-    // https://github.com/raspberrypi/utils/blob/master/pinctrl/gpiochip_rp1.c#L503
-    constexpr auto block_size = 0x30000;
     constexpr auto periph_base = 0x20000000;
     constexpr auto io_bank_base_address = 0x400d0000;
 
-    GPIO GPIO::open() noexcept {
+    GPIO GPIO::open(size_t block_size) noexcept {
         const auto gpio_fd = try_open_gpiomem();
         if (gpio_fd < 0) {
             return GPIO{};
