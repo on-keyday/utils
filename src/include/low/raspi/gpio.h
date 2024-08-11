@@ -45,6 +45,14 @@ namespace futils::low::rpi {
 
         // https://github.com/raspberrypi/utils/blob/master/pinctrl/gpiochip_rp1.c#L11
         constexpr auto io_bank0_offset = 0;
+        constexpr auto sys_rio_bank0_offset = 0x00010000;
+        constexpr auto sys_rio_reg_out_offset = 0x0000;
+        constexpr auto sys_rio_reg_oe_offset = 0x0004;
+        constexpr auto sys_rio_reg_sync_in_offset = 0x0008;
+        constexpr auto rio_rw_offset = 0x0000;
+        constexpr auto rio_xor_offset = 0x1000;
+        constexpr auto rio_set_offset = 0x2000;
+        constexpr auto rio_clr_offset = 0x3000;
         constexpr auto pads_bank0_offset = 0x00020000;
         constexpr auto pull_none = 0;
         constexpr auto pull_down = 1;
@@ -64,6 +72,34 @@ namespace futils::low::rpi {
 
         constexpr auto gpio_pads_offset(size_t gpio_number) {
             return pads_bank0_offset + 4 + (gpio_number * 4);
+        }
+
+        constexpr auto sys_rio_out_offset() {
+            return sys_rio_bank0_offset + sys_rio_reg_out_offset;
+        }
+
+        constexpr auto sys_rio_sync_in_offset() {
+            return sys_rio_bank0_offset + sys_rio_reg_sync_in_offset;
+        }
+
+        constexpr auto sys_rio_out_set_offset() {
+            return sys_rio_bank0_offset + sys_rio_reg_out_offset + rio_set_offset;
+        }
+
+        constexpr auto sys_rio_out_clr_offset() {
+            return sys_rio_bank0_offset + sys_rio_reg_out_offset + rio_clr_offset;
+        }
+
+        constexpr auto sys_rio_oe_offset() {
+            return sys_rio_bank0_offset + sys_rio_reg_oe_offset;
+        }
+
+        constexpr auto sys_rio_oe_set_offset() {
+            return sys_rio_bank0_offset + sys_rio_reg_oe_offset + rio_set_offset;
+        }
+
+        constexpr auto sys_rio_oe_clr_offset() {
+            return sys_rio_bank0_offset + sys_rio_reg_oe_offset + rio_clr_offset;
         }
 
         constexpr auto interrupt = 0x100;
@@ -123,6 +159,34 @@ namespace futils::low::rpi {
 
             void gpio(GPIORegister gpio, size_t gpio_number) noexcept {
                 this->gpio_[gpio_pads_offset(gpio_number) / 4] = gpio.flags_4_.as_value();
+            }
+
+            GPIOs rio_out() noexcept {
+                return GPIOs{gpio_[sys_rio_out_offset() / 4]};
+            }
+
+            GPIOs rio_sync_in() noexcept {
+                return GPIOs{gpio_[sys_rio_sync_in_offset() / 4]};
+            }
+
+            GPIOs rio_out_enable() noexcept {
+                return GPIOs{gpio_[sys_rio_oe_offset() / 4]};
+            }
+
+            void rio_out_set(GPIOs rio) noexcept {
+                gpio_[sys_rio_out_set_offset() / 4] = rio.flags_2_.as_value();
+            }
+
+            void rio_out_clr(GPIOs rio) noexcept {
+                gpio_[sys_rio_out_clr_offset() / 4] = rio.flags_2_.as_value();
+            }
+
+            void rio_out_enable_set(GPIOs rio) noexcept {
+                gpio_[sys_rio_oe_set_offset() / 4] = rio.flags_2_.as_value();
+            }
+
+            void rio_out_enable_clr(GPIOs rio) noexcept {
+                gpio_[sys_rio_oe_clr_offset() / 4] = rio.flags_2_.as_value();
             }
         };
 

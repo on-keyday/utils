@@ -61,7 +61,7 @@ namespace futils::low::rpi {
 #else
 namespace futils::low::rpi {
     // stubs
-    GPIO GPIO::open() noexcept {
+    GPIO GPIO::open(size_t) noexcept {
         return GPIO{};
     }
 
