@@ -173,19 +173,47 @@ namespace futils::low::rpi {
                 return GPIOs{gpio_[sys_rio_oe_offset() / 4]};
             }
 
-            void rio_out_set(GPIOs rio) noexcept {
+           private:
+            static constexpr bool check_mask(GPIOs rio) noexcept {
+                auto v = rio.flags_2_.as_value();
+                if (rio.reserved()) {
+                    return false;
+                }
+                if (v == 0) {
+                    return false;
+                }
+                if (v & (v - 1)) {  // check if v is a power of 2
+                    return false;
+                }
+                return true;
+            }
+
+           public:
+            bool rio_out_set(GPIOs rio) noexcept {
+                if (!check_mask(rio)) {
+                    return false;
+                }
                 gpio_[sys_rio_out_set_offset() / 4] = rio.flags_2_.as_value();
             }
 
-            void rio_out_clr(GPIOs rio) noexcept {
+            bool rio_out_clr(GPIOs rio) noexcept {
+                if (!check_mask(rio)) {
+                    return false;
+                }
                 gpio_[sys_rio_out_clr_offset() / 4] = rio.flags_2_.as_value();
             }
 
-            void rio_out_enable_set(GPIOs rio) noexcept {
+            bool rio_out_enable_set(GPIOs rio) noexcept {
+                if (!check_mask(rio)) {
+                    return false;
+                }
                 gpio_[sys_rio_oe_set_offset() / 4] = rio.flags_2_.as_value();
             }
 
-            void rio_out_enable_clr(GPIOs rio) noexcept {
+            bool rio_out_enable_clr(GPIOs rio) noexcept {
+                if (!check_mask(rio)) {
+                    return false;
+                }
                 gpio_[sys_rio_oe_clr_offset() / 4] = rio.flags_2_.as_value();
             }
         };
