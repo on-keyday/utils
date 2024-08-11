@@ -145,7 +145,7 @@ namespace futils::low::rpi {
                 return ControlRegister{gpio_[gpio_ctrl_offset(gpio_number) / 4]};
             }
 
-            void control(ControlRegister control, size_t gpio_number) noexcept {
+            void control(size_t gpio_number, ControlRegister control) noexcept {
                 gpio_[gpio_ctrl_offset(gpio_number) / 4] = control.flags_1_.as_value();
             }
 
@@ -157,7 +157,7 @@ namespace futils::low::rpi {
                 return GPIORegister{gpio_[gpio_pads_offset(gpio_number) / 4]};
             }
 
-            void gpio(GPIORegister gpio, size_t gpio_number) noexcept {
+            void gpio(size_t gpio_number, GPIORegister gpio) noexcept {
                 this->gpio_[gpio_pads_offset(gpio_number) / 4] = gpio.flags_4_.as_value();
             }
 
