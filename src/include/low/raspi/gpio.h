@@ -203,6 +203,15 @@ namespace futils::low::rpi {
                 gpio_[sys_rio_out_clr_offset() / 4] = rio.flags_2_.as_value();
             }
 
+            bool rio_out(GPIOs rio, bool on) noexcept {
+                if (on) {
+                    return rio_out_set(rio);
+                }
+                else {
+                    return rio_out_clr(rio);
+                }
+            }
+
             bool rio_out_enable_set(GPIOs rio) noexcept {
                 if (!check_mask(rio)) {
                     return false;
@@ -215,6 +224,15 @@ namespace futils::low::rpi {
                     return false;
                 }
                 gpio_[sys_rio_oe_clr_offset() / 4] = rio.flags_2_.as_value();
+            }
+
+            bool rio_out_enable(GPIOs rio, bool enable) noexcept {
+                if (enable) {
+                    return rio_out_enable_set(rio);
+                }
+                else {
+                    return rio_out_enable_clr(rio);
+                }
             }
         };
 
