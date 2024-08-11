@@ -188,8 +188,13 @@ namespace futils::low::rpi {
                 return true;
             }
 
+            static constexpr GPIOs gpio_num_to_bit(size_t gpio_num) noexcept {
+                return GPIOs{1 << gpio_num};
+            }
+
            public:
-            bool rio_out_set(GPIOs rio) noexcept {
+            bool rio_out_set(size_t gpio_num) noexcept {
+                auto rio = gpio_num_to_bit(gpio_num);
                 if (!check_mask(rio)) {
                     return false;
                 }
@@ -197,7 +202,8 @@ namespace futils::low::rpi {
                 return true;
             }
 
-            bool rio_out_clr(GPIOs rio) noexcept {
+            bool rio_out_clr(size_t gpio_num) noexcept {
+                auto rio = gpio_num_to_bit(gpio_num);
                 if (!check_mask(rio)) {
                     return false;
                 }
@@ -205,16 +211,17 @@ namespace futils::low::rpi {
                 return true;
             }
 
-            bool rio_out(GPIOs rio, bool on) noexcept {
+            bool rio_out(size_t gpio_num, bool on) noexcept {
                 if (on) {
-                    return rio_out_set(rio);
+                    return rio_out_set(gpio_num);
                 }
                 else {
-                    return rio_out_clr(rio);
+                    return rio_out_clr(gpio_num);
                 }
             }
 
-            bool rio_out_enable_set(GPIOs rio) noexcept {
+            bool rio_out_enable_set(size_t gpio_num) noexcept {
+                auto rio = gpio_num_to_bit(gpio_num);
                 if (!check_mask(rio)) {
                     return false;
                 }
@@ -222,7 +229,8 @@ namespace futils::low::rpi {
                 return true;
             }
 
-            bool rio_out_enable_clr(GPIOs rio) noexcept {
+            bool rio_out_enable_clr(size_t gpio_num) noexcept {
+                auto rio = gpio_num_to_bit(gpio_num);
                 if (!check_mask(rio)) {
                     return false;
                 }
@@ -230,12 +238,12 @@ namespace futils::low::rpi {
                 return true;
             }
 
-            bool rio_out_enable(GPIOs rio, bool enable) noexcept {
+            bool rio_out_enable(size_t gpio_num, bool enable) noexcept {
                 if (enable) {
-                    return rio_out_enable_set(rio);
+                    return rio_out_enable_set(gpio_num);
                 }
                 else {
-                    return rio_out_enable_clr(rio);
+                    return rio_out_enable_clr(gpio_num);
                 }
             }
         };
