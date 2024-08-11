@@ -153,11 +153,11 @@ namespace futils::low::rpi {
                 return VoltageSelect{gpio_[pads_bank0_offset / 4]};
             }
 
-            GPIORegister gpio(size_t gpio_number) noexcept {
+            GPIORegister pads(size_t gpio_number) noexcept {
                 return GPIORegister{gpio_[gpio_pads_offset(gpio_number) / 4]};
             }
 
-            void gpio(size_t gpio_number, GPIORegister gpio) noexcept {
+            void pads(size_t gpio_number, GPIORegister gpio) noexcept {
                 this->gpio_[gpio_pads_offset(gpio_number) / 4] = gpio.flags_4_.as_value();
             }
 
