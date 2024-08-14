@@ -189,21 +189,27 @@ namespace futils::binary {
     constexpr auto pop_count(T v) {
         static_assert(std::is_unsigned_v<T>);
         constexpr auto count = sizeof(T);
-        constexpr auto num_mask = ~T(0);
-        auto bit_mask = [&](size_t i) {
+        constexpr auto bit_mask = [](size_t i) {
+            constexpr auto num_mask = ~T(0);
             return T(bit_pair_masks[i] & num_mask);
         };
-        v = v - ((v >> 1) & bit_mask(0));
-        v = (v & bit_mask(1)) + ((v >> 2) & bit_mask(1));
-        v = (v + (v >> 4)) & bit_mask(2);
+        constexpr auto bit_mask_0 = bit_mask(0);
+        v = v - ((v >> 1) & bit_mask_0);
+        constexpr auto bit_mask_1 = bit_mask(1);
+        v = (v & bit_mask_1) + ((v >> 2) & bit_mask_1);
+        constexpr auto bit_mask_2 = bit_mask(2);
+        v = (v + (v >> 4)) & bit_mask_2;
         if constexpr (count >= 2) {
-            v = (v + (v >> 8)) & bit_mask(3);
+            constexpr auto bit_mask_3 = bit_mask(3);
+            v = (v + (v >> 8)) & bit_mask_3;
         }
         if constexpr (count >= 4) {
-            v = (v + (v >> 16)) & bit_mask(4);
+            constexpr auto bit_mask_4 = bit_mask(4);
+            v = (v + (v >> 16)) & bit_mask_4;
         }
         if constexpr (count >= 8) {
-            v = (v + (v >> 32)) & bit_mask(5);
+            constexpr auto bit_mask_5 = bit_mask(5);
+            v = (v + (v >> 32)) & bit_mask_5;
         }
         v = v & 0x3F;
         return v;
