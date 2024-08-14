@@ -168,4 +168,72 @@ namespace futils::binary {
         constexpr auto mul_test_result = mul_test();
     }  // namespace test
 
+    constexpr std::uint64_t bit_pair_masks[] = {
+        // 0101010101010101010101010101010101010101010101010101010101010101
+        std::uint64_t(0x5555555555555555),
+        // 0011001100110011001100110011001100110011001100110011001100110011
+        std::uint64_t(0x3333333333333333),
+        // 0000111100001111000011110000111100001111000011110000111100001111
+        std::uint64_t(0x0F0F0F0F0F0F0F0F),
+        // 0000000011111111000000001111111100000000111111110000000011111111
+        std::uint64_t(0x00FF00FF00FF00FF),
+        // 0000000000000000111111111111111100000000000000001111111111111111
+        std::uint64_t(0x0000FFFF0000FFFF),
+        // 0000000000000000000000000000000011111111111111111111111111111111
+        std::uint64_t(0x00000000FFFFFFFF),
+        // 1111111111111111111111111111111111111111111111111111111111111111
+        std::uint64_t(0xffffffffffffffff),
+    };
+
+    template <class T>
+    constexpr auto pop_count(T v) {
+        static_assert(std::is_unsigned_v<T>);
+        constexpr auto count = sizeof(T);
+        constexpr auto num_mask = ~T(0);
+        auto bit_mask = [&](size_t i) {
+            return T(bit_pair_masks[i] & num_mask);
+        };
+        v = v - ((v >> 1) & bit_mask(0));
+        v = (v & bit_mask(1)) + ((v >> 2) & bit_mask(1));
+        v = (v + (v >> 4)) & bit_mask(2);
+        if constexpr (count >= 2) {
+            v = (v + (v >> 8)) & bit_mask(3);
+        }
+        if constexpr (count >= 4) {
+            v = (v + (v >> 16)) & bit_mask(4);
+        }
+        if constexpr (count >= 8) {
+            v = (v + (v >> 32)) & bit_mask(5);
+        }
+        v = v & 0x3F;
+        return v;
+    }
+
+    namespace test {
+
+        constexpr auto pop_count8_test() {
+            return pop_count(std::uint8_t(0b10101010));
+        }
+
+        static_assert(pop_count8_test() == 4);
+
+        constexpr auto pop_count16_test() {
+            return pop_count(std::uint16_t(0b1010101010101010));
+        }
+
+        static_assert(pop_count16_test() == 8);
+
+        constexpr auto pop_count32_test() {
+            return pop_count(0b10101010101010101010101010101010);
+        }
+
+        static_assert(pop_count32_test() == 16);
+
+        constexpr auto pop_count64_test() {
+            return pop_count(0b1010101010101010101010101010101010101010101010101010101010101010);
+        }
+
+        static_assert(pop_count64_test() == 32);
+    }  // namespace test
+
 }  // namespace futils::binary
