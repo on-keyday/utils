@@ -18,6 +18,7 @@ namespace futils::number::hex {
             auto c = seq.current();
             result.push_back(to_num_char(c >> 4));
             result.push_back(to_num_char(c & 0xf));
+            seq.consume();
         }
     }
 
