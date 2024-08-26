@@ -210,7 +210,7 @@ namespace futils::jit::x64::coro {
         first_arg_relocation.end_offset = w.offset();
         // copy RAX to second argument register
         x64::emit_mov_reg_reg(w, x64::Register::RAX, x64::Register::RDX);
-        // copy target function to thrird argument register
+        // copy target function to third argument register
         x64::emit_mov_reg_imm(w, x64::Register::R8, std::bit_cast<std::uintptr_t>(f));
         // copy stack bottom to fourth argument register
         x64::emit_mov_reg_imm(w, x64::Register::R9, std::bit_cast<std::uintptr_t>(stack_memory.data() + stack_memory.size() - sizeof(StackBottom)));

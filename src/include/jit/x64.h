@@ -50,12 +50,16 @@ namespace futils::jit::x64 {
         NOP = 0x90,
         ADD_REG_IMM = 0x81,
         ADD_REG_REG = 0x01,
+        MUL_REG_REG = 0x0F,
         RET = 0xC3,
         CMP_REG_REG = 0x3B,
         JE_REL8 = 0x74,
         JNE_REL8 = 0x75,
         CALL_REG = 0xFF,
         JMP_REG = 0xFF,
+        SHL_CL = 0xD3,
+        MUL = 0xF7,
+        INC_REG = 0xFF,
     };
 
     enum Mod {
@@ -172,6 +176,28 @@ namespace futils::jit::x64 {
         return w.write(rex_prefix, 1) &&
                w.write(JMP_REG, 1) &&
                w.write(make_mod_rm(MOD_REG, 0b100, reg), 1);
+    }
+
+    constexpr bool emit_shl_reg_cl(binary::writer& w, Register left) {
+        auto rex_prefix = make_rex_prefix(1, 0, 0, left >= EXTENDED_REGISTER);
+        return w.write(rex_prefix, 1) &&
+               w.write(SHL_CL, 1) &&
+               w.write(make_mod_rm(MOD_REG, 0b100, left), 1);
+    }
+
+    // mul rax, rbx
+    constexpr bool emit_mul(binary::writer& w, Register right) {
+        auto rex_prefix = make_rex_prefix(1, 0, 0, 0);
+        return w.write(rex_prefix, 1) &&
+               w.write(MUL, 1) &&
+               w.write(make_mod_rm(MOD_REG, 0b100, right), 1);
+    }
+
+    constexpr bool emit_inc_reg(binary::writer& w, Register reg) {
+        auto rex_prefix = make_rex_prefix(1, 0, 0, reg >= EXTENDED_REGISTER);
+        return w.write(rex_prefix, 1) &&
+               w.write(INC_REG, 1) &&
+               w.write(make_mod_rm(MOD_REG, 0b000, reg), 1);
     }
 
 }  // namespace futils::jit::x64
