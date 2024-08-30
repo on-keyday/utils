@@ -304,7 +304,7 @@ namespace futils {
                 basic_writer<C> w{resizable_buffer_writer<T>(), &buffer, buffer};
                 w.reset(offset);
                 // exception safe
-                // to prevent #include <helper/defer.h>
+                // to prevent include <helper/defer.h>
                 struct L {
                     basic_writer<C>* w;
                     size_t* offset;

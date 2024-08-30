@@ -427,7 +427,7 @@ namespace futils {
                 basic_reader<C> r{&handler, &buffer, buffer};
                 r.reset(offset);
                 // exception safe
-                // to prevent #include <helper/defer.h>
+                // to prevent include <helper/defer.h>
                 struct L {
                     basic_reader<C>* r;
                     size_t* offset;
