@@ -7,7 +7,7 @@
 
 #pragma once
 #include <view/iovec.h>
-#include "contract.h"
+#include <binary/contract.h>
 namespace futils {
     namespace binary {
 
