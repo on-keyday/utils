@@ -1354,6 +1354,7 @@ namespace futils {
                 else {
                     apply_0RTT_transport_parameter();
                 }
+                logger.debug("client handshake start");
                 return true;
             }
 
@@ -1377,6 +1378,7 @@ namespace futils {
                 connIDs.set_original_dst_id(original_dst_id, retry_src_conn_id);
                 // needless to call tls.accept here
                 // because no handshake data is available here
+                logger.debug("server handshake start");
                 return true;
             }
 
