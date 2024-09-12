@@ -77,6 +77,41 @@ namespace futils {
             }
         };
 
+        template <class T>
+        concept resizable = requires(T t) {
+            t.resize(1);
+        };
+
+        struct maybe_resizable_buffer {
+            view::wvec buffer;
+
+            void (*resize_)(void* ctx, std::size_t size, view::wvec& buffer) = nullptr;
+            void* ctx = nullptr;
+
+           private:
+            template <class T>
+            static void resize_stub(void* ctx, std::size_t size, view::wvec& buffer) {
+                auto self = static_cast<T*>(ctx);
+                self->resize(size);
+                buffer = view::wvec{self->data(), self->size()};
+            }
+
+           public:
+            constexpr maybe_resizable_buffer() = default;
+            constexpr maybe_resizable_buffer(view::wvec buffer)
+                : buffer(buffer) {}
+
+            template <resizable T, helper_disable_self(maybe_resizable_buffer, T)>
+            constexpr maybe_resizable_buffer(T&& buffer)
+                : buffer(buffer), resize_(&resize_stub<std::decay_t<T>>), ctx(std::addressof(buffer)) {}
+
+            void resize(std::size_t size) {
+                if (resize_) {
+                    resize_(ctx, size, buffer);
+                }
+            }
+        };
+
         // Context is QUIC connection context suite
         // this class handles single connection both client and server
         // this class has no interest in about ip address and port
@@ -638,15 +673,16 @@ namespace futils {
                 return true;
             }
 
-            binary::writer prepare_writer(flex_storage* external_buffer, std::uint64_t bufsize) {
-                if (!external_buffer) {
-                    external_buffer = &packet_creation_buffer;
+            binary::writer prepare_writer(maybe_resizable_buffer external_buffer, std::uint64_t bufsize) {
+                external_buffer.resize(bufsize);
+                if (external_buffer.buffer.size() >= bufsize) {
+                    return binary::writer{external_buffer.buffer.substr(0, bufsize)};
                 }
-                external_buffer->resize(bufsize);
-                return binary::writer{*external_buffer};
+                packet_creation_buffer.resize(bufsize);
+                return binary::writer{packet_creation_buffer};
             }
 
-            std::pair<view::rvec, bool> create_encrypted_packet(bool on_close, flex_storage* external_buffer) {
+            std::pair<view::rvec, bool> create_encrypted_packet(bool on_close, maybe_resizable_buffer external_buffer) {
                 if (!status.is_server()) {
                     // on client drop 0-RTT key if 1-RTT key is installed
                     crypto.maybe_drop_0rtt();
@@ -705,7 +741,7 @@ namespace futils {
 
             // creates PATH_CHALLANGE
             // maybe change writing_path
-            std::pair<view::rvec, bool> create_path_probe_packet(flex_storage* external_buffer) {
+            std::pair<view::rvec, bool> create_path_probe_packet(maybe_resizable_buffer external_buffer) {
                 if (!status.handshake_confirmed() ||
                     !crypto.write_installed(PacketType::OneRTT) ||
                     !status.can_send(status::PacketNumberSpace::application)) {
@@ -728,7 +764,7 @@ namespace futils {
                 return {w.written(), true};
             }
 
-            std::pair<view::rvec, bool> create_mtu_probe_packet(flex_storage* external_buffer) {
+            std::pair<view::rvec, bool> create_mtu_probe_packet(maybe_resizable_buffer external_buffer) {
                 const bool has_onertt = crypto.write_installed(PacketType::OneRTT) &&
                                         status.can_send(status::PacketNumberSpace::application);
                 if (!has_onertt) {
@@ -754,7 +790,7 @@ namespace futils {
                 return {probe, true};
             }
 
-            std::pair<view::rvec, bool> create_connection_close_packet(flex_storage* external_buffer) {
+            std::pair<view::rvec, bool> create_connection_close_packet(maybe_resizable_buffer external_buffer) {
                 const auto d = close_lock();
                 if (!closer.has_error()) {
                     return {{}, true};  // nothing to do
@@ -1347,7 +1383,7 @@ namespace futils {
             // if idle is false, connection is terminated
             // thread unsafe call
             // returns (payload,path_id,idle)
-            std::tuple<view::rvec, path::PathID, bool> create_udp_payload(flex_storage* external_buffer = nullptr) {
+            std::tuple<view::rvec, path::PathID, bool> create_udp_payload(maybe_resizable_buffer external_buffer = {}) {
                 auto create_close = [&] {
                     auto [payload, idle] = create_connection_close_packet(external_buffer);
                     return std::tuple{payload, path_verifier.get_writing_path(), idle};

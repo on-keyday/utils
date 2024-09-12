@@ -44,7 +44,7 @@ namespace futils {
                 bool ok = false;
                 while (true) {
                     binary::reader r{recv_buffer};
-                    auto err = frame::parse_frame(r, conn.state.recv.settings.max_frame_size, [&](const auto& f, const frame::UnknownFrame&, Error err) {
+                    auto err = frame::parse_frame(r, conn.state.recv_settings().max_frame_size, [&](const auto& f, const frame::UnknownFrame&, Error err) {
                         ok = true;
                         if constexpr (std::is_same_v<decltype(f), const frame::UnknownFrame&>) {
                             return no_error;  // ignore

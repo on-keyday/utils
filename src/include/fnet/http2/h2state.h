@@ -766,6 +766,10 @@ namespace futils {
                 return send.settings;
             }
 
+            constexpr setting::PredefinedSettings recv_settings() const {
+                return recv.settings;
+            }
+
             constexpr Error on_recv_frame(const frame::Frame& f) {
                 if (auto err = recv.on_frame(f, send)) {
                     return err;

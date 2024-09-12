@@ -74,11 +74,11 @@ namespace futils {
             // returns (payload,idle)
             std::tuple<view::rvec, path::PathID, bool> create_packet(flex_storage& buf) override {
                 const auto d = lock();
-                auto v = ctx.create_udp_payload(&buf);
+                auto v = ctx.create_udp_payload(buf);
                 next_deadline = ctx.get_earliest_deadline();
                 if (ctx.is_closed()) {
                     closed = true;
-                    return {{}, path::original_path, false};  // trnasfer to ClosedContext
+                    return {{}, path::original_path, false};  // transfer to ClosedContext
                 }
                 return v;
             }

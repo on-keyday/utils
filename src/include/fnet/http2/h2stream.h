@@ -37,7 +37,7 @@ namespace futils {
                     auto header = [&](auto&& key, auto&& value) {
                         header.push_back({std::forward<decltype(key)>(key), std::forward<decltype(value)>(value)});
                     };
-                    auto err = hpack::decode<flex_storage>(payload, c->decode_table, header, table_size_limit, c->state.recv.settings.max_header_table_size);
+                    auto err = hpack::decode<flex_storage>(payload, c->decode_table, header, table_size_limit, c->state.recv_settings().max_header_table_size);
                     if (err != hpack::HpackError::none) {
                         return Error{H2Error::compression};
                     }
