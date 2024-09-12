@@ -98,6 +98,7 @@ namespace futils {
                 constexpr TLSConfig() = default;
                 constexpr TLSConfig(TLSConfig&& conf)
                     : ctx(std::exchange(conf.ctx, nullptr)) {}
+                TLSConfig(const TLSConfig& conf);
                 ~TLSConfig();
                 TLSConfig& operator=(TLSConfig&& conf) {
                     if (this == &conf) {

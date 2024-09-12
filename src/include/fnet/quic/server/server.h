@@ -289,9 +289,10 @@ namespace futils {
                 config.connid_parameters.exporter.mux = this->weak_from_this();
             }
 
-            const context::Config& get_config(std::shared_ptr<context::Context<TConfig>> ptr, path::PathID id) {
-                config.connid_parameters.exporter.obj = std::move(ptr);
-                config.path_parameters.original_path = id;
+            context::Config get_config(std::shared_ptr<context::Context<TConfig>> ptr, path::PathID id) {
+                auto copy = config;
+                copy.connid_parameters.exporter.obj = std::move(ptr);
+                copy.path_parameters.original_path = id;
                 return config;
             }
 

@@ -188,6 +188,13 @@ namespace futils {
             return conf;
         }
 
+        TLSConfig::TLSConfig(const TLSConfig& conf) {
+            if (conf.ctx) {
+                lazy::ssl::SSL_CTX_up_ref_(static_cast<ssl_import::SSL_CTX*>(conf.ctx));
+                this->ctx = conf.ctx;
+            }
+        }
+
         TLSConfig& TLSConfig::operator=(const TLSConfig& conf) {
             if (this->ctx == conf.ctx) {
                 return *this;
