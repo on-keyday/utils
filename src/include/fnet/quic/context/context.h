@@ -180,6 +180,7 @@ namespace futils {
             void recv_close(const frame::ConnectionCloseFrame& conn_close) {
                 const auto d = close_lock();
                 if (closer.recv(conn_close)) {
+                    logger.debug("connection close: CONNECTION_CLOSE by peer");
                     closed.store(close::CloseReason::close_by_remote);  // remote close
                 }
             }
@@ -815,6 +816,7 @@ namespace futils {
                 }
                 closer.on_close_packet_sent(packet);
                 status.set_close_timer();
+                logger.debug("connection close: CONNECTION_CLOSE by local");
                 closed.store(
                     closer.error_type() == close::ErrorType::app
                         ? close::CloseReason::close_by_local_app
