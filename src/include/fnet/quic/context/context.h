@@ -1500,16 +1500,19 @@ namespace futils {
                 ctx.active_path = path_verifier.get_writing_path();
                 switch (closed.load()) {
                     case close::CloseReason::not_closed:
+                        logger.debug("warning: expose_closed_context is called but connection is not closed");
                         return false;
                     case close::CloseReason::idle_timeout:
                     case close::CloseReason::handshake_timeout:
                         ctx.clock = status.clock();
                         ctx.close_timeout.set_deadline(ctx.clock.now());
+                        logger.debug("expose close context: idle or handshake timeout");
                         return false;
                     default:
                         break;
                 }
                 ctx = closer.expose_closed_context(status.clock(), status.get_close_deadline());
+                logger.debug("expose close context: normal close");
                 return true;
             }
 
