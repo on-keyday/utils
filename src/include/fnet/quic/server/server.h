@@ -286,6 +286,7 @@ namespace futils {
 
             void setup_config() {
                 config.server = true;
+                config.connid_parameters.exporter.exporter = &this->exporter_fn;
                 config.connid_parameters.exporter.mux = this->weak_from_this();
             }
 
