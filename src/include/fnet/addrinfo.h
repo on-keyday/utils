@@ -31,7 +31,7 @@ namespace futils {
             void* select;
             friend struct WaitAddrInfo;
             constexpr AddrInfo(void* root)
-                : root(root), select(nullptr){};
+                : root(root), select(nullptr) {};
 
            public:
             constexpr AddrInfo(AddrInfo&& in)
@@ -103,7 +103,7 @@ namespace futils {
         [[nodiscard]] fnet_dll_export(expected<WaitAddrInfo>) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr);
 
         // this invokes resolve_address with attr.flag|=AI_PASSIVE and hostname = {}
-        [[nodiscard]] fnet_dll_export(expected<WaitAddrInfo>) get_self_server_address(view::rvec port, SockAttr attr);
+        [[nodiscard]] fnet_dll_export(expected<WaitAddrInfo>) get_self_server_address(view::rvec port, SockAttr attr, view::rvec hostname = {});
 
         // this invokes resolve_address with hostname=gethostname()
         [[nodiscard]] fnet_dll_export(expected<WaitAddrInfo>) get_self_host_address(view::rvec port, SockAttr attr);

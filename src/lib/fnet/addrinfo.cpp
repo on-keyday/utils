@@ -360,9 +360,9 @@ namespace futils {
             return WaitAddrInfo{obj};
         }
 
-        fnet_dll_implement(expected<WaitAddrInfo>) get_self_server_address(view::rvec port, SockAttr attr) {
+        fnet_dll_implement(expected<WaitAddrInfo>) get_self_server_address(view::rvec port, SockAttr attr, view::rvec hostname) {
             attr.flag |= AI_PASSIVE;
-            return resolve_address({}, port, attr);
+            return resolve_address(hostname, port, attr);
         }
 
         fnet_dll_export(expected<WaitAddrInfo>) get_self_host_address(view::rvec port, SockAttr attr) {
