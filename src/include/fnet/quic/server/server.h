@@ -294,7 +294,7 @@ namespace futils {
                 auto copy = config;
                 copy.connid_parameters.exporter.obj = std::move(ptr);
                 copy.path_parameters.original_path = id;
-                return config;
+                return copy;
             }
 
            public:
