@@ -68,16 +68,9 @@ namespace futils {
             bool discard = false;
             Lock l;
 
-            auto lock() {
-                l.lock();
-                return helper::defer([&] {
-                    l.unlock();
-                });
-            }
-
             // returns (payload,idle)
             std::tuple<view::rvec, path::PathID, bool> create_packet(context::maybe_resizable_buffer buf) override {
-                const auto d = lock();
+                const auto d = helper::lock(l);
                 auto v = ctx.create_udp_payload(buf);
                 next_deadline = ctx.get_earliest_deadline();
                 if (ctx.is_closed()) {
@@ -88,7 +81,7 @@ namespace futils {
             }
 
             bool handle_packet(view::wvec payload, path::PathID id) override {
-                const auto d = lock();
+                const auto d = helper::lock(l);
                 if (discard) {
                     return false;
                 }
@@ -98,7 +91,7 @@ namespace futils {
             }
 
             std::shared_ptr<Handler> next_handler() override {
-                const auto d = lock();
+                const auto d = helper::lock(l);
                 if (!closed || discard) {
                     return nullptr;
                 }
@@ -312,7 +305,7 @@ namespace futils {
             }
 
             void add_new_conn(view::rvec origDst, view::wvec d, path::PathID pid) {
-                std::shared_ptr<Opened<TConfig>> opened = std::allocate_shared<Opened<TConfig>>(glheap_allocator<Opened<TConfig>>{});
+                std::shared_ptr<Opened<TConfig>> opened = Opened<TConfig>::create();
                 Opened<TConfig>* ptr = opened.get();
                 auto rel = std::shared_ptr<context::Context<TConfig>>(opened, &ptr->ctx);
                 if (!ptr->ctx.init(get_config(rel, pid))) {
@@ -321,8 +314,7 @@ namespace futils {
                 if (!ptr->ctx.accept_start(origDst)) {
                     return;  // failed to accept
                 }
-                ptr->ctx.set_mux_ptr(opened);
-                ptr->ctx.parse_udp_payload(d, pid);
+                ptr->handle_packet(d, pid);
                 send_que.enque(opened, false);
                 handlers.add(opened);
             }
