@@ -311,10 +311,13 @@ namespace futils {
                 if (!ptr->ctx.init(get_config(rel, pid))) {
                     return;  // failed to init
                 }
-                if (!ptr->ctx.accept_start(origDst)) {
-                    return;  // failed to accept
+                {
+                    const auto l = helper::lock(ptr->l);
+                    if (!ptr->ctx.accept_start(origDst)) {
+                        return;  // failed to accept
+                    }
+                    ptr->ctx.parse_udp_payload(d, pid);
                 }
-                ptr->handle_packet(d, pid);
                 send_que.enque(opened, false);
                 handlers.add(opened);
             }
