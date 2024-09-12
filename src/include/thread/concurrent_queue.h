@@ -35,6 +35,16 @@ namespace futils::thread {
             tail.store(node);
         }
 
+        ~MultiProduceSingleConsumeQueue() {
+            auto node = head.load();
+            while (node) {
+                auto next = node->next.load();
+                traits::destroy(allocator, node);
+                traits::deallocate(allocator, node, 1);
+                node = next;
+            }
+        }
+
         // called by the producer (multi thread)
         void push(T&& data) {
             auto node = traits::allocate(allocator, 1);
@@ -73,6 +83,16 @@ namespace futils::thread {
             traits::construct(allocator, node, QueueNode<T>{nullptr, T{}});
             head.store(node);
             tail.store(node);
+        }
+
+        ~SingleProduceMultiConsumeQueue() {
+            auto node = head.load();
+            while (node) {
+                auto next = node->next.load();
+                traits::destroy(allocator, node);
+                traits::deallocate(allocator, node, 1);
+                node = next;
+            }
         }
 
         // called by the producer (single thread)

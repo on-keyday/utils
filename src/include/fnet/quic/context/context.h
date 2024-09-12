@@ -1057,6 +1057,7 @@ namespace futils {
                 if (!handle_on_initial(summary)) {
                     return false;
                 }
+                connIDs.maybe_retire_original_dst_id(summary.dstID);
                 binary::reader r{payload};
                 packet::PacketStatus pstatus;
                 if (!frame::parse_frames<slib::vector>(r, [&](frame::Frame& f, bool err) {
@@ -1355,10 +1356,10 @@ namespace futils {
             }
 
             // thread unsafe call
-            // if before_retry_src_conn_id is not null, it is set to initial_src_connection_id
+            // if retry_src_conn_id is not null, it is set to initial_src_connection_id
             // and next initial packet's src connection id will be retry_src_connection_id
             // otherwise next initial packet's src connection id will be initial_src_connection_id
-            bool accept_start(view::rvec original_dst_id, view::rvec before_retry_src_conn_id = {}) {
+            bool accept_start(view::rvec original_dst_id, view::rvec retry_src_conn_id = {}) {
                 if (status.handshake_started()) {
                     return false;
                 }
@@ -1367,10 +1368,11 @@ namespace futils {
                 }
                 status.on_handshake_start();
                 params.local.original_dst_connection_id = original_dst_id;
-                if (!before_retry_src_conn_id.null()) {
-                    params.local.initial_src_connection_id = before_retry_src_conn_id;
+                if (!retry_src_conn_id.null()) {
+                    params.local.retry_src_connection_id = retry_src_conn_id;
                     status.set_retry_sent();
                 }
+                connIDs.set_original_dst_id(original_dst_id, retry_src_conn_id);
                 // needless to call tls.accept here
                 // because no handshake data is available here
                 return true;

@@ -14,14 +14,18 @@
 #include <tuple>
 #include <queue>
 #include "../path/addrmanage.h"
+#include <thread/concurrent_queue.h>
 
 namespace futils {
     namespace fnet::quic::server {
+
+        using BytesChannel = thread::MultiProducerChannelBuffer<storage, glheap_allocator<storage>>;
+
         struct Handler {
             std::atomic<std::int64_t> next_deadline = -1;
 
             // returns (payload,idle)
-            virtual std::tuple<view::rvec, path::PathID, bool> create_packet(flex_storage& buf) = 0;
+            virtual std::tuple<view::rvec, path::PathID, bool> create_packet(context::maybe_resizable_buffer buf) = 0;
 
             // returns (should_send)
             virtual bool handle_packet(view::wvec payload, path::PathID pid) = 0;
@@ -35,7 +39,7 @@ namespace futils {
             close::ClosedContext ctx;
             slib::vector<connid::CloseID> ids;
             // returns (payload,idle)
-            std::tuple<view::rvec, path::PathID, bool> create_packet(flex_storage&) override {
+            std::tuple<view::rvec, path::PathID, bool> create_packet(context::maybe_resizable_buffer) override {
                 next_deadline = ctx.close_timeout.get_deadline();
                 auto [payload, idle] = ctx.create_udp_payload();
                 return {
@@ -72,7 +76,7 @@ namespace futils {
             }
 
             // returns (payload,idle)
-            std::tuple<view::rvec, path::PathID, bool> create_packet(flex_storage& buf) override {
+            std::tuple<view::rvec, path::PathID, bool> create_packet(context::maybe_resizable_buffer buf) override {
                 const auto d = lock();
                 auto v = ctx.create_udp_payload(buf);
                 next_deadline = ctx.get_earliest_deadline();
@@ -119,7 +123,7 @@ namespace futils {
         struct ZeroRTTBuffer : Handler {
             storage src_conn_id;
             storage dst_conn_id;
-            std::tuple<view::rvec, path::PathID, bool> create_packet(flex_storage& buf) override {
+            std::tuple<view::rvec, path::PathID, bool> create_packet(context::maybe_resizable_buffer) override {
                 return {{}, path::original_path, true};
             }
 
@@ -394,7 +398,7 @@ namespace futils {
 
             // thread safe call
             // call by multiple thread not make error
-            std::tuple<view::rvec, NetAddrPort, bool> create_packet(flex_storage& buffer) {
+            std::tuple<view::rvec, NetAddrPort, bool> create_packet(context::maybe_resizable_buffer buffer) {
                 while (true) {
                     auto handler = send_que.deque();
                     if (!handler) {

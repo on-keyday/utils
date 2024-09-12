@@ -41,6 +41,7 @@ namespace futils {
             byte concurrent_limit = 0;
             ConnIDExporter exporter;
             std::int64_t retire_proior_to_id = 0;
+            bool originalRetired = false;
 
            public:
             void reset(const ConnIDExporter& exp, byte conn_id_len, byte conc_limit) {
@@ -52,6 +53,7 @@ namespace futils {
                 connID_len = conn_id_len;
                 concurrent_limit = conc_limit;
                 exporter = exp;
+                originalRetired = false;
             }
 
             // expose_close_ids expose connIDs to close
@@ -62,6 +64,31 @@ namespace futils {
                     CloseID c{.id = std::move(exp.id)};
                     view::copy(c.token, exp.stateless_reset_token);
                     ids.push_back(std::move(c));
+                }
+            }
+
+            void on_server_handshake_start(InitialRetry& iniret, view::rvec originalDstID, view::rvec retrySrcID) {
+                if (originalDstID.size() == 0) {
+                    return;
+                }
+                iniret.set_initial(originalDstID);
+                // added until initial source connection ID is confirmed
+                if (!retrySrcID.null()) {
+                    iniret.set_retry(retrySrcID);
+                    exporter.add(retrySrcID, null_stateless_reset);
+                }
+                else {
+                    exporter.add(originalDstID, null_stateless_reset);
+                }
+            }
+
+            void maybe_retire_original_dst_id(InitialRetry& iniret, view::rvec dstID) {
+                if (originalRetired || dstID.size() == 0) {
+                    return;
+                }
+                if (iniret.get_initial_or_retry() != dstID) {
+                    exporter.retire(iniret.get_initial_or_retry(), null_stateless_reset);
+                    originalRetired = true;
                 }
             }
 

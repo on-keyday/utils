@@ -133,6 +133,14 @@ namespace futils {
                 return retry_random;
             }
 
+            void set_initial(view::rvec id) {
+                initial_random = make_storage(id);
+            }
+
+            void set_retry(view::rvec id) {
+                retry_random = make_storage(id);
+            }
+
             view::rvec get_initial_or_retry() const {
                 if (has_retry()) {
                     return retry_random;

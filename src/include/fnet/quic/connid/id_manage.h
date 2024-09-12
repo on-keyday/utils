@@ -36,6 +36,15 @@ namespace futils {
                 iniret.reset();
             }
 
+            // for first time server received packet
+            void set_original_dst_id(view::rvec origDstID, view::rvec retrySrc) {
+                issuer.on_server_handshake_start(iniret, origDstID, retrySrc);
+            }
+
+            void maybe_retire_original_dst_id(view::rvec dstID) {
+                issuer.maybe_retire_original_dst_id(iniret, dstID);
+            }
+
             Random& random() {
                 return cparam.random;
             }
