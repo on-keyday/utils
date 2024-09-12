@@ -1057,7 +1057,9 @@ namespace futils {
                 if (!handle_on_initial(summary)) {
                     return false;
                 }
-                connIDs.maybe_retire_original_dst_id(summary.dstID);
+                if (status.is_server()) {
+                    connIDs.maybe_retire_original_dst_id(summary.dstID);
+                }
                 binary::reader r{payload};
                 packet::PacketStatus pstatus;
                 if (!frame::parse_frames<slib::vector>(r, [&](frame::Frame& f, bool err) {
