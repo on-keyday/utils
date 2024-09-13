@@ -155,12 +155,12 @@ namespace futils {
                 auto next = std::allocate_shared<Closed<Lock>>(glheap_allocator<Closed<Lock>>{});
                 next->ids = std::move(ids);
                 next->ctx = std::move(c);
-                if (auto mux = next->ctx.get_multiplexer_ptr()) {
+                if (auto mux = this->ctx.get_multiplexer_ptr().lock()) {
                     auto ptr = std::static_pointer_cast<HandlerMap<TConfig>>(mux);
                     auto conn_id = std::shared_ptr<ConnIDMap<Lock>>(ptr, &ptr->conn_ids);
                     conn_id->replace_ids(next->ids, next);
                     next->connid_map = conn_id;
-                    auto obj_ptr = std::static_pointer_cast<Opened<TConfig>>(next->ctx.get_outer_self_ptr().lock());
+                    auto obj_ptr = std::static_pointer_cast<Opened<TConfig>>(this->ctx.get_outer_self_ptr().lock());
                     ptr->close_connection(std::shared_ptr<context::Context<TConfig>>(obj_ptr, &obj_ptr->ctx));
                 }
                 next->next_deadline = c.close_timeout.get_deadline();
@@ -294,13 +294,17 @@ namespace futils {
             using BidiStream = stream::impl::BidiStream<StreamTypeConfig>;
             using RecvUniStream = stream::impl::RecvUniStream<StreamTypeConfig>;
 
-           public:
+            friend struct Opened<TConfig>;
+
+            friend struct Closed<Lock>;
+
             HandlerList<Lock> handlers;
             ConnIDMap<Lock> conn_ids;
             SenderQue<Lock> send_que;
             path::ip::PathMapper paths;
             Lock path_lock;
 
+           public:
             path::PathID get_path_id(const NetAddrPort& addr) {
                 const auto l = helper::lock(path_lock);
                 return paths.get_path_id(addr);
