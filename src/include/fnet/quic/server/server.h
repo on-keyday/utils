@@ -35,6 +35,8 @@ namespace futils {
             }
         };
 
+        using HandlerPtr = std::shared_ptr<Handler>;
+
         template <class Lock>
         struct ConnIDMap {
             slib::hash_map<flex_storage, HandlerPtr> connid_maps;
@@ -165,8 +167,6 @@ namespace futils {
                 return false;
             }
         };
-
-        using HandlerPtr = std::shared_ptr<Handler>;
 
         template <class Lock>
         struct SenderQue {
