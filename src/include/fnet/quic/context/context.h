@@ -562,8 +562,9 @@ namespace futils {
                     return true;  // skip. no payload exists
                 }
                 if (!rendered) {
-                    set_error(err_creation);
-                    return false;
+                    // set_error(err_creation);
+                    // return false;
+                    return true;  // no space to write
                 }
 
                 // encrypt packet
