@@ -57,6 +57,13 @@ namespace futils {
                 }
             }
 
+            void remove_ids(auto&& ids) {
+                const auto l = helper::lock(connId_map_lock);
+                for (auto& id : ids) {
+                    connid_maps.erase(flex_storage(id.id));
+                }
+            }
+
             void remove_connID(view::rvec id) {
                 const auto l = helper::lock(connId_map_lock);
                 connid_maps.erase(flex_storage(id));
@@ -98,9 +105,7 @@ namespace futils {
 
             std::shared_ptr<Handler> next_handler() override {
                 if (auto conn_id = connid_map.lock()) {
-                    for (auto& id : ids) {
-                        conn_id->remove_connID(id.id);
-                    }
+                    conn_id->remove_ids(ids);
                 }
                 return nullptr;
             }
