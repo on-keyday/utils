@@ -1295,6 +1295,9 @@ namespace futils {
                     params.peer = {};  // reset when server; no 0-RTT exists
                 }
 
+                // setup connection IDs manager
+                connIDs.reset(config.version, std::move(config.connid_parameters));
+
                 auto local = trsparam::to_initial_limits(params.local);
 
                 // create streams
@@ -1305,9 +1308,6 @@ namespace futils {
                                                                     /*for server*/);
 
                 streams->apply_local_initial_limits(local);
-
-                // setup connection IDs manager
-                connIDs.reset(config.version, std::move(config.connid_parameters));
                 logger = std::move(config.logger);
 
                 // setup token storage
