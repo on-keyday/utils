@@ -35,9 +35,39 @@ namespace futils {
             }
         };
 
+        template <class Lock>
+        struct ConnIDMap {
+            slib::hash_map<flex_storage, HandlerPtr> connid_maps;
+            Lock connId_map_lock;
+
+            void add_connID(view::rvec id, HandlerPtr&& ptr) {
+                const auto l = helper::lock(connId_map_lock);
+                connid_maps.emplace(flex_storage(id), ptr);
+            }
+
+            void remove_connID(view::rvec id) {
+                const auto l = helper::lock(connId_map_lock);
+                connid_maps.erase(flex_storage(id));
+            }
+
+            HandlerPtr lookup(view::rvec id) {
+                const auto l = helper::lock(connId_map_lock);
+                auto found = connid_maps.find(id);
+                if (found != connid_maps.end()) {
+                    return found->second;
+                }
+                return nullptr;
+            }
+        };
+
+        template <class TConfig>
+        struct HandlerMap;
+
+        template <class Lock>
         struct Closed : Handler {
             close::ClosedContext ctx;
             slib::vector<connid::CloseID> ids;
+            std::weak_ptr<ConnIDMap<Lock>> connid_map;
             // returns (payload,idle)
             std::tuple<view::rvec, path::PathID, bool> create_packet(context::maybe_resizable_buffer) override {
                 next_deadline = ctx.close_timeout.get_deadline();
@@ -55,6 +85,11 @@ namespace futils {
             }
 
             std::shared_ptr<Handler> next_handler() override {
+                if (auto conn_id = connid_map.lock()) {
+                    for (auto& id : ids) {
+                        conn_id->remove_connID(id.id);
+                    }
+                }
                 return nullptr;
             }
         };
@@ -99,9 +134,15 @@ namespace futils {
                 slib::vector<connid::CloseID> ids;
                 ctx.expose_closed_context(c, ids);
                 discard = true;
-                auto next = std::allocate_shared<Closed>(glheap_allocator<Closed>{});
+                auto next = std::allocate_shared<Closed>(glheap_allocator<Closed<Lock>>{});
                 next->ids = std::move(ids);
                 next->ctx = std::move(c);
+                auto mux = ctx.get_mux_ptr();
+                if (mux) {
+                    auto ptr = std::static_pointer_cast<HandlerMap<TConfig>>(mux);
+                    auto conn_id = std::shared_ptr<ConnIDMap<Lock>>(ptr, &ptr->conn_ids);
+                    next->connid_map = conn_id;
+                }
                 next->next_deadline = c.close_timeout.get_deadline();
                 return next;
             }
@@ -209,31 +250,6 @@ namespace futils {
                     }
                 }
                 return;
-            }
-        };
-
-        template <class Lock>
-        struct ConnIDMap {
-            slib::hash_map<flex_storage, HandlerPtr> connid_maps;
-            Lock connId_map_lock;
-
-            void add_connID(view::rvec id, HandlerPtr&& ptr) {
-                const auto l = helper::lock(connId_map_lock);
-                connid_maps.emplace(flex_storage(id), ptr);
-            }
-
-            void remove_connID(view::rvec id) {
-                const auto l = helper::lock(connId_map_lock);
-                connid_maps.erase(flex_storage(id));
-            }
-
-            HandlerPtr lookup(view::rvec id) {
-                const auto l = helper::lock(connId_map_lock);
-                auto found = connid_maps.find(id);
-                if (found != connid_maps.end()) {
-                    return found->second;
-                }
-                return nullptr;
             }
         };
 
