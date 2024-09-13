@@ -524,7 +524,7 @@ namespace futils {
             // thread safe call
             // call by multiple thread not make error
             void notify(const std::shared_ptr<context::Context<TConfig>>& ctx) {
-                auto ptr = ctx->get_outer_self_ptr();
+                auto ptr = ctx->get_outer_self_ptr().lock();
                 if (!ptr) {
                     return;
                 }
