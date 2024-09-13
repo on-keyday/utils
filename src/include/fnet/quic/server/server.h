@@ -155,11 +155,13 @@ namespace futils {
                 auto next = std::allocate_shared<Closed<Lock>>(glheap_allocator<Closed<Lock>>{});
                 next->ids = std::move(ids);
                 next->ctx = std::move(c);
-                if (auto mux = next->ctx.multiplexer.lock()) {
+                if (auto mux = next->ctx.get_multiplexer_ptr()) {
                     auto ptr = std::static_pointer_cast<HandlerMap<TConfig>>(mux);
                     auto conn_id = std::shared_ptr<ConnIDMap<Lock>>(ptr, &ptr->conn_ids);
                     conn_id->replace_ids(next->ids, next);
                     next->connid_map = conn_id;
+                    auto obj_ptr = std::static_pointer_cast<Opened<TConfig>>(next->ctx.get_outer_self_ptr().lock());
+                    ptr->close_connection(std::shared_ptr<context::Context<TConfig>>(obj_ptr, &obj_ptr->ctx));
                 }
                 next->next_deadline = c.close_timeout.get_deadline();
                 return next;
@@ -268,6 +270,19 @@ namespace futils {
         };
 
         template <class TConfig>
+        struct ServerConfig {
+            QUIC_ctx_type(StreamTypeConfig, TConfig, stream_type_config);
+            using BidiStream = stream::impl::BidiStream<StreamTypeConfig>;
+            using RecvUniStream = stream::impl::RecvUniStream<StreamTypeConfig>;
+            std::shared_ptr<void> app_ctx = nullptr;
+            void (*init_recv_stream)(std::shared_ptr<void>&, RecvUniStream&) = nullptr;
+            void (*accept_uni_stream)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<RecvUniStream>&&) = nullptr;
+            void (*accept_bidi_stream)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<BidiStream>&&) = nullptr;
+            void (*accept_connection)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
+            void (*close_connection)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
+        };
+
+        template <class TConfig>
         struct HandlerMap : std::enable_shared_from_this<HandlerMap<TConfig>> {
             std::uint64_t id = 0;
             using Lock = typename TConfig::context_lock;
@@ -334,49 +349,43 @@ namespace futils {
                 return copy;
             }
 
-            std::shared_ptr<void> app_ctx = nullptr;
-            void (*init_recv_stream_)(std::shared_ptr<void>&, RecvUniStream&) = nullptr;
-            void (*accept_uni_stream_)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<RecvUniStream>&&) = nullptr;
-            void (*accept_bidi_stream_)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<BidiStream>&&) = nullptr;
-            void (*accept_connection_)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
+            ServerConfig<TConfig> server_config;
 
             void init_recv_stream(RecvUniStream& stream) {
-                if (init_recv_stream_) {
-                    init_recv_stream_(app_ctx, stream);
+                if (server_config.init_recv_stream) {
+                    server_config.init_recv_stream(server_config.app_ctx, stream);
                 }
             }
 
             void accept_uni_stream(std::shared_ptr<context::Context<TConfig>>&& ctx, std::shared_ptr<RecvUniStream>&& stream) {
-                if (accept_uni_stream_) {
-                    accept_uni_stream_(app_ctx, std::move(ctx), std::move(stream));
+                if (server_config.accept_uni_stream) {
+                    server_config.accept_uni_stream(server_config.app_ctx, std::move(ctx), std::move(stream));
                 }
             }
 
             void accept_bidi_stream(std::shared_ptr<context::Context<TConfig>>&& ctx, std::shared_ptr<BidiStream>&& stream) {
-                if (accept_bidi_stream_) {
-                    accept_bidi_stream_(app_ctx, std::move(ctx), std::move(stream));
+                if (server_config.accept_bidi_stream) {
+                    server_config.accept_bidi_stream(server_config.app_ctx, std::move(ctx), std::move(stream));
                 }
             }
 
             void accept_connection(std::shared_ptr<context::Context<TConfig>>&& ctx) {
-                if (accept_connection_) {
-                    accept_connection_(app_ctx, std::move(ctx));
+                if (server_config.accept_connection) {
+                    server_config.accept_connection(server_config.app_ctx, std::move(ctx));
+                }
+            }
+
+            void close_connection(std::shared_ptr<context::Context<TConfig>>&& ctx) {
+                if (server_config.close_connection) {
+                    server_config.close_connection(server_config.app_ctx, std::move(ctx));
                 }
             }
 
            public:
             void set_config(context::Config&& conf,
-                            std::shared_ptr<void> app_ctx = nullptr,
-                            void (*init_recv_stream)(std::shared_ptr<void>&, RecvUniStream&) = nullptr,
-                            void (*accept_uni_stream)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<RecvUniStream>&&) = nullptr,
-                            void (*accept_bidi_stream)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<BidiStream>&&) = nullptr,
-                            void (*accept_connection)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr) {
+                            ServerConfig server_config = {}) {
                 config = std::move(conf);
-                this->app_ctx = app_ctx;
-                this->init_recv_stream_ = init_recv_stream;
-                this->accept_uni_stream_ = accept_uni_stream;
-                this->accept_bidi_stream_ = accept_bidi_stream;
-                this->accept_connection_ = accept_connection;
+                this->server_config = std::move(server_config);
                 setup_config();
             }
 

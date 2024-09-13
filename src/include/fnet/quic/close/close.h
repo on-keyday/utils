@@ -62,8 +62,6 @@ namespace futils {
             flags::CloseFlag flag;
             path::PathID active_path;
             time::Clock clock;
-            // this may refer multiplexer object
-            std::weak_ptr<void> multiplexer;
 
             std::pair<view::rvec, bool> create_udp_payload() {
                 // not_working means already closed or timeout

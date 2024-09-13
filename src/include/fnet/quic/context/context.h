@@ -1525,7 +1525,6 @@ namespace futils {
                     case close::CloseReason::handshake_timeout:
                         ctx.clock = status.clock();
                         ctx.close_timeout.set_deadline(ctx.clock.now());
-                        ctx.multiplexer = get_multiplexer_ptr();
                         ctx.active_path = path_verifier.get_writing_path();
                         logger.debug("expose close context: idle or handshake timeout");
                         return false;
@@ -1533,7 +1532,6 @@ namespace futils {
                         break;
                 }
                 ctx = closer.expose_closed_context(status.clock(), status.get_close_deadline());
-                ctx.multiplexer = get_multiplexer_ptr();
                 ctx.active_path = path_verifier.get_writing_path();
                 logger.debug("expose close context: normal close");
                 return true;
