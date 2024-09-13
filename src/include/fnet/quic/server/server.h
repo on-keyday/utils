@@ -416,6 +416,9 @@ namespace futils {
                 std::shared_ptr<Opened<TConfig>> opened = Opened<TConfig>::create();
                 Opened<TConfig>* ptr = opened.get();
                 auto rel = std::shared_ptr<context::Context<TConfig>>(opened, &ptr->ctx);
+                if (!ptr->ctx.init(get_config(rel, pid))) {
+                    return;  // failed to init
+                }
                 ConnHandler* handler = ptr->ctx.get_streams()->get_conn_handler();
                 handler->set_arg(std::static_pointer_cast<void>(rel));
                 handler->set_open_bidi(+[](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
@@ -442,9 +445,7 @@ namespace futils {
                     multiplexer->init_recv_stream(*stream);
                     multiplexer->accept_uni_stream(std::move(ptr), std::move(stream));
                 });
-                if (!ptr->ctx.init(get_config(rel, pid))) {
-                    return;  // failed to init
-                }
+
                 {
                     const auto l = helper::lock(ptr->l);
                     if (!ptr->ctx.accept_start(origDst)) {
