@@ -136,7 +136,7 @@ namespace futils {
                 slib::vector<connid::CloseID> ids;
                 ctx.expose_closed_context(c, ids);
                 discard = true;
-                auto next = std::allocate_shared<Closed>(glheap_allocator<Closed<Lock>>{});
+                auto next = std::allocate_shared<Closed<Lock>>(glheap_allocator<Closed<Lock>>{});
                 next->ids = std::move(ids);
                 next->ctx = std::move(c);
                 auto mux = ctx.get_mux_ptr();
