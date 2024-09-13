@@ -67,7 +67,8 @@ namespace futils {
             std::weak_ptr<void> exporter_mux;
 
             std::pair<view::rvec, bool> create_udp_payload() {
-                if (close_timeout.timeout(clock)) {
+                // not_working means already closed or timeout
+                if (close_timeout.not_working() || close_timeout.timeout(clock)) {
                     return {{}, false};
                 }
                 if (flag.sent() && flag.should_send_again()) {
