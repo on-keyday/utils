@@ -175,6 +175,7 @@ namespace futils {
             void set_quic_runtime_error(auto&& err) {
                 const auto d = close_lock();
                 closer.on_error(std::move(err), close::ErrorType::runtime);
+                logger.report_error(closer.get_error());
             }
 
             void recv_close(const frame::ConnectionCloseFrame& conn_close) {
@@ -182,6 +183,7 @@ namespace futils {
                 if (closer.recv(conn_close)) {
                     logger.debug("connection close: CONNECTION_CLOSE by peer");
                     closed.store(close::CloseReason::close_by_remote);  // remote close
+                    logger.report_error(closer.get_error());
                 }
             }
 
@@ -1208,6 +1210,7 @@ namespace futils {
                     err = std::move(q);
                 }
                 closer.on_error(std::move(err), close::ErrorType::app);
+                logger.report_error(closer.get_error());
             }
 
             // thread unsafe call
