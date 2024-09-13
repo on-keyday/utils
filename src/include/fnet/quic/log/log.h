@@ -20,7 +20,7 @@ namespace futils {
         struct ConnLogCallbacks {
             void (*drop_packet)(std::shared_ptr<void>&, PacketType, packetnum::Value, error::Error, view::rvec raw_packet, bool is_decrypted) = nullptr;
             void (*debug)(std::shared_ptr<void>&, const char*) = nullptr;
-            void (*report_error)(const error::Error&) = nullptr;
+            void (*report_error)(std::shared_ptr<void>&, const error::Error&) = nullptr;
             void (*sending_packet)(std::shared_ptr<void>&, packet::PacketSummary, view::rvec payload, bool is_send /*always true*/) = nullptr;
             void (*recv_packet)(std::shared_ptr<void>&, packet::PacketSummary, view::rvec payload, bool is_send /*always false*/) = nullptr;
             void (*pto_fire)(std::shared_ptr<void>&, status::PacketNumberSpace) = nullptr;
@@ -83,7 +83,7 @@ namespace futils {
 
             void report_error(const error::Error& err) {
                 if (callbacks && callbacks->report_error) {
-                    callbacks->report_error(err);
+                    callbacks->report_error(ctx, err);
                 }
             }
         };
