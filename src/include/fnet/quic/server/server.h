@@ -422,7 +422,6 @@ namespace futils {
                     auto ptr = std::static_pointer_cast<context::Context<TConfig>>(arg);
                     auto multiplexer = std::static_pointer_cast<HandlerMap<TConfig>>(ptr->get_multiplexer_ptr().lock());
                     multiplexer->init_recv_stream(*stream);
-                    multiplexer->init_send_stream(stream->sender);
                     multiplexer->accept_uni_stream(std::move(ptr), std::move(stream));
                 });
                 if (!ptr->ctx.init(get_config(rel, pid))) {
