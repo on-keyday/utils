@@ -58,15 +58,25 @@ namespace futils {
 
             // expose_close_ids expose connIDs to close
             // after call this, IDIssuer is invalid
-            // returns exporter.mux
-            std::weak_ptr<void> expose_close_data(auto&& ids) {
+            void expose_close_data(auto&& ids) {
                 for (auto&& s : srcids) {
                     IDStorage& exp = s.second;
                     CloseID c{.id = std::move(exp.id)};
                     view::copy(c.token, exp.stateless_reset_token);
                     ids.push_back(std::move(c));
                 }
+            }
+
+            std::weak_ptr<void> get_exporter_mux() const {
                 return exporter.mux;
+            }
+
+            void set_exporter_obj(std::shared_ptr<void>&& obj) {
+                exporter.obj = std::move(obj);
+            }
+
+            std::weak_ptr<void> get_exporter_obj() const {
+                return exporter.obj;
             }
 
             void on_server_handshake_start(InitialRetry& iniret, view::rvec originalDstID, view::rvec retrySrcID) {

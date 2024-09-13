@@ -306,5 +306,6 @@ namespace futils {
             s->update_prev_read(n);
             return lim.current_limit() + increment;
         }
+
     }  // namespace fnet::quic::stream::impl
 }  // namespace futils

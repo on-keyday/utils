@@ -14,7 +14,7 @@
 #include <env/env_sys.h>
 namespace fnet = futils::fnet;
 namespace quic = futils::fnet::quic;
-using HandlerMap = quic::server::HandlerMap<quic::use::rawptr::DefaultTypeConfig>;
+using HandlerMap = quic::server::HandlerMap<quic::use::smartptr::DefaultTypeConfig>;
 
 struct ServerContext {
     std::shared_ptr<HandlerMap> hm;

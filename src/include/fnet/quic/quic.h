@@ -14,6 +14,7 @@
 #include "context/default.h"
 #include "context/typeconfig.h"
 #include "stream/impl/recv_stream.h"
+#include "stream/impl/set_receiver.h"
 #include <mutex>
 
 namespace futils {
@@ -30,21 +31,6 @@ namespace futils {
         using Reader = stream::impl::RecvSorter<std::mutex>;
 
         using FlowLimiter = stream::core::Limiter;
-
-        template <class TConfig, class Lock = typename TConfig::recv_stream_lock>
-        std::shared_ptr<stream::impl::RecvSorter<Lock>> set_stream_reader(stream::impl::RecvUniStream<TConfig>& r, bool use_auto_update = false) {
-            auto read = std::allocate_shared<stream::impl::RecvSorter<Lock>>(glheap_allocator<stream::impl::RecvSorter<Lock>>{});
-            using Saver = typename TConfig::stream_handler::recv_buf;
-            if (use_auto_update) {
-                r.set_receiver(Saver(read,
-                                     stream::impl::reader_recv_handler<Lock, TConfig>,
-                                     stream::impl::reader_auto_updater<Lock, TConfig>));
-            }
-            else {
-                r.set_receiver(Saver(read, stream::impl::reader_recv_handler<Lock, TConfig>));
-            }
-            return read;
-        }
 
         using AppError = quic::AppError;
 
@@ -77,16 +63,16 @@ namespace futils {
                 auto cb = std::allocate_shared<AcceptT>(glheap_allocator<AcceptT>(), std::move(accept_callback));
                 h->set_arg(std::move(cb));
                 h->set_open_bidi([](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
-                    set_stream_reader(stream->receiver, auto_update);
+                    stream::impl::set_stream_reader(stream->receiver, auto_update);
                 });
                 h->set_accept_bidi([](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
                     auto cb = static_cast<AcceptT*>(arg.get());
-                    set_stream_reader(stream->receiver, auto_update);
+                    stream::impl::set_stream_reader(stream->receiver, auto_update);
                     (*cb)(stream);
                 });
                 h->set_accept_uni([](std::shared_ptr<void>& arg, std::shared_ptr<RecvStream> stream) {
                     auto cb = static_cast<AcceptT*>(arg.get());
-                    set_stream_reader(*stream, auto_update);
+                    stream::impl::set_stream_reader(*stream, auto_update);
                     (*cb)(stream);
                 });
                 return ctx;

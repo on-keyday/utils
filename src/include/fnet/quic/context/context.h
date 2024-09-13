@@ -1229,6 +1229,21 @@ namespace futils {
                 return datagrams;
             }
 
+            // thread unsafe call
+            auto get_multiplexer_ptr() const {
+                return connIDs.get_exporter_mux();
+            }
+
+            // thread unsafe call
+            void set_outer_self_ptr(std::weak_ptr<void>&& m) {
+                connIDs.set_exporter_obj(std::move(m));
+            }
+
+            // thread unsafe call
+            auto get_outer_self_ptr() const {
+                return connIDs.get_exporter_obj();
+            }
+
             // get earliest timer deadline
             // thread unsafe call
             time::Time get_earliest_deadline() const {
@@ -1501,6 +1516,7 @@ namespace futils {
             // ids are always set
             bool expose_closed_context(close::ClosedContext& ctx, auto&& ids) {
                 const auto l = close_lock();
+                connIDs.expose_close_data(ids);
                 switch (closed.load()) {
                     case close::CloseReason::not_closed:
                         logger.debug("warning: expose_closed_context is called but connection is not closed");
@@ -1509,7 +1525,7 @@ namespace futils {
                     case close::CloseReason::handshake_timeout:
                         ctx.clock = status.clock();
                         ctx.close_timeout.set_deadline(ctx.clock.now());
-                        ctx.exporter_mux = connIDs.expose_close_data(ids);
+                        ctx.multiplexer = get_multiplexer_ptr();
                         ctx.active_path = path_verifier.get_writing_path();
                         logger.debug("expose close context: idle or handshake timeout");
                         return false;
@@ -1517,20 +1533,10 @@ namespace futils {
                         break;
                 }
                 ctx = closer.expose_closed_context(status.clock(), status.get_close_deadline());
-                ctx.exporter_mux = connIDs.expose_close_data(ids);
+                ctx.multiplexer = get_multiplexer_ptr();
                 ctx.active_path = path_verifier.get_writing_path();
                 logger.debug("expose close context: normal close");
                 return true;
-            }
-
-            // thread unsafe call
-            void set_mux_ptr(const std::shared_ptr<void>& m) {
-                mux_ptr = m;
-            }
-
-            // thread unsafe call
-            std::shared_ptr<void> get_mux_ptr() const {
-                return mux_ptr.lock();
             }
 
             // thread unsafe call

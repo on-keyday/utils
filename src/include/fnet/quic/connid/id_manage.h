@@ -50,9 +50,21 @@ namespace futils {
             }
 
             // expose ids to close
+            void expose_close_data(auto&& ids) {
+                issuer.expose_close_data(ids);
+            }
+
             // returns exporter.mux
-            std::weak_ptr<void> expose_close_data(auto&& ids) {
-                return issuer.expose_close_data(ids);
+            std::weak_ptr<void> get_exporter_mux() const {
+                return issuer.get_exporter_mux();
+            }
+
+            void set_exporter_obj(std::shared_ptr<void>&& obj) {
+                issuer.set_exporter_obj(std::move(obj));
+            }
+
+            std::weak_ptr<void> get_exporter_obj() const {
+                return issuer.get_exporter_obj();
             }
 
             view::rvec get_original_dst_id() {

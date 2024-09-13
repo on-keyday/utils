@@ -15,9 +15,9 @@ namespace futils {
     namespace fnet::quic::connid {
 
         struct ExporterFn {
-            error::Error (*gen_callback)(void* mux, void* obj, Random& rand, std::uint32_t version, byte len, view::wvec connID, view::wvec statless_reset) = nullptr;
-            void (*add_connID)(void* mux, void* obj, view::rvec id, view::rvec sr) = nullptr;
-            void (*retire_connID)(void* mux, void* obj, view::rvec id, view::rvec sr) = nullptr;
+            error::Error (*gen_callback)(std::shared_ptr<void> mux, std::shared_ptr<void> obj, Random& rand, std::uint32_t version, byte len, view::wvec connID, view::wvec statless_reset) = nullptr;
+            void (*add_connID)(std::shared_ptr<void> mux, std::shared_ptr<void> obj, view::rvec id, view::rvec sr) = nullptr;
+            void (*retire_connID)(std::shared_ptr<void> mux, std::shared_ptr<void> obj, view::rvec id, view::rvec sr) = nullptr;
         };
 
         // ConnIDExporter exports connection IDs to multiplexer
@@ -30,25 +30,25 @@ namespace futils {
 
             void add(view::rvec id, view::rvec stateless_reset) {
                 if (exporter && exporter->add_connID != nullptr) {
-                    exporter->add_connID(mux.lock().get(), obj.lock().get(), id, stateless_reset);
+                    exporter->add_connID(mux.lock(), obj.lock(), id, stateless_reset);
                 }
             }
 
             void retire(view::rvec id, view::rvec stateless_reset) {
                 if (exporter && exporter->retire_connID != nullptr) {
-                    exporter->retire_connID(mux.lock().get(), obj.lock().get(), id, stateless_reset);
+                    exporter->retire_connID(mux.lock(), obj.lock(), id, stateless_reset);
                 }
             }
 
             error::Error generate(Random& rand, std::uint32_t version, byte len, view::wvec connID, view::wvec stateless_reset) {
                 if (exporter && exporter->gen_callback != nullptr) {
-                    return exporter->gen_callback(mux.lock().get(), obj.lock().get(), rand, version, len, connID, stateless_reset);
+                    return exporter->gen_callback(mux.lock(), obj.lock(), rand, version, len, connID, stateless_reset);
                 }
                 return error::Error("no connID generator", error::Category::lib, error::fnet_quic_user_arg_error);
             }
         };
 
-        inline error::Error default_generator(void*, void*, Random& rand, std::uint32_t version, byte len, view::wvec connID, view::wvec stateless_reset) {
+        inline error::Error default_generator(std::shared_ptr<void>, std::shared_ptr<void>, Random& rand, std::uint32_t version, byte len, view::wvec connID, view::wvec stateless_reset) {
             if (!rand.valid()) {
                 return error::Error("invalid random", error::Category::lib, error::fnet_quic_user_arg_error);
             }

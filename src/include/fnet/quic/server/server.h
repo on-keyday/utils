@@ -15,6 +15,7 @@
 #include <queue>
 #include "../path/addrmanage.h"
 #include <thread/concurrent_queue.h>
+#include "../stream/impl/set_receiver.h"
 
 namespace futils {
     namespace fnet::quic::server {
@@ -154,7 +155,7 @@ namespace futils {
                 auto next = std::allocate_shared<Closed<Lock>>(glheap_allocator<Closed<Lock>>{});
                 next->ids = std::move(ids);
                 next->ctx = std::move(c);
-                if (auto mux = next->ctx.exporter_mux.lock()) {
+                if (auto mux = next->ctx.multiplexer.lock()) {
                     auto ptr = std::static_pointer_cast<HandlerMap<TConfig>>(mux);
                     auto conn_id = std::shared_ptr<ConnIDMap<Lock>>(ptr, &ptr->conn_ids);
                     conn_id->replace_ids(next->ids, next);
@@ -165,9 +166,7 @@ namespace futils {
             }
 
             static std::shared_ptr<Opened> create() {
-                std::shared_ptr<Opened<TConfig>> open = std::allocate_shared<Opened<TConfig>>(glheap_allocator<Opened<TConfig>>{});
-                open->ctx.set_mux_ptr(open);
-                return open;
+                return std::allocate_shared<Opened<TConfig>>(glheap_allocator<Opened<TConfig>>{});
             }
         };
 
@@ -273,6 +272,14 @@ namespace futils {
             std::uint64_t id = 0;
             using Lock = typename TConfig::context_lock;
 
+           private:
+            QUIC_ctx_type(StreamTypeConfig, TConfig, stream_type_config);
+            QUIC_ctx_vector_type(ConnHandlerImpl, StreamTypeConfig, conn_handler);
+            using ConnHandler = ConnHandlerImpl<StreamTypeConfig>;
+            using BidiStream = stream::impl::BidiStream<StreamTypeConfig>;
+            using RecvUniStream = stream::impl::RecvUniStream<StreamTypeConfig>;
+
+           public:
             HandlerList<Lock> handlers;
             ConnIDMap<Lock> conn_ids;
             SenderQue<Lock> send_que;
@@ -293,20 +300,19 @@ namespace futils {
             context::Config config;
             connid::ExporterFn exporter_fn = {
                 connid::default_generator,
-                +[](void* pmp, void* pop, view::rvec id, view::rvec sr) {
+                +[](std::shared_ptr<void> pmp, std::shared_ptr<void> pop, view::rvec id, view::rvec sr) {
                     if (!pmp || !pop) {
                         return;
                     }
-                    auto mp = static_cast<HandlerMap<TConfig>*>(pmp);
-                    auto op = static_cast<context::Context<TConfig>*>(pop);
-                    auto ptr = std::static_pointer_cast<Opened<TConfig>>(op->get_mux_ptr());
+                    auto mp = std::static_pointer_cast<HandlerMap<TConfig>>(pmp);
+                    auto ptr = std::static_pointer_cast<Opened<TConfig>>(pop);
                     mp->conn_ids.add_connID(id, std::move(ptr));
                 },
-                +[](void* pmp, void* pop, view::rvec id, view::rvec sr) {
+                +[](std::shared_ptr<void> pmp, std::shared_ptr<void> pop, view::rvec id, view::rvec sr) {
                     if (!pmp || !pop) {
                         return;
                     }
-                    auto mp = static_cast<HandlerMap<TConfig>*>(pmp);
+                    auto mp = std::static_pointer_cast<HandlerMap<TConfig>>(pmp);
                     mp->conn_ids.remove_connID(id);
                 },
             };
@@ -328,9 +334,49 @@ namespace futils {
                 return copy;
             }
 
+            std::shared_ptr<void> app_ctx = nullptr;
+            void (*init_recv_stream_)(std::shared_ptr<void>&, RecvUniStream&) = nullptr;
+            void (*accept_uni_stream_)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<RecvUniStream>&&) = nullptr;
+            void (*accept_bidi_stream_)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<BidiStream>&&) = nullptr;
+            void (*accept_connection_)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
+
+            void init_recv_stream(RecvUniStream& stream) {
+                if (init_recv_stream_) {
+                    init_recv_stream_(app_ctx, stream);
+                }
+            }
+
+            void accept_uni_stream(std::shared_ptr<context::Context<TConfig>>&& ctx, std::shared_ptr<RecvUniStream>&& stream) {
+                if (accept_uni_stream_) {
+                    accept_uni_stream_(app_ctx, std::move(ctx), std::move(stream));
+                }
+            }
+
+            void accept_bidi_stream(std::shared_ptr<context::Context<TConfig>>&& ctx, std::shared_ptr<BidiStream>&& stream) {
+                if (accept_bidi_stream_) {
+                    accept_bidi_stream_(app_ctx, std::move(ctx), std::move(stream));
+                }
+            }
+
+            void accept_connection(std::shared_ptr<context::Context<TConfig>>&& ctx) {
+                if (accept_connection_) {
+                    accept_connection_(app_ctx, std::move(ctx));
+                }
+            }
+
            public:
-            void set_config(context::Config&& conf) {
+            void set_config(context::Config&& conf,
+                            std::shared_ptr<void> app_ctx = nullptr,
+                            void (*init_recv_stream)(std::shared_ptr<void>&, RecvUniStream&) = nullptr,
+                            void (*accept_uni_stream)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<RecvUniStream>&&) = nullptr,
+                            void (*accept_bidi_stream)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<BidiStream>&&) = nullptr,
+                            void (*accept_connection)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr) {
                 config = std::move(conf);
+                this->app_ctx = app_ctx;
+                this->init_recv_stream_ = init_recv_stream;
+                this->accept_uni_stream_ = accept_uni_stream;
+                this->accept_bidi_stream_ = accept_bidi_stream;
+                this->accept_connection_ = accept_connection;
                 setup_config();
             }
 
@@ -338,6 +384,25 @@ namespace futils {
                 std::shared_ptr<Opened<TConfig>> opened = Opened<TConfig>::create();
                 Opened<TConfig>* ptr = opened.get();
                 auto rel = std::shared_ptr<context::Context<TConfig>>(opened, &ptr->ctx);
+                ConnHandler* handler = ptr->ctx.get_streams()->get_conn_handler();
+                handler->set_arg(std::static_pointer_cast<void>(rel));
+                handler->set_open_bidi(+[](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
+                    auto ptr = std::static_pointer_cast<context::Context<TConfig>>(arg);
+                    auto multiplexer = std::static_pointer_cast<HandlerMap<TConfig>>(ptr->get_multiplexer_ptr().lock());
+                    multiplexer->init_recv_stream(stream->receiver);
+                });
+                handler->set_accept_bidi(+[](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
+                    auto ptr = std::static_pointer_cast<context::Context<TConfig>>(arg);
+                    auto multiplexer = std::static_pointer_cast<HandlerMap<TConfig>>(ptr->get_multiplexer_ptr().lock());
+                    multiplexer->init_recv_stream(stream->receiver);
+                    multiplexer->accept_bidi_stream(std::move(ptr), std::move(stream));
+                });
+                handler->set_accept_uni(+[](std::shared_ptr<void>& arg, std::shared_ptr<RecvUniStream> stream) {
+                    auto ptr = std::static_pointer_cast<context::Context<TConfig>>(arg);
+                    auto multiplexer = std::static_pointer_cast<HandlerMap<TConfig>>(ptr->get_multiplexer_ptr().lock());
+                    multiplexer->init_recv_stream(*stream);
+                    multiplexer->accept_uni_stream(std::move(ptr), std::move(stream));
+                });
                 if (!ptr->ctx.init(get_config(rel, pid))) {
                     return;  // failed to init
                 }
@@ -347,6 +412,7 @@ namespace futils {
                         return;  // failed to accept
                     }
                     ptr->ctx.parse_udp_payload(d, pid);
+                    this->accept_connection(std::move(rel));
                 }
                 send_que.enque(opened, false);
                 handlers.add(opened);
@@ -410,7 +476,7 @@ namespace futils {
             // thread safe call
             // call by multiple thread not make error
             void notify(const std::shared_ptr<context::Context<TConfig>>& ctx) {
-                auto ptr = ctx->get_mux_ptr();
+                auto ptr = ctx->get_outer_self_ptr();
                 if (!ptr) {
                     return;
                 }
