@@ -64,7 +64,7 @@ namespace futils {
            public:
             Conn(Origin self, std::weak_ptr<void> conn_ctx) {
                 control.base.state.set_dir(self);
-                control.conn_ctx = conn_ctx;
+                control.conn_ctx = std::move(conn_ctx);
             }
 
             void set_auto_remove(bool is_auto) {
