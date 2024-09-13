@@ -383,7 +383,7 @@ namespace futils {
 
            public:
             void set_config(context::Config&& conf,
-                            ServerConfig server_config = {}) {
+                            ServerConfig<TConfig> server_config = {}) {
                 config = std::move(conf);
                 this->server_config = std::move(server_config);
                 setup_config();
