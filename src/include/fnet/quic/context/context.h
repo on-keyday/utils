@@ -1539,6 +1539,11 @@ namespace futils {
             }
 
             // thread unsafe call
+            constexpr bool transport_parameter_read() const {
+                return status.transport_parameter_read();
+            }
+
+            // thread unsafe call
             // reports whether migration is enabled for this connection
             constexpr bool migration_enabled() const {
                 return status.transport_parameter_read() &&

@@ -120,6 +120,7 @@ namespace futils {
             Ctx ctx;
             bool closed = false;
             bool discard = false;
+            bool transport_parameter_notified = false;
             Lock l;
 
             // returns (payload,idle)
@@ -141,6 +142,14 @@ namespace futils {
                 }
                 ctx.parse_udp_payload(payload, id);
                 next_deadline = ctx.get_earliest_deadline();
+                if (!transport_parameter_notified && ctx.transport_parameter_read()) {
+                    transport_parameter_notified = true;
+                    if (auto mux = ctx.get_multiplexer_ptr().lock()) {
+                        auto ptr = std::static_pointer_cast<HandlerMap<TConfig>>(mux);
+                        auto obj_ptr = std::static_pointer_cast<Opened<TConfig>>(ctx.get_outer_self_ptr().lock());
+                        ptr->on_transport_parameter_read(std::shared_ptr<Opened<TConfig>>(obj_ptr, &obj_ptr->ctx));
+                    }
+                }
                 return true;
             }
 
@@ -282,6 +291,8 @@ namespace futils {
             void (*accept_uni_stream)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<RecvUniStream>&&) = nullptr;
             void (*accept_bidi_stream)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<BidiStream>&&) = nullptr;
             void (*accept_connection)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
+            // when transport parameter read, user may send data to peer
+            void (*on_transport_parameter_read)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
             void (*close_connection)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
         };
 
@@ -386,6 +397,12 @@ namespace futils {
             void accept_connection(std::shared_ptr<context::Context<TConfig>>&& ctx) {
                 if (server_config.accept_connection) {
                     server_config.accept_connection(server_config.app_ctx, std::move(ctx));
+                }
+            }
+
+            void on_transport_parameter_read(std::shared_ptr<context::Context<TConfig>>&& ctx) {
+                if (server_config.on_transport_parameter_read) {
+                    server_config.on_transport_parameter_read(server_config.app_ctx, std::move(ctx));
                 }
             }
 
