@@ -147,7 +147,7 @@ namespace futils {
                     if (auto mux = ctx.get_multiplexer_ptr().lock()) {
                         auto ptr = std::static_pointer_cast<HandlerMap<TConfig>>(mux);
                         auto obj_ptr = std::static_pointer_cast<Opened<TConfig>>(ctx.get_outer_self_ptr().lock());
-                        ptr->on_transport_parameter_read(std::shared_ptr<Opened<TConfig>>(obj_ptr, &obj_ptr->ctx));
+                        ptr->on_transport_parameter_read(std::shared_ptr<context::Context<TConfig>>(obj_ptr, &obj_ptr->ctx));
                     }
                 }
                 return true;
