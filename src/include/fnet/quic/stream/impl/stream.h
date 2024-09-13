@@ -29,7 +29,6 @@ namespace futils {
 
             using SendBuffer = typename TConfig::stream_handler::send_buf;
 
-            // SendBuffer src;
             SendBufInterface<SendBuffer> src;
 
             resend::ACKHandler reset_wait;
@@ -303,6 +302,12 @@ namespace futils {
                     return res;
                 }
                 res.result = uni.update_data(uni.data.discarded_offset, src, fin) ? res.result : IOResult::fatal;  // must success
+                if (res.result == IOResult::ok) {
+                    // maybe notify data added to multiplexer
+                    if (auto conn = this->conn.lock()) {
+                        src.on_data_added(conn->conn_ctx.lock(), uni.id);
+                    }
+                }
                 return res;
             }
 

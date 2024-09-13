@@ -154,10 +154,6 @@ namespace futils {
             // log
             log::ConnLogger logger;
 
-            // multiplexer object pointer
-            // this may refer object holded by multiplexer that refers this
-            std::weak_ptr<void> mux_ptr;
-
             // internal parameters
             flex_storage packet_creation_buffer;
 
@@ -1304,7 +1300,10 @@ namespace futils {
                 // create streams
                 streams = stream::impl::make_conn<StreamTypeConfig>(config.server
                                                                         ? stream::Origin::server
-                                                                        : stream::Origin::client);
+                                                                        : stream::Origin::client,
+                                                                    get_outer_self_ptr().lock()
+                                                                    /*for server*/);
+
                 streams->apply_local_initial_limits(local);
 
                 // setup connection IDs manager
@@ -1318,7 +1317,9 @@ namespace futils {
                 // setup datagram handler
                 using DgramT = datagram::DatagramManager<Lock, DatagramDrop>;
                 datagrams = std::allocate_shared<DgramT>(glheap_allocator<DgramT>{});
-                datagrams->reset(config.transport_parameters.max_datagram_frame_size, config.datagram_parameters, std::move(udconfig.dgram_drop));
+                datagrams->reset(config.transport_parameters.max_datagram_frame_size, config.datagram_parameters,
+                                 get_outer_self_ptr().lock(),  // for server
+                                 std::move(udconfig.dgram_drop));
 
                 // setup path validation status
                 path_verifier.reset(config.path_parameters.original_path, config.path_parameters.max_path_challenge);

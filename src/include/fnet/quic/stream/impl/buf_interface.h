@@ -56,6 +56,10 @@ namespace futils {
             constexpr auto get_specific() {
                 return impl.get_specific();
             }
+
+            constexpr void on_data_added(std::shared_ptr<void>&& conn_ctx, StreamID id) {
+                impl.on_data_added(std::move(conn_ctx), id);
+            }
         };
 
         template <class T>

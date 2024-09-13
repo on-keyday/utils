@@ -7,6 +7,7 @@
 
 #pragma once
 #include <cstddef>
+#include <memory>
 
 namespace futils {
     namespace fnet::quic::datagram {
@@ -20,6 +21,14 @@ namespace futils {
             void drop(auto& s, auto pn) {}
             void detect() {}
             void sent(auto&& observer, auto&& dgram) {}
+
+            void (*on_data_added_cb)(std::shared_ptr<void>&&) = nullptr;
+
+            void on_data_added(std::shared_ptr<void>&& conn_ctx) {
+                if (on_data_added_cb) {
+                    on_data_added_cb(std::move(conn_ctx));
+                }
+            }
         };
 
         template <template <class...> class List,

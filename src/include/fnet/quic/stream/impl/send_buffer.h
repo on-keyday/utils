@@ -17,11 +17,12 @@ namespace futils {
             concept has_shift_front = requires(T t) {
                 { t.shift_front(size_t()) };
             };
-        }
+        }  // namespace internal
 
-        template <class T = flex_storage>
+        template <class Buffer = flex_storage>
         struct SendBuffer {
-            T src;
+            void (*on_data_added_cb)(std::shared_ptr<void>&& conn_ctx, StreamID id) = nullptr;
+            Buffer src;
 
             auto data() {
                 return src.data();
@@ -52,11 +53,19 @@ namespace futils {
                 src.shrink_to_fit();
             }
 
-            void get_specific() {}
+            auto get_specific() {
+                return this;
+            }
             void send_callback(auto d) {}
             void recv_callback(auto d) {}
             std::uint64_t fairness_limit() const {
                 return ~0;  // No Limit!
+            }
+
+            void on_data_added(std::shared_ptr<void>&& conn_ctx, StreamID id) {
+                if (on_data_added_cb) {
+                    on_data_added_cb(std::move(conn_ctx), id);
+                }
             }
         };
     }  // namespace fnet::quic::stream::impl

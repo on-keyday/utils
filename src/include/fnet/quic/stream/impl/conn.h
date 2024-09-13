@@ -27,7 +27,7 @@ namespace futils {
         }  // namespace internal
 
         template <class TConfig>
-        struct SendeSchedArg {
+        struct SendSchedArg {
             using UniOpenArg = typename TConfig::conn_cb_arg::open_uni;
             using UniAcceptArg = typename TConfig::conn_cb_arg::accept_uni;
             using BidiOpenArg = typename TConfig::conn_cb_arg::open_bidi;
@@ -41,33 +41,6 @@ namespace futils {
 
         template <class TConfig>
         struct Conn : std::enable_shared_from_this<Conn<TConfig>> {
-            /*
-            using UniOpenArg = typename TConfig::conn_cb_arg::open_uni;
-            using UniAcceptArg = typename TConfig::conn_cb_arg::accept_uni;
-            using BidiOpenArg = typename TConfig::conn_cb_arg::open_bidi;
-            using BidiAcceptArg = typename TConfig::conn_cb_arg::accept_bidi;
-
-            using UniOpenCB = void (*)(UniOpenArg& arg, std::shared_ptr<SendUniStream<TConfig>> stream);
-            using UniAcceptCB = void (*)(UniAcceptArg& arg, std::shared_ptr<RecvUniStream<TConfig>> stream);
-            using BidiOpenCB = void (*)(UniOpenArg& arg, std::shared_ptr<BidiStream<TConfig>> stream);
-            using BidiAcceptCB = void (*)(UniAcceptArg& arg, std::shared_ptr<BidiStream<TConfig>> stream);
-            using SendCB = IOResult (*)(SendeSchedArg<TConfig>, frame::fwriter& w, ack::ACKRecorder& observer);
-            */
-
-            /*
-            UniOpenArg uniopenarg;
-            BidiOpenArg bidiopenarg;
-            UniOpenCB open_uni_stream = nullptr;
-            BidiOpenCB open_bidi_stream = nullptr;
-
-            UniAcceptArg uniacceptarg;
-            BidiAcceptArg bidiacceptarg;
-            UniAcceptCB accept_uni_stream = nullptr;
-            BidiOpenCB accept_bidi_stream = nullptr;
-
-            SendCB send_schedule = nullptr;
-            */
-
             QUIC_ctx_type(ConnHandler, TConfig, template conn_handler<TConfig>);
 
            private:
@@ -89,8 +62,9 @@ namespace futils {
             }
 
            public:
-            Conn(Origin self) {
+            Conn(Origin self, std::weak_ptr<void> conn_ctx) {
                 control.base.state.set_dir(self);
+                control.conn_ctx = conn_ctx;
             }
 
             void set_auto_remove(bool is_auto) {
@@ -140,11 +114,6 @@ namespace futils {
                     }
                     s = internal::make_ptr<SendUniStream<TConfig>>(id, borrow_control());
                     local_uni.emplace(id, s);
-                    /*
-                    if (open_uni_stream) {
-                        open_uni_stream(uniopenarg, s);
-                    }
-                    */
                     handler.uni_open(s);
                 });
                 return s;
@@ -160,40 +129,10 @@ namespace futils {
                         glheap_allocator<BidiStream<TConfig>>{},
                         id, borrow_control());
                     local_bidi.emplace(id, s);
-                    /*
-                    if (open_bidi_stream) {
-                        open_bidi_stream(bidiopenarg, s);
-                    }
-                    */
                     handler.bidi_open(s);
                 });
                 return s;
             }
-
-            /*
-            void set_open_bidi(BidiOpenArg arg, BidiOpenCB cb) {
-                const auto lock = control.base.open_bidi_lock();
-                bidiopenarg = std::move(arg);
-                open_bidi_stream = cb;
-            }
-
-            void set_accept_bidi(BidiAcceptArg arg, BidiOpenCB cb) {
-                const auto lock = control.base.accept_bidi_lock();
-                bidiacceptarg = std::move(arg);
-                accept_bidi_stream = cb;
-            }
-
-            void set_open_uni(UniOpenArg arg, UniOpenCB cb) {
-                const auto lock = control.base.open_uni_lock();
-                uniopenarg = std::move(arg);
-                open_uni_stream = cb;
-            }
-
-            void set_accept_uni(UniAcceptArg arg, UniAcceptCB cb) {
-                const auto lock = control.base.accept_uni_lock();
-                uniacceptarg = std::move(arg);
-                accept_uni_stream = cb;
-            }*/
 
             // thread unsafe call
             // call this before share this with multi thread
@@ -327,11 +266,7 @@ namespace futils {
                             oerr = error::Error("unexpected creation failure on bidi stream!", error::Category::lib, error::fnet_quic_implementation_bug);
                             return;
                         }
-                        /*
-                        if (accept_bidi_stream) {
-                            accept_bidi_stream(bidiacceptarg, std::move(s));
-                        }
-                        */
+
                         handler.bidi_accept(std::move(s));
                     }
                     else {
@@ -341,11 +276,7 @@ namespace futils {
                             oerr = error::Error("unexpected creation failure on uni stream!", error::Category::lib, error::fnet_quic_implementation_bug);
                             return;
                         }
-                        /*
-                        if (accept_uni_stream) {
-                            accept_uni_stream(uniacceptarg, std::move(s));
-                        }
-                        */
+
                         handler.uni_accept(std::move(s));
                     }
                 });
@@ -510,8 +441,8 @@ namespace futils {
         };
 
         template <class TConfig>
-        std::shared_ptr<Conn<TConfig>> make_conn(Origin self) {
-            return internal::make_ptr<Conn<TConfig>>(self);
+        std::shared_ptr<Conn<TConfig>> make_conn(Origin self, std::shared_ptr<void> conn_ctx) {
+            return internal::make_ptr<Conn<TConfig>>(self, conn_ctx);
         }
     }  // namespace fnet::quic::stream::impl
 }  // namespace futils

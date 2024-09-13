@@ -38,6 +38,8 @@ namespace futils {
             std::shared_ptr<void> arg;
             void (*notify_drop_cb)(std::shared_ptr<void>&, storage&, packetnum::Value) = nullptr;
 
+            void (*on_data_added_cb)(std::shared_ptr<void>&&) = nullptr;
+
             void drop(storage& s, packetnum::Value pn) {
                 if (notify_drop_cb != nullptr) {
                     notify_drop_cb(arg, s, pn);
@@ -55,6 +57,12 @@ namespace futils {
             void sent(auto&& observer, SendDatagram&& dgram) {
                 retransmit.sent(observer, std::move(dgram));
             }
+
+            void on_data_added(std::shared_ptr<void>&& conn_ctx) {
+                if (on_data_added_cb) {
+                    on_data_added_cb(std::move(conn_ctx));
+                }
+            }
         };
 
         template <class Locker, class DropDetector>
@@ -67,6 +75,7 @@ namespace futils {
             Config config;
             Locker locker;
             DropDetector drop;
+            std::weak_ptr<void> conn_ctx;
 
             auto lock() {
                 locker.lock();
@@ -76,13 +85,24 @@ namespace futils {
             }
 
            public:
-            void reset(size_t local_size, Config config, DropDetector&& detect = DropDetector{}) {
+            void reset(size_t local_size, Config config, std::shared_ptr<void>&& conn_ctx, DropDetector&& detect = DropDetector{}) {
                 send_que.clear();
                 recv_que.clear();
                 local_param_size = local_size;
                 peer_param_size = 0;
                 this->config = config;
+                this->conn_ctx = std::move(conn_ctx);
                 drop = std::move(detect);
+            }
+
+            void set_drop_detector(DropDetector&& detect) {
+                const auto d = lock();
+                drop = std::move(detect);
+            }
+
+            // thread unsafe
+            auto get_drop_detector() {
+                return std::addressof(drop);
             }
 
             void on_transport_parameter(std::uint64_t max_dgram_frame) {
@@ -156,6 +176,7 @@ namespace futils {
                 sd.data = make_storage(data);
                 const auto d = lock();
                 send_que.push_back(std::move(sd));
+                drop.on_data_added(conn_ctx.lock());
                 return true;
             }
         };

@@ -19,6 +19,8 @@ namespace futils {
             resend::ACKHandler max_data;
             resend::ACKHandler max_uni_streams;
             resend::ACKHandler max_bidi_streams;
+            // connection context of root context::Context
+            std::weak_ptr<void> conn_ctx;
 
             // don't get lock by yourself
             bool update_max_data(auto&& decide_new_limit) {

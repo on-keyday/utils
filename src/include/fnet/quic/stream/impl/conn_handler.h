@@ -26,7 +26,7 @@ namespace futils {
             bool auto_increase_bidi_stream = false;
             bool auto_increase_max_data = false;
 
-            void auto_incrase(auto t) {
+            void auto_increase(auto t) {
                 if (auto_increase_bidi_stream) {
                     auto a = t->remote_bidi_avail();
                     t->update_max_bidi_streams([&](core::Limiter lim, std::uint64_t ini_size) {
@@ -109,11 +109,11 @@ namespace futils {
             }
 
             void recv_callback(auto d) {
-                auto_incr.auto_incrase(d);
+                auto_incr.auto_increase(d);
             }
 
             void send_callback(auto d) {
-                auto_incr.auto_incrase(d);
+                auto_incr.auto_increase(d);
             }
 
             void set_arg(Arg&& a) {
@@ -206,11 +206,11 @@ namespace futils {
             }
 
             void recv_callback(auto d) {
-                auto_incr.auto_incrase(d);
+                auto_incr.auto_increase(d);
             }
 
             void send_callback(auto d) {
-                auto_incr.auto_incrase(d);
+                auto_incr.auto_increase(d);
             }
         };
     }  // namespace fnet::quic::stream::impl

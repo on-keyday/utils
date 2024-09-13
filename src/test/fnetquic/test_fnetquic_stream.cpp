@@ -66,10 +66,10 @@ int main() {
     using IOResult = futils::fnet::quic::IOResult;
     auto peer = test::gen_peer_limits();
     auto local = test::gen_local_limits();
-    auto conn_local = test::impl::make_conn<test::stream::TypeConfig<std::mutex>>(test::stream::Origin::client);
+    auto conn_local = test::impl::make_conn<test::stream::TypeConfig<std::mutex>>(test::stream::Origin::client, nullptr);
     conn_local->apply_peer_initial_limits(peer);
     conn_local->apply_local_initial_limits(local);
-    auto conn_peer = test::impl::make_conn<test::stream::TypeConfig<std::mutex>>(test::stream::Origin::server);
+    auto conn_peer = test::impl::make_conn<test::stream::TypeConfig<std::mutex>>(test::stream::Origin::server, nullptr);
     conn_peer->apply_local_initial_limits(peer);
     conn_peer->apply_peer_initial_limits(local);
     auto stream_1 = conn_local->open_bidi();

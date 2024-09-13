@@ -43,11 +43,8 @@ namespace futils {
             }
 
             // this clear record and set new record from rec
-            // TODO(on-keyday): use ACKRecorder instead
             void wait(ack::ACKRecorder& rec) {
                 record = rec.record();
-                // record = ack::make_ack_wait();
-                // rec.push_back(record);
             }
         };
     }  // namespace fnet::quic::resend
