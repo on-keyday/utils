@@ -385,14 +385,6 @@ namespace futils {
                 }
             }
 
-           public:
-            void set_config(context::Config&& conf,
-                            ServerConfig<TConfig> server_config = {}) {
-                config = std::move(conf);
-                this->server_config = std::move(server_config);
-                setup_config();
-            }
-
             void add_new_conn(view::rvec origDst, view::wvec d, path::PathID pid) {
                 std::shared_ptr<Opened<TConfig>> opened = Opened<TConfig>::create();
                 Opened<TConfig>* ptr = opened.get();
@@ -457,6 +449,14 @@ namespace futils {
                 }
                 ptr->handle_packet(d, pid);
                 send_que.enque(ptr, false);
+            }
+
+           public:
+            void set_config(context::Config&& conf,
+                            ServerConfig<TConfig> server_config = {}) {
+                config = std::move(conf);
+                this->server_config = std::move(server_config);
+                setup_config();
             }
 
             void parse_udp_payload(view::wvec d, const NetAddrPort& addr) {
