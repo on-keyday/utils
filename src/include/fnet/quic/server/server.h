@@ -47,6 +47,16 @@ namespace futils {
                 connid_maps.emplace(flex_storage(id), ptr);
             }
 
+            void replace_ids(auto&& ids, HandlerPtr&& ptr) {
+                const auto l = helper::lock(connId_map_lock);
+                for (auto& id : ids) {
+                    connid_maps.erase(flex_storage(id.id));
+                }
+                for (auto& id : ids) {
+                    connid_maps.emplace(flex_storage(id.id), ptr);
+                }
+            }
+
             void remove_connID(view::rvec id) {
                 const auto l = helper::lock(connId_map_lock);
                 connid_maps.erase(flex_storage(id));
@@ -143,6 +153,7 @@ namespace futils {
                 if (mux) {
                     auto ptr = std::static_pointer_cast<HandlerMap<TConfig>>(mux);
                     auto conn_id = std::shared_ptr<ConnIDMap<Lock>>(ptr, &ptr->conn_ids);
+                    conn_id->replace_ids(next->ids, next);
                     next->connid_map = conn_id;
                 }
                 next->next_deadline = c.close_timeout.get_deadline();
