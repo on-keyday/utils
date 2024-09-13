@@ -16,6 +16,7 @@
 #include "../path/addrmanage.h"
 #include <thread/concurrent_queue.h>
 #include "../stream/impl/set_receiver.h"
+#include "../stream/impl/set_sender.h"
 
 namespace futils {
     namespace fnet::quic::server {
