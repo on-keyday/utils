@@ -534,13 +534,13 @@ namespace futils {
             static void stream_notify_callback(std::shared_ptr<void>&& conn_ctx, stream::StreamID id) {
                 auto ctx = std::static_pointer_cast<Opened<TConfig>>(std::move(conn_ctx));
                 auto mux = std::static_pointer_cast<HandlerMap<TConfig>>(ctx->ctx.get_multiplexer_ptr().lock());
-                mux->notify(std::move(ctx));
+                send_que.enque(std::static_pointer_cast<Handler>(std::move(ctx)), false);
             }
 
             static void datagram_notify_callback(std::shared_ptr<void>&& conn_ctx) {
                 auto ctx = std::static_pointer_cast<Opened<TConfig>>(std::move(conn_ctx));
                 auto mux = std::static_pointer_cast<HandlerMap<TConfig>>(ctx->ctx.get_multiplexer_ptr().lock());
-                mux->notify(std::move(ctx));
+                send_que.enque(std::static_pointer_cast<Handler>(std::move(ctx)), false);
             }
 
             void schedule() {
