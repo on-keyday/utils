@@ -49,8 +49,10 @@ namespace futils {
                 return cparam.random;
             }
 
-            void expose_close_ids(auto&& ids) {
-                issuer.expose_close_ids(ids);
+            // expose ids to close
+            // returns exporter.mux
+            std::weak_ptr<void> expose_close_data(auto&& ids) {
+                return issuer.expose_close_data(ids);
             }
 
             view::rvec get_original_dst_id() {

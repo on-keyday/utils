@@ -154,8 +154,7 @@ namespace futils {
                 auto next = std::allocate_shared<Closed<Lock>>(glheap_allocator<Closed<Lock>>{});
                 next->ids = std::move(ids);
                 next->ctx = std::move(c);
-                auto mux = ctx.get_mux_ptr();
-                if (mux) {
+                if (auto mux = next->ctx.exporter_mux.lock()) {
                     auto ptr = std::static_pointer_cast<HandlerMap<TConfig>>(mux);
                     auto conn_id = std::shared_ptr<ConnIDMap<Lock>>(ptr, &ptr->conn_ids);
                     conn_id->replace_ids(next->ids, next);
@@ -332,9 +331,6 @@ namespace futils {
            public:
             void set_config(context::Config&& conf) {
                 config = std::move(conf);
-                if (config.connid_parameters.exporter.exporter) {
-                    exporter_fn.gen_callback = config.connid_parameters.exporter.exporter->gen_callback;
-                }
                 setup_config();
             }
 

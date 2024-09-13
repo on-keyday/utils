@@ -1496,7 +1496,7 @@ namespace futils {
             // ids are always set
             bool expose_closed_context(close::ClosedContext& ctx, auto&& ids) {
                 const auto l = close_lock();
-                connIDs.expose_close_ids(ids);
+                ctx.exporter_mux = connIDs.expose_close_data(ids);
                 ctx.active_path = path_verifier.get_writing_path();
                 switch (closed.load()) {
                     case close::CloseReason::not_closed:
