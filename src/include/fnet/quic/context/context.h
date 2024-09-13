@@ -207,7 +207,8 @@ namespace futils {
                 // get registered initial_source_connection_id by peer
                 auto connID = connIDs.choose_dstID(0);
                 connIDs.on_transport_parameter_received(peer.active_connection_id_limit);
-                if (peer.initial_src_connection_id.empty() || peer.initial_src_connection_id != connID.id) {
+                // allow empty if empty
+                if (peer.initial_src_connection_id != connID.id) {
                     set_quic_runtime_error(QUICError{
                         .msg = "initial_src_connection_id is not matched to id contained on initial packet",
                         .transport_error = TransportError::PROTOCOL_VIOLATION,
