@@ -1496,8 +1496,6 @@ namespace futils {
             // ids are always set
             bool expose_closed_context(close::ClosedContext& ctx, auto&& ids) {
                 const auto l = close_lock();
-                ctx.exporter_mux = connIDs.expose_close_data(ids);
-                ctx.active_path = path_verifier.get_writing_path();
                 switch (closed.load()) {
                     case close::CloseReason::not_closed:
                         logger.debug("warning: expose_closed_context is called but connection is not closed");
@@ -1506,12 +1504,16 @@ namespace futils {
                     case close::CloseReason::handshake_timeout:
                         ctx.clock = status.clock();
                         ctx.close_timeout.set_deadline(ctx.clock.now());
+                        ctx.exporter_mux = connIDs.expose_close_data(ids);
+                        ctx.active_path = path_verifier.get_writing_path();
                         logger.debug("expose close context: idle or handshake timeout");
                         return false;
                     default:
                         break;
                 }
                 ctx = closer.expose_closed_context(status.clock(), status.get_close_deadline());
+                ctx.exporter_mux = connIDs.expose_close_data(ids);
+                ctx.active_path = path_verifier.get_writing_path();
                 logger.debug("expose close context: normal close");
                 return true;
             }
