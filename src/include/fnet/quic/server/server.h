@@ -361,7 +361,7 @@ namespace futils {
                 config.connid_parameters.exporter.mux = this->weak_from_this();
             }
 
-            context::Config get_config(std::shared_ptr<context::Context<TConfig>> ptr, path::PathID id) {
+            context::Config get_config(std::shared_ptr<Opened<TConfig>> ptr, path::PathID id) {
                 auto copy = config;
                 copy.connid_parameters.exporter.obj = std::move(ptr);
                 copy.path_parameters.original_path = id;
@@ -415,11 +415,11 @@ namespace futils {
             void add_new_conn(view::rvec origDst, view::wvec d, path::PathID pid) {
                 std::shared_ptr<Opened<TConfig>> opened = Opened<TConfig>::create();
                 Opened<TConfig>* ptr = opened.get();
-                auto rel = std::shared_ptr<context::Context<TConfig>>(opened, &ptr->ctx);
-                if (!ptr->ctx.init(get_config(rel, pid))) {
+                if (!ptr->ctx.init(get_config(opened, pid))) {
                     return;  // failed to init
                 }
                 ConnHandler* handler = ptr->ctx.get_streams()->get_conn_handler();
+                auto rel = std::shared_ptr<context::Context<TConfig>>(opened, &ptr->ctx);
                 handler->set_arg(std::static_pointer_cast<void>(rel));
                 handler->set_open_bidi(+[](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
                     auto ptr = std::static_pointer_cast<context::Context<TConfig>>(arg);
@@ -532,15 +532,15 @@ namespace futils {
             }
 
             static void stream_notify_callback(std::shared_ptr<void>&& conn_ctx, stream::StreamID id) {
-                auto ctx = std::static_pointer_cast<Opened<TConfig>>(std::move(conn_ctx));
+                auto ctx = std::static_pointer_cast<context::Context<TConfig>>(std::move(conn_ctx));
                 auto mux = std::static_pointer_cast<HandlerMap<TConfig>>(ctx->ctx.get_multiplexer_ptr().lock());
-                mux->send_que.enque(std::move(ctx), false);
+                mux->notify(std::move(ctx));
             }
 
             static void datagram_notify_callback(std::shared_ptr<void>&& conn_ctx) {
-                auto ctx = std::static_pointer_cast<Opened<TConfig>>(std::move(conn_ctx));
+                auto ctx = std::static_pointer_cast<context::Context<TConfig>>(std::move(conn_ctx));
                 auto mux = std::static_pointer_cast<HandlerMap<TConfig>>(ctx->ctx.get_multiplexer_ptr().lock());
-                mux->send_que.enque(std::move(ctx), false);
+                mux->notify(std::move(ctx));
             }
 
             void schedule() {
