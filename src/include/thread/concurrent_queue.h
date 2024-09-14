@@ -24,7 +24,8 @@ namespace futils::thread {
        private:
         std::atomic<QueueNode<T>*> head;
         std::atomic<QueueNode<T>*> tail;
-        A allocator;
+        using rebound_alloc = typename std::allocator_traits<A>::template rebind_alloc<QueueNode<T>>;
+        rebound_alloc allocator;
         using traits = std::allocator_traits<A>::template rebind_traits<QueueNode<T>>;
 
        public:
@@ -74,7 +75,8 @@ namespace futils::thread {
        private:
         std::atomic<QueueNode<T>*> head;
         std::atomic<QueueNode<T>*> tail;
-        A allocator;
+        using rebound_alloc = typename std::allocator_traits<A>::template rebind_alloc<QueueNode<T>>;
+        rebound_alloc allocator;
         using traits = std::allocator_traits<A>::template rebind_traits<QueueNode<T>>;
 
        public:
