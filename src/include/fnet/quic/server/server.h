@@ -571,12 +571,12 @@ namespace futils {
 
             void schedule_recv() {
                 while (true) {
-                    RecvStreamNotify<TConfig> notify = recv_notify.pop();
+                    std::optional<RecvStreamNotify<TConfig>> notify = recv_notify.pop();
                     if (!notify) {
                         break;
                     }
-                    auto ctx = std::shared_ptr<context::Context<TConfig>>(notify.handler, &notify.handler->ctx);
-                    if (!notify.id.valid()) {
+                    auto ctx = std::shared_ptr<context::Context<TConfig>>(notify->handler, &notify->handler->ctx);
+                    if (!notify->id.valid()) {
                         if (server_config.on_datagram_recv) {
                             server_config.on_datagram_recv(server_config.app_ctx, std::move(ctx));
                         }
@@ -584,7 +584,7 @@ namespace futils {
                     else {
                         std::shared_ptr<stream::impl::Conn<StreamTypeConfig>> streams = ctx->get_streams();
                         stream::impl::Conn<StreamTypeConfig>* ptr = streams.get();
-                        if (notify.id.type() == stream::StreamType::bidi) {
+                        if (notify->id.type() == stream::StreamType::bidi) {
                             auto stream = ptr->find_bidi(notify.id);
                             if (stream) {
                                 if (server_config.on_bidi_stream_recv) {
@@ -593,7 +593,7 @@ namespace futils {
                             }
                         }
                         else {
-                            auto stream = ptr->find_recv_uni(notify.id);
+                            auto stream = ptr->find_recv_uni(notify->id);
                             if (stream) {
                                 if (server_config.on_uni_stream_recv) {
                                     server_config.on_uni_stream_recv(server_config.app_ctx, std::move(ctx), stream);
