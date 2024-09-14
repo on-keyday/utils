@@ -146,7 +146,7 @@ namespace futils {
                         auto cp = it;
                         cp++;
                         if (cp == sorted.end()) {
-                            return handle_single_range(it, type, frag);
+                            return handle_single_range(std::move(conn_ctx), it, type, frag);
                         }
                         const auto nextofs = cp->offset;
                         if (nextofs <= frag.offset) {
@@ -155,7 +155,7 @@ namespace futils {
                         const auto curmax = it->offset + it->data.size();
                         const auto newmax = frag.offset + frag.fragment.size();
                         if (newmax <= nextofs) {
-                            return handle_single_range(it, type, frag);
+                            return handle_single_range(std::move(conn_ctx), it, type, frag);
                         }
                         const auto cmp1 = it->data.rvec().substr(frag.offset - it->offset);
                         const auto cmp2 = frag.fragment.substr(0, cmp1.size());
