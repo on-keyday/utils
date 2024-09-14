@@ -412,7 +412,7 @@ namespace futils {
                         frame::add_padding_for_encryption(fw, wire, crypto::sample_skip_size);
                     }
                     pstatus = fw.status;
-                    logger.sending_packet(summary, w.written());  // logging
+                    logger.sending_packet(path_verifier.get_writing_path(), summary, w.written());  // logging
                     return true;
                 };
             }
@@ -499,7 +499,7 @@ namespace futils {
                                 }
                                 frame::add_padding_for_encryption(fw, wire, crypto::sample_skip_size);
                                 pstatus = fw.status;
-                                logger.sending_packet(summary, w.written());
+                                logger.sending_packet(path_verifier.get_writing_path(), summary, w.written());
                                 return true;
                             });
                         break;
@@ -512,7 +512,7 @@ namespace futils {
                                 fw.write(frame::PingFrame{});
                                 pstatus = fw.status;
                                 pstatus.set_mtu_probe();  // is MTU probe
-                                logger.sending_packet(summary, w.written());
+                                logger.sending_packet(path_verifier.get_writing_path(), summary, w.written());
                                 return true;
                             });
                         break;
@@ -532,7 +532,7 @@ namespace futils {
                                     return false;
                                 }
                                 pstatus = fw.status;
-                                logger.sending_packet(summary, w.written());
+                                logger.sending_packet(path_verifier.get_writing_path(), summary, w.written());
                                 return true;
                             });
                     }
@@ -1055,7 +1055,7 @@ namespace futils {
                     summary.version = version;
                 }
                 status.on_packet_decrypted(pn_space);
-                logger.recv_packet(summary, payload);
+                logger.recv_packet(path_id, summary, payload);
                 if (!handle_on_initial(summary)) {
                     return false;
                 }
@@ -1103,9 +1103,9 @@ namespace futils {
                 return true;
             }
 
-            bool handle_retry_packet(packet::RetryPacket retry, view::rvec raw_packet) {
+            bool handle_retry_packet(packet::RetryPacket retry, view::rvec raw_packet, path::PathID path_id) {
                 logger.debug("received Retry packet");
-                logger.recv_packet(packet::summarize(retry), {});
+                logger.recv_packet(path_id, packet::summarize(retry), {});
                 if (status.is_server()) {
                     logger.drop_packet(PacketType::Retry, packetnum::infinity, error::Error("received Retry packet at server", error::Category::lib, error::fnet_quic_packet_error), raw_packet, true);
                     return true;
@@ -1486,9 +1486,9 @@ namespace futils {
                 auto decrypt_suite = crypto.decrypt_callback(version, [&](PacketType type) {
                     return status.largest_received_packet_number(status::from_packet_type(type));
                 });
-                auto plain_cb = [this](PacketType type, auto&& packet, view::wvec src) {
+                auto plain_cb = [this, &path](PacketType type, auto&& packet, view::wvec src) {
                     if constexpr (std::is_same_v<std::decay_t<decltype(packet)>, packet::RetryPacket>) {
-                        return handle_retry_packet(packet, src);
+                        return handle_retry_packet(packet, src, path);
                     }
                     return true;
                 };

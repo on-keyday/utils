@@ -21,8 +21,8 @@ namespace futils {
             void (*drop_packet)(std::shared_ptr<void>&, PacketType, packetnum::Value, error::Error, view::rvec raw_packet, bool is_decrypted) = nullptr;
             void (*debug)(std::shared_ptr<void>&, const char*) = nullptr;
             void (*report_error)(std::shared_ptr<void>&, const error::Error&) = nullptr;
-            void (*sending_packet)(std::shared_ptr<void>&, packet::PacketSummary, view::rvec payload, bool is_send /*always true*/) = nullptr;
-            void (*recv_packet)(std::shared_ptr<void>&, packet::PacketSummary, view::rvec payload, bool is_send /*always false*/) = nullptr;
+            void (*sending_packet)(std::shared_ptr<void>&, path::PathID path, packet::PacketSummary, view::rvec payload, bool is_send /*always true*/) = nullptr;
+            void (*recv_packet)(std::shared_ptr<void>&, path::PathID path, packet::PacketSummary, view::rvec payload, bool is_send /*always false*/) = nullptr;
             void (*pto_fire)(std::shared_ptr<void>&, status::PacketNumberSpace) = nullptr;
             void (*loss_timer_state)(std::shared_ptr<void>&, const status::LossTimer&, time::Time now) = nullptr;
             void (*mtu_probe)(std::shared_ptr<void>&, std::uint64_t probe) = nullptr;
@@ -45,15 +45,15 @@ namespace futils {
                 }
             }
 
-            void sending_packet(packet::PacketSummary s, view::rvec payload) {
+            void sending_packet(path::PathID path, packet::PacketSummary s, view::rvec payload) {
                 if (callbacks && callbacks->sending_packet) {
-                    callbacks->sending_packet(ctx, s, payload, true);
+                    callbacks->sending_packet(ctx, path, s, payload, true);
                 }
             }
 
-            void recv_packet(packet::PacketSummary s, view::rvec payload) {
+            void recv_packet(path::PathID path, packet::PacketSummary s, view::rvec payload) {
                 if (callbacks && callbacks->recv_packet) {
-                    callbacks->recv_packet(ctx, s, payload, false);
+                    callbacks->recv_packet(ctx, path, s, payload, false);
                 }
             }
 

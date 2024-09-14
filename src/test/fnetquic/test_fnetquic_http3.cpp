@@ -104,7 +104,7 @@ void handler_thread(Data* data) {
     }
 }
 
-void log_packet(std::shared_ptr<void>&, futils::fnet::quic::packet::PacketSummary su, futils::view::rvec payload, bool is_send) {
+void log_packet(std::shared_ptr<void>&, futils::fnet::quic::path::PathID, futils::fnet::quic::packet::PacketSummary su, futils::view::rvec payload, bool is_send) {
     std::string res = is_send ? "send: " : "recv: ";
     res += to_string(su.type);
     res += " ";
