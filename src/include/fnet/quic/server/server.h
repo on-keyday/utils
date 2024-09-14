@@ -294,8 +294,8 @@ namespace futils {
             void (*close_connection)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
 
             // notify when stream received
-            void (*on_bidi_stream_recv)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<BidiStream>&) = nullptr;
-            void (*on_uni_stream_recv)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<RecvUniStream>&) = nullptr;
+            void (*on_bidi_stream_recv)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<BidiStream>&&) = nullptr;
+            void (*on_uni_stream_recv)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<RecvUniStream>&&) = nullptr;
             void (*on_datagram_recv)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
         };
 
@@ -588,7 +588,7 @@ namespace futils {
                             auto stream = ptr->find_bidi(notify->id);
                             if (stream) {
                                 if (server_config.on_bidi_stream_recv) {
-                                    server_config.on_bidi_stream_recv(server_config.app_ctx, std::move(ctx), stream);
+                                    server_config.on_bidi_stream_recv(server_config.app_ctx, std::move(ctx), std::move(stream));
                                 }
                             }
                         }
@@ -596,7 +596,7 @@ namespace futils {
                             auto stream = ptr->find_recv_uni(notify->id);
                             if (stream) {
                                 if (server_config.on_uni_stream_recv) {
-                                    server_config.on_uni_stream_recv(server_config.app_ctx, std::move(ctx), stream);
+                                    server_config.on_uni_stream_recv(server_config.app_ctx, std::move(ctx), std::move(stream));
                                 }
                             }
                         }
