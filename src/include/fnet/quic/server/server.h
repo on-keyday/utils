@@ -585,7 +585,7 @@ namespace futils {
                         std::shared_ptr<stream::impl::Conn<StreamTypeConfig>> streams = ctx->get_streams();
                         stream::impl::Conn<StreamTypeConfig>* ptr = streams.get();
                         if (notify->id.type() == stream::StreamType::bidi) {
-                            auto stream = ptr->find_bidi(notify.id);
+                            auto stream = ptr->find_bidi(notify->id);
                             if (stream) {
                                 if (server_config.on_bidi_stream_recv) {
                                     server_config.on_bidi_stream_recv(server_config.app_ctx, std::move(ctx), stream);
