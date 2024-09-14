@@ -22,11 +22,18 @@ namespace futils {
             void detect() {}
             void sent(auto&& observer, auto&& dgram) {}
 
-            void (*on_data_added_cb)(std::shared_ptr<void>&&) = nullptr;
+            void (*on_send_data_added_cb)(std::shared_ptr<void>&&) = nullptr;
+            void (*on_recv_data_added_cb)(std::shared_ptr<void>&&) = nullptr;
 
-            void on_data_added(std::shared_ptr<void>&& conn_ctx) {
-                if (on_data_added_cb) {
-                    on_data_added_cb(std::move(conn_ctx));
+            void on_send_data_added(std::shared_ptr<void>&& conn_ctx) {
+                if (on_send_data_added_cb) {
+                    on_send_data_added_cb(std::move(conn_ctx));
+                }
+            }
+
+            void on_recv_data_added(std::shared_ptr<void>&& conn_ctx) {
+                if (on_recv_data_added_cb) {
+                    on_recv_data_added_cb(std::move(conn_ctx));
                 }
             }
         };

@@ -22,6 +22,8 @@ namespace futils {
             StreamID id = invalid_id;
 
            private:
+            void (*on_data_added_cb)(std::shared_ptr<void>&& conn_ctx, StreamID id) = nullptr;
+
             Locker locker;
             slib::list<resend::StreamFragment> sorted;
             // all data has been received
@@ -30,6 +32,7 @@ namespace futils {
             bool fin = false;
             // reset received
             bool rst = false;
+            std::uint64_t prev_notified = -1;
             std::atomic_uint64_t read_pos = 0;
             std::uint64_t prev_pos = 0;
 
@@ -57,8 +60,7 @@ namespace futils {
                 };
             }
 
-           public:
-            bool check_done() {
+            bool check_done(std::shared_ptr<void>&& conn_ctx) {
                 if (done) {
                     return true;
                 }
@@ -70,13 +72,19 @@ namespace futils {
                     if (prev != it->offset) {
                         return false;
                     }
+                    if (prev == read_pos && read_pos != prev_notified) {  // at here,some data is available
+                        if (on_data_added_cb && conn_ctx) {
+                            on_data_added_cb(std::move(conn_ctx), id);
+                        }
+                        prev_notified = read_pos;
+                    }
                     prev = it->offset + it->data.size();
                 }
                 done = true;
                 return true;
             }
 
-            std::pair<bool, error::Error> handle_single_range(auto& iter, FrameType type, Fragment frag) {
+            std::pair<bool, error::Error> handle_single_range(std::shared_ptr<void>&& conn_ctx, auto& iter, FrameType type, Fragment frag) {
                 resend::StreamFragment& it = *iter;
                 auto curmax = it.offset + it.data.size();
                 auto newmax = frag.offset + frag.fragment.size();
@@ -92,7 +100,7 @@ namespace futils {
                     }
                     fin = fin || frag.fin;
                     return {
-                        check_done(),
+                        check_done(std::move(conn_ctx)),
                         error::none,
                     };
                 }
@@ -108,24 +116,30 @@ namespace futils {
                     it.fin = frag.fin;
                     fin = fin || frag.fin;
                     return {
-                        check_done(),
+                        check_done(std::move(conn_ctx)),
                         error::none,
                     };
                 }
                 // no duplicated = new fragment
                 else {
                     sorted.insert(++iter, pack_new(frag));
-                    return {check_done(), error::none};
+                    return {check_done(std::move(conn_ctx)), error::none};
                 }
             }
 
-            std::pair<bool, error::Error> recv(FrameType type, Fragment frag) {
+           public:
+            void set_data_added_cb(void (*cb)(std::shared_ptr<void>&& conn_ctx, StreamID id)) {
+                const auto unlock = lock();
+                on_data_added_cb = cb;
+            }
+
+            std::pair<bool, error::Error> recv(std::shared_ptr<void>&& conn_ctx, FrameType type, Fragment frag) {
                 const auto unlock = lock();
                 if (done) {
                     return {true, error::none};  // ignore
                 }
                 if (frag.offset < read_pos) {
-                    return {check_done(), error::none};  // ignore
+                    return {check_done(std::move(conn_ctx)), error::none};  // ignore
                 }
                 for (auto it = sorted.begin(); it != sorted.end(); it++) {
                     if (it->offset <= frag.offset) {
@@ -162,7 +176,7 @@ namespace futils {
                 else {
                     sorted.push_back(pack_new(frag));
                 }
-                return {check_done(), error::none};
+                return {check_done(std::move(conn_ctx)), error::none};
             }
 
             void reset() {
@@ -274,7 +288,7 @@ namespace futils {
 
         // arg must be ptrlike
         template <class Locker, class TConfig>
-        inline std::pair<bool, error::Error> reader_recv_handler(decltype(std::declval<typename TConfig::stream_handler::recv_buf>().get_specific())& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t err_code) {
+        inline std::pair<bool, error::Error> reader_recv_handler(decltype(std::declval<typename TConfig::stream_handler::recv_buf>().get_specific())& arg, std::shared_ptr<void>&& conn_ctx, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t err_code) {
             if (!arg) {
                 return {false, error::Error("unexpected arg", error::Category::lib, error::fnet_quic_implementation_bug)};
             }
@@ -283,13 +297,13 @@ namespace futils {
                 s->id = id;
             }
             if (s->id != id) {
-                return {false, error::Error("unexpected bug!!", error::Category::lib, error::fnet_quic_implementation_bug)};
+                return {false, error::Error("unexpected conn id; maybe bug!!", error::Category::lib, error::fnet_quic_implementation_bug)};
             }
             if (type == FrameType::RESET_STREAM) {
                 s->reset();
                 return {false, error::none};
             }
-            return s->recv(type, frag);
+            return s->recv(std::move(conn_ctx), type, frag);
         }
 
         template <class Locker, class TConfig>

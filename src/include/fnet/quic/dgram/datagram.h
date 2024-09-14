@@ -38,7 +38,8 @@ namespace futils {
             std::shared_ptr<void> arg;
             void (*notify_drop_cb)(std::shared_ptr<void>&, storage&, packetnum::Value) = nullptr;
 
-            void (*on_data_added_cb)(std::shared_ptr<void>&&) = nullptr;
+            void (*on_send_data_added_cb)(std::shared_ptr<void>&&) = nullptr;
+            void (*on_recv_data_added_cb)(std::shared_ptr<void>&&) = nullptr;
 
             void drop(storage& s, packetnum::Value pn) {
                 if (notify_drop_cb != nullptr) {
@@ -58,9 +59,15 @@ namespace futils {
                 retransmit.sent(observer, std::move(dgram));
             }
 
-            void on_data_added(std::shared_ptr<void>&& conn_ctx) {
-                if (on_data_added_cb) {
-                    on_data_added_cb(std::move(conn_ctx));
+            void on_send_data_added(std::shared_ptr<void>&& conn_ctx) {
+                if (on_send_data_added_cb) {
+                    on_send_data_added_cb(std::move(conn_ctx));
+                }
+            }
+
+            void on_recv_data_added(std::shared_ptr<void>&& conn_ctx) {
+                if (on_recv_data_added_cb) {
+                    on_recv_data_added_cb(std::move(conn_ctx));
                 }
             }
         };
@@ -132,6 +139,7 @@ namespace futils {
                 if (recv_que.size() > config.recv_buf_limit) {
                     recv_que.pop_front();
                 }
+                drop.on_recv_data_added(conn_ctx.lock());
                 return error::none;
             }
 
@@ -176,7 +184,7 @@ namespace futils {
                 sd.data = make_storage(data);
                 const auto d = lock();
                 send_que.push_back(std::move(sd));
-                drop.on_data_added(conn_ctx.lock());
+                drop.on_send_data_added(conn_ctx.lock());
                 return true;
             }
         };

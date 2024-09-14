@@ -15,7 +15,7 @@ namespace futils {
     namespace fnet::quic::stream::impl {
         // returns (all_recved,err)
         template <class Arg>
-        using SaveFragmentCallback = std::pair<bool, error::Error> (*)(Arg& arg, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv_bytes, std::uint64_t err_code);
+        using SaveFragmentCallback = std::pair<bool, error::Error> (*)(Arg& arg, std::shared_ptr<void>&& conn_ctx, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv_bytes, std::uint64_t err_code);
 
         // this has two mode:
         // query_update = true: if this returns non-zero, then call update
@@ -56,9 +56,9 @@ namespace futils {
                 }
             }
 
-            std::pair<bool, error::Error> save(StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t error_code) {
+            std::pair<bool, error::Error> save(std::shared_ptr<void>&& conn_ctx, StreamID id, FrameType type, Fragment frag, std::uint64_t total_recv, std::uint64_t error_code) {
                 if (callback) {
-                    return callback(arg, id, type, frag, total_recv, error_code);
+                    return callback(arg, std::move(conn_ctx), id, type, frag, total_recv, error_code);
                 }
                 return {false, error::none};
             }

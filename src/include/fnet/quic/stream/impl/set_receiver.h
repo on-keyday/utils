@@ -4,8 +4,9 @@
 
 namespace futils::fnet::quic::stream::impl {
     template <class TConfig, class Lock = typename TConfig::recv_stream_lock>
-    std::shared_ptr<RecvSorter<Lock>> set_stream_reader(RecvUniStream<TConfig>& r, bool use_auto_update = false) {
+    std::shared_ptr<RecvSorter<Lock>> set_stream_reader(RecvUniStream<TConfig>& r, bool use_auto_update = false, void (*on_data_added)(std::shared_ptr<void>&& ctx, StreamID id) = nullptr) {
         auto read = std::allocate_shared<RecvSorter<Lock>>(glheap_allocator<stream::impl::RecvSorter<Lock>>{});
+        read->set_data_added_cb(on_data_added);
         using Saver = typename TConfig::stream_handler::recv_buf;
         if (use_auto_update) {
             r.set_receiver(Saver(read,

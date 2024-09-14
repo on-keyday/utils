@@ -66,8 +66,8 @@ namespace futils {
         struct RecvBufInterface {
             T impl;
 
-            std::pair<bool, error::Error> save(StreamID id, FrameType type, Fragment frag, std::uint64_t recv_bytes, std::uint64_t err_code) {
-                return impl.save(id, type, frag, recv_bytes, err_code);
+            std::pair<bool, error::Error> save(std::shared_ptr<void>&& conn_ctx, StreamID id, FrameType type, Fragment frag, std::uint64_t recv_bytes, std::uint64_t err_code) {
+                return impl.save(std::move(conn_ctx), id, type, frag, recv_bytes, err_code);
             }
 
             constexpr void send_callback(auto this_) {

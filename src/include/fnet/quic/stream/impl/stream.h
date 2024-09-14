@@ -383,7 +383,6 @@ namespace futils {
             core::RecvUniStreamBase<TConfig> uni;
             std::weak_ptr<ConnFlowControl<TConfig>> conn;
             using RecvBuffer = typename TConfig::stream_handler::recv_buf;
-            // RecvBuffer saver;
             RecvBufInterface<RecvBuffer> saver;
             resend::ACKHandler max_data_wait;
             resend::ACKHandler stop_sending_wait;
@@ -471,7 +470,7 @@ namespace futils {
                     return error::eof;  // no way to handle
                 }
                 auto [_, err] = uni.recv_stream(c->base, frame, [&](Fragment frag, std::uint64_t recv_bytes) -> error::Error {
-                    auto [all_done, err] = saver.save(uni.id, frame.type.type_detail(), frag, recv_bytes, 0);
+                    auto [all_done, err] = saver.save(c->conn_ctx.lock(), uni.id, frame.type.type_detail(), frag, recv_bytes, 0);
                     if (err) {
                         return err;
                     }
@@ -495,7 +494,7 @@ namespace futils {
                 if (err) {
                     return err;
                 }
-                auto [tmp2, err2] = saver.save(uni.id, FrameType::RESET_STREAM, Fragment{.offset = uni.state.recv_bytes(), .fin = true}, uni.state.recv_bytes(), uni.state.get_error_code());
+                auto [tmp2, err2] = saver.save(c->conn_ctx.lock(), uni.id, FrameType::RESET_STREAM, Fragment{.offset = uni.state.recv_bytes(), .fin = true}, uni.state.recv_bytes(), uni.state.get_error_code());
                 return err2;
             }
 
