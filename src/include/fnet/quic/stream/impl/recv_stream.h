@@ -61,6 +61,13 @@ namespace futils {
             }
 
             bool check_done(std::shared_ptr<void>&& conn_ctx) {
+                // at here,some data is available
+                if (sorted.size() && sorted.front().offset == read_pos && read_pos != prev_notified) {
+                    if (on_data_added_cb && conn_ctx) {
+                        on_data_added_cb(std::move(conn_ctx), id);
+                    }
+                    prev_notified = read_pos;
+                }
                 if (done) {
                     return true;
                 }
@@ -72,12 +79,7 @@ namespace futils {
                     if (prev != it->offset) {
                         return false;
                     }
-                    if (prev == read_pos && read_pos != prev_notified) {  // at here,some data is available
-                        if (on_data_added_cb && conn_ctx) {
-                            on_data_added_cb(std::move(conn_ctx), id);
-                        }
-                        prev_notified = read_pos;
-                    }
+
                     prev = it->offset + it->data.size();
                 }
                 done = true;
