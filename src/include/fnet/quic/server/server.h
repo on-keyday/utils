@@ -21,8 +21,6 @@
 namespace futils {
     namespace fnet::quic::server {
 
-        using BytesChannel = thread::MultiProducerChannelBuffer<storage, glheap_allocator<storage>>;
-
         struct Handler {
             std::atomic<std::int64_t> next_deadline = -1;
 
@@ -294,6 +292,17 @@ namespace futils {
             // when transport parameter read, user may send data to peer
             void (*on_transport_parameter_read)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
             void (*close_connection)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
+
+            // notify when stream received
+            void (*on_bidi_stream_recv)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<BidiStream>&) = nullptr;
+            void (*on_uni_stream_recv)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<RecvUniStream>&) = nullptr;
+            void (*on_datagram_recv)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
+        };
+
+        template <class TConfig>
+        struct RecvStreamNotify {
+            std::shared_ptr<Opened<TConfig>> handler;
+            stream::StreamID id;
         };
 
         template <class TConfig>
@@ -318,6 +327,7 @@ namespace futils {
             SenderQue<Lock> send_que;
             path::ip::PathMapper paths;
             Lock path_lock;
+            thread::SingleProduceMultiConsumeQueue<RecvStreamNotify<TConfig>, glheap_allocator<RecvStreamNotify<TConfig>>> recv_notify;
 
            public:
             path::PathID get_path_id(const NetAddrPort& addr) {
@@ -531,20 +541,67 @@ namespace futils {
                 send_que.enque(std::static_pointer_cast<Handler>(std::move(ptr)), false);
             }
 
-            static void stream_notify_callback(std::shared_ptr<void>&& conn_ctx, stream::StreamID id) {
+            static void stream_send_notify_callback(std::shared_ptr<void>&& conn_ctx, stream::StreamID id) {
                 auto ctx = std::static_pointer_cast<Opened<TConfig>>(std::move(conn_ctx));
                 auto mux = std::static_pointer_cast<HandlerMap<TConfig>>(ctx->ctx.get_multiplexer_ptr().lock());
                 mux->send_que.enque(std::static_pointer_cast<Handler>(std::move(ctx)), false);
             }
 
-            static void datagram_notify_callback(std::shared_ptr<void>&& conn_ctx) {
+            static void stream_recv_notify_callback(std::shared_ptr<void>&& conn_ctx, stream::StreamID id) {
+                auto ctx = std::static_pointer_cast<Opened<TConfig>>(std::move(conn_ctx));
+                auto mux = std::static_pointer_cast<HandlerMap<TConfig>>(ctx->ctx.get_multiplexer_ptr().lock());
+                mux->recv_notify.push({std::move(ctx), id});
+            }
+
+            static void datagram_send_notify_callback(std::shared_ptr<void>&& conn_ctx) {
                 auto ctx = std::static_pointer_cast<Opened<TConfig>>(std::move(conn_ctx));
                 auto mux = std::static_pointer_cast<HandlerMap<TConfig>>(ctx->ctx.get_multiplexer_ptr().lock());
                 mux->send_que.enque(std::static_pointer_cast<Handler>(std::move(ctx)), false);
             }
 
-            void schedule() {
+            static void datagram_recv_notify_callback(std::shared_ptr<void>&& conn_ctx) {
+                auto ctx = std::static_pointer_cast<Opened<TConfig>>(std::move(conn_ctx));
+                auto mux = std::static_pointer_cast<HandlerMap<TConfig>>(ctx->ctx.get_multiplexer_ptr().lock());
+                mux->recv_notify.push({std::move(ctx), stream::invalid_id});
+            }
+
+            void schedule_send() {
                 handlers.schedule(config.internal_parameters.clock, send_que);
+            }
+
+            void schedule_recv() {
+                while (true) {
+                    RecvStreamNotify<TConfig> notify = recv_notify.pop();
+                    if (!notify) {
+                        break;
+                    }
+                    auto ctx = std::shared_ptr<context::Context<TConfig>>(notify.handler, &notify.handler->ctx);
+                    if (!notify.id.valid()) {
+                        if (server_config.on_datagram_recv) {
+                            server_config.on_datagram_recv(server_config.app_ctx, std::move(ctx));
+                        }
+                    }
+                    else {
+                        std::shared_ptr<stream::impl::Conn<StreamTypeConfig>> streams = ctx->get_streams();
+                        stream::impl::Conn<StreamTypeConfig>* ptr = streams.get();
+                        if (notify.id.type() == stream::StreamType::bidi) {
+                            auto stream = ptr->find_bidi(notify.id);
+                            if (stream) {
+                                if (server_config.on_bidi_stream_recv) {
+                                    server_config.on_bidi_stream_recv(server_config.app_ctx, std::move(ctx), stream);
+                                }
+                            }
+                        }
+                        else {
+                            auto stream = ptr->find_recv_uni(notify.id);
+                            if (stream) {
+                                if (server_config.on_uni_stream_recv) {
+                                    server_config.on_uni_stream_recv(server_config.app_ctx, std::move(ctx), stream);
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // thread safe call

@@ -35,9 +35,16 @@ void recv_packets(std::shared_ptr<ServerContext> ctx) {
     }
 }
 
-void schedule_events(std::shared_ptr<ServerContext> ctx) {
+void schedule_send(std::shared_ptr<ServerContext> ctx) {
     while (!ctx->end) {
-        ctx->hm->schedule();
+        ctx->hm->schedule_send();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
+
+void schedule_recv(std::shared_ptr<ServerContext> ctx) {
+    while (!ctx->end) {
+        ctx->hm->schedule_recv();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
@@ -118,7 +125,8 @@ int quic_server() {
     ctx->sock = std::move(sock);
     std::thread(recv_packets, ctx).detach();
     std::thread(send_packets, ctx).detach();
-    std::thread(schedule_events, ctx).detach();
+    std::thread(schedule_send, ctx).detach();
+    std::thread(schedule_recv, ctx).detach();
     while (!ctx->end) {
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }

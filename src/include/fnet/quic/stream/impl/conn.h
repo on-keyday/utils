@@ -184,6 +184,13 @@ namespace futils {
                 return nullptr;
             }
 
+            std::shared_ptr<BidiStream<TConfig>> find_bidi(StreamID id) {
+                if (id.origin() == local_origin()) {
+                    return find_local_bidi(id);
+                }
+                return find_remote_bidi(id);
+            }
+
             std::shared_ptr<SendUniStream<TConfig>> find_send_uni(StreamID id) {
                 const auto locked = control.base.open_uni_lock();
                 if (auto it = local_uni.find(id); it != local_uni.end()) {
