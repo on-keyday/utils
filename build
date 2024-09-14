@@ -39,6 +39,9 @@ fi
 
 
 INSTALL_PREFIX=$(pwd)
+if [ "$FUTILS_INSTALL_PREFIX" ]; then
+INSTALL_PREFIX=$FUTILS_INSTALL_PREFIX
+fi
 if [ $FUTILS_BUILD_MODE = "wasm-rt" ]; then
 # wasimake must be enabled on this context
 cmake -D CMAKE_TOOLCHAIN_FILE=$WASI_SDK_PREFIX/share/cmake/wasi-sdk-pthread.cmake -D WASI_SDK_PREFIX=$WASI_SDK_PREFIX -G Ninja -D CMAKE_BUILD_TYPE=$BUILD_TYPE -D CMAKE_INSTALL_PREFIX=$INSTALL_PREFIX -D FUTILS_BUILD_MODE=static -S . -B $OUTPUT_DIR

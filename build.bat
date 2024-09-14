@@ -70,6 +70,9 @@ if not "%FUTILS_C_COMPILER%" == "" (
 
 set LLVM_DIR=D:\llvm-project\%BUILD_TYPE%
 set INSTALL_PREFIX=%CD%
+if not "%FUTILS_INSTALL_PREFIX%" == "" (
+    set INSTALL_PREFIX=%FUTILS_INSTALL_PREFIX%
+)
 rem -D CMAKE_CXX_CLANG_TIDY=clang-tidy;-header-filter=src/include;--checks=-*
 rem if "%CLANG%"=="true" (
 if "%FUTILS_BUILD_MODE%" == "wasm-rt" (
