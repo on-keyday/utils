@@ -17,6 +17,11 @@ namespace futils::thread {
     struct QueueNode {
         std::atomic<QueueNode*> next;
         T data;
+
+        constexpr QueueNode() = default;
+        template <class Arg>
+        constexpr QueueNode(Arg&& arg)
+            : data(std::forward<Arg>(arg)) {}
     };
 
     template <typename T, class A>
@@ -31,7 +36,7 @@ namespace futils::thread {
        public:
         MultiProduceSingleConsumeQueue() {
             auto node = traits::allocate(allocator, 1);
-            traits::construct(allocator, node, QueueNode<T>{nullptr, T{}});
+            traits::construct(allocator, node);
             head.store(node);
             tail.store(node);
         }
@@ -49,7 +54,7 @@ namespace futils::thread {
         // called by the producer (multi thread)
         void push(T&& data) {
             auto node = traits::allocate(allocator, 1);
-            traits::construct(allocator, node, QueueNode<T>{nullptr, std::move(data)});
+            traits::construct(allocator, node, std::move(data));
             node->next = nullptr;
             auto last = tail.exchange(node);
             last->next = node;
@@ -82,7 +87,7 @@ namespace futils::thread {
        public:
         SingleProduceMultiConsumeQueue() {
             auto node = traits::allocate(allocator, 1);
-            traits::construct(allocator, node, QueueNode<T>{nullptr, T{}});
+            traits::construct(allocator, node);
             head.store(node);
             tail.store(node);
         }
@@ -100,7 +105,7 @@ namespace futils::thread {
         // called by the producer (single thread)
         void push(T&& data) {
             auto node = traits::allocate(allocator, 1);
-            traits::construct(allocator, node, QueueNode<T>{nullptr, std::move(data)});
+            traits::construct(allocator, node, std::move(data));
             node->next = nullptr;
             auto last = tail.exchange(node);
             last->next = node;
