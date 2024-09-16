@@ -551,7 +551,7 @@ namespace futils {
             static void stream_recv_notify_callback(std::shared_ptr<void>&& conn_ctx, stream::StreamID id) {
                 auto ctx = std::static_pointer_cast<Opened<TConfig>>(std::move(conn_ctx));
                 auto mux = std::static_pointer_cast<HandlerMap<TConfig>>(ctx->ctx.get_multiplexer_ptr().lock());
-                std::shared_ptr<stream::impl::Conn<StreamTypeConfig>> streams = ctx->get_streams();
+                std::shared_ptr<stream::impl::Conn<StreamTypeConfig>> streams = ctx->ctx.get_streams();
                 stream::impl::Conn<StreamTypeConfig>* ptr = streams.get();
                 // because of auto_remove mode, stream may removed from streams after this call
                 // if stream is removed and if not acquired this stream here,
