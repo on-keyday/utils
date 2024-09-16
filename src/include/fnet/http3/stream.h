@@ -39,7 +39,7 @@ namespace futils {
                 return false;
             }
             if (eof) {
-                q->user_read_full();
+                q.user_read_full();
                 break;
             }
             return true;
