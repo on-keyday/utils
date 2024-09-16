@@ -141,6 +141,23 @@ namespace futils {
             }
         };
 
+        enum class StateMachine {
+            no_state_machine,
+            client_start,  // client header send
+            client_header_send = client_start,
+            client_data_send,
+            client_header_recv,
+            client_data_recv,
+            client_end,
+            server_start,  // server header recv
+            server_header_recv = server_start,
+            server_data_recv,
+            server_header_send,
+            server_data_send,
+
+            failed,
+        };
+
         template <class Config>
         struct RequestStream {
             using QuicStream = quic::stream::impl::BidiStream<typename Config::quic_config>;
@@ -149,11 +166,32 @@ namespace futils {
             std::shared_ptr<Connection<Config>> conn;
             flex_storage read_buf;
             using String = typename Config::qpack_config::string;
+            StateMachine state = StateMachine::no_state_machine;
 
+           private:
+            bool is_valid_state(StateMachine s) {
+                return state == StateMachine::no_state_machine || state == s;
+            }
+
+            void set_state(StateMachine s) {
+                if (state != StateMachine::no_state_machine) {
+                    state = s;
+                }
+            }
+
+            void set_failed() {
+                state = StateMachine::failed;
+            }
+
+           public:
             bool write_header(auto&& write) {
                 auto s = stream.lock();
                 QuicStream* q = s.get();
                 if (!q || q->sender.is_fin()) {
+                    return false;
+                }
+                if (!is_valid_state(StateMachine::client_header_send) ||
+                    !is_valid_state(StateMachine::server_header_send)) {
                     return false;
                 }
                 binary::WriteStreamingBuffer<String> buf;
@@ -171,7 +209,14 @@ namespace futils {
                 auto header = frame::get_header(area, frame::Type::HEADER, section.size());
                 auto res = q->sender.add_multi_data(false, true, header, section);
                 if (res.result != quic::IOResult::ok) {
+                    set_failed();
                     return false;
+                }
+                if (state == StateMachine::client_start) {
+                    set_state(StateMachine::client_data_send);
+                }
+                else {
+                    set_state(StateMachine::server_data_send);
                 }
                 return true;
             }
@@ -188,19 +233,17 @@ namespace futils {
                 if (q->receiver.is_closed()) {
                     return false;
                 }
-                while (true) {
-                    auto [data, eof] = re->read_direct();
-                    if (data.size() == 0 && !eof) {
-                        return one;
-                    }
+                auto eof = re->read_best([&](auto& data) {
                     read_buf.append(data);
-                    one = true;
-                    if (eof) {
-                        q->receiver.user_read_full();
-                        break;
-                    }
+                });
+                if (data.size() == 0 && !eof) {
+                    return one;
                 }
-
+                one = true;
+                if (eof) {
+                    q->receiver.user_read_full();
+                    break;
+                }
                 return true;
             }
 
@@ -209,6 +252,10 @@ namespace futils {
                 auto locked = stream.lock();
                 QuicStream* q = locked.get();
                 if (!q) {
+                    return false;
+                }
+                if (!is_valid_state(StateMachine::client_header_recv) ||
+                    !is_valid_state(StateMachine::server_header_recv)) {
                     return false;
                 }
                 if (read_buf.size() == 0) {
@@ -233,10 +280,20 @@ namespace futils {
                     return false;
                 }
                 read_buf.shift_front(offset);
+                if (state == StateMachine::client_start) {
+                    set_state(StateMachine::client_data_recv);
+                }
+                else {
+                    set_state(StateMachine::server_data_recv);
+                }
                 return true;
             }
 
             bool read(auto&& callback) {
+                if (!is_valid_state(StateMachine::client_data_recv) ||
+                    !is_valid_state(StateMachine::server_data_recv)) {
+                    return false;
+                }
                 if (read_buf.size() == 0) {
                     if (!append_to_read_buf()) {
                         return false;
@@ -260,6 +317,10 @@ namespace futils {
             bool write(view::rvec data) {
                 QuicStream* q = stream.get();
                 if (q->sender.is_fin()) {
+                    return false;
+                }
+                if (!is_valid_state(StateMachine::client_data_send) ||
+                    !is_valid_state(StateMachine::server_data_send)) {
                     return false;
                 }
                 frame::FrameHeaderArea area;

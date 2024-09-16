@@ -424,6 +424,7 @@ namespace futils {
                 });
             }
 
+            // read is void(DecodeField)
             QpackError read_header(StreamID id, binary::reader& r, auto&& read) {
                 fields::EncodedSectionPrefix enc_prefix;
                 if (auto err = enc_prefix.parse(r); err != QpackError::none) {
