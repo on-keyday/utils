@@ -136,14 +136,18 @@ namespace futils {
             std::shared_ptr<QuicSendStream> send_encoder;
             ControlStream<typename Config::quic_config> ctrl;
 
-            bool write_uni_stream_headers() {
+            bool write_uni_stream_headers_and_settings(auto&& write_settings) {
+                if (!ctrl.send_control || !send_decoder || !send_encoder) {
+                    return false;
+                }
                 unistream::UniStreamHeaderArea area;
                 auto hdr = unistream::get_header(area, unistream::Type::CONTROL);
                 ctrl.send_control->add_multi_data(false, true, hdr);
                 hdr = unistream::get_header(area, unistream::Type::QPACK_ENCODER);
-                ctrl.send_control->add_multi_data(false, true, hdr);
+                send_encoder->add_multi_data(false, true, hdr);
                 hdr = unistream::get_header(area, unistream::Type::QPACK_DECODER);
-                ctrl.send_control->add_multi_data(false, true, hdr);
+                send_decoder->add_multi_data(false, true, hdr);
+                return ctrl.write_settings(write_settings);
             }
 
             using Lock = typename Config::conn_lock;
