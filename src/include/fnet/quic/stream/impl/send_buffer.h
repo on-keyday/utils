@@ -70,7 +70,7 @@ namespace futils {
                 }
             }
 
-            void set_application_context(std::shared_ptr<void>&& ctx) {
+            void set_application_context(auto&& ctx) {
                 app_ctx = std::forward<decltype(ctx)>(ctx);
             }
 
