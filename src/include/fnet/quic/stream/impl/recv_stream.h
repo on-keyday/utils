@@ -256,6 +256,33 @@ namespace futils {
             }
 
            public:
+            bool read_best(auto&& cb, bool use_try_lock = false) {
+                auto do_read = [&] {
+                    while (sorted.size() && sorted.front().offset == read_pos) {
+                        auto data = std::move(sorted.front());
+                        read_pos += data.data.size();
+                        sorted.pop_front();
+                        if (!cb(data.data)) {
+                            return false;
+                        }
+                    }
+                    return sorted.size() == 0 && done;
+                };
+                if (use_try_lock) {
+                    if (!locker.try_lock()) {
+                        return {{}, false};
+                    }
+                    auto unlock = helper::defer([&] {
+                        locker.unlock();
+                    });
+                    return do_read();
+                }
+                else {
+                    auto unlock = lock();
+                    return do_read();
+                }
+            }
+
             // returns (data,eos)
             std::pair<flex_storage, bool> read_direct(bool use_try_lock = false) {
                 if (use_try_lock) {

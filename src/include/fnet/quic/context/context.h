@@ -157,6 +157,9 @@ namespace futils {
             // internal parameters
             flex_storage packet_creation_buffer;
 
+            // application protocol context
+            std::shared_ptr<void> app_ctx;
+
             void reset_internal() {
                 packet_creation_buffer.resize(0);
             }
@@ -1238,6 +1241,14 @@ namespace futils {
             // thread unsafe call
             auto get_outer_self_ptr() const {
                 return connIDs.get_exporter_obj();
+            }
+
+            auto get_application_context() const {
+                return app_ctx;
+            }
+
+            void set_application_context(std::shared_ptr<void>&& ctx) {
+                app_ctx = std::forward<decltype(ctx)>(ctx);
             }
 
             // get earliest timer deadline
