@@ -48,8 +48,9 @@ namespace futils {
         struct ControlStream {
             using QuicRecvStream = quic::stream::impl::RecvUniStream<typename Config::quic_config>;
             using QuicSendStream = quic::stream::impl::SendUniStream<typename Config::quic_config>;
-            std::weak_ptr<QuicSendStream> send_control;
-            std::weak_ptr<QuicRecvStream> recv_control;
+            using Reader = quic::stream::impl::RecvSorter<typename Config::recv_stream_lock>;
+            std::shared_ptr<QuicSendStream> send_control;
+            std::shared_ptr<QuicRecvStream> recv_control;
             flex_storage read_buf;
 
            private:
@@ -106,10 +107,19 @@ namespace futils {
             bool read_settings(auto&& settings) {
                 QuicRecvStream* q = recv_control.get();
                 Reader* r = q->receiver.get_receiver_ctx().get();
-                frame::FrameHeaderArea area;
-                flex_storage buf;
-                auto eof = r->read_best([&](auto& data) {
-                    buf.append(data);
+                frame::Settings settings;
+                binary::reader r{read_buf};
+                while (!settings.parse(r)) {
+                    if (read_buf.size() && settings.type != std::uint64_t(frame::Type::SETTINGS)) {
+                        return false;
+                    }
+                    if (!append_to_read_buf(q, read_buf)) {
+                        return false;
+                    }
+                }
+                return settings.visit_settings([&](auto&& setting) {
+                    settings(setting.id, setting.value);
+                    return true;
                 });
             }
         };
@@ -121,8 +131,20 @@ namespace futils {
             using QuicSendStream = quic::stream::impl::SendUniStream<typename Config::quic_config>;
             std::shared_ptr<QuicRecvStream> recv_decoder;
             std::shared_ptr<QuicRecvStream> recv_encoder;
+
             std::shared_ptr<QuicSendStream> send_decoder;
             std::shared_ptr<QuicSendStream> send_encoder;
+            ControlStream<typename Config::quic_config> ctrl;
+
+            bool write_uni_stream_headers() {
+                unistream::UniStreamHeaderArea area;
+                auto hdr = unistream::get_header(area, unistream::Type::CONTROL);
+                ctrl.send_control->add_multi_data(false, true, hdr);
+                hdr = unistream::get_header(area, unistream::Type::QPACK_ENCODER);
+                ctrl.send_control->add_multi_data(false, true, hdr);
+                hdr = unistream::get_header(area, unistream::Type::QPACK_DECODER);
+                ctrl.send_control->add_multi_data(false, true, hdr);
+            }
 
             using Lock = typename Config::conn_lock;
             Lock locker;
