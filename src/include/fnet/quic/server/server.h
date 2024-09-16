@@ -303,6 +303,7 @@ namespace futils {
         struct RecvStreamNotify {
             std::shared_ptr<Opened<TConfig>> handler;
             stream::StreamID id;
+            std::shared_ptr<void> stream;
         };
 
         template <class TConfig>
@@ -550,7 +551,26 @@ namespace futils {
             static void stream_recv_notify_callback(std::shared_ptr<void>&& conn_ctx, stream::StreamID id) {
                 auto ctx = std::static_pointer_cast<Opened<TConfig>>(std::move(conn_ctx));
                 auto mux = std::static_pointer_cast<HandlerMap<TConfig>>(ctx->ctx.get_multiplexer_ptr().lock());
-                mux->recv_notify.push({std::move(ctx), id});
+                std::shared_ptr<stream::impl::Conn<StreamTypeConfig>> streams = ctx->get_streams();
+                stream::impl::Conn<StreamTypeConfig>* ptr = streams.get();
+                // because of auto_remove mode, stream may removed from streams after this call
+                // if stream is removed and if not acquired this stream here,
+                // enqueued data will be lost and not sent notification correctly.
+                // so acquire stream here
+                // at here, stream referred by id is locked,
+                // but streams object is not locked
+                // so this doesn't make recursive lock and deadlock
+                std::shared_ptr<void> stream;
+                if (id.type() == stream::StreamType::bidi) {
+                    stream = ptr->find_bidi(id);
+                }
+                else {
+                    stream = ptr->find_recv_uni(id);
+                }
+                if (!stream) {
+                    return;  // already removed stream
+                }
+                mux->recv_notify.push({std::move(ctx), id, std::move(stream)});
             }
 
             static void datagram_send_notify_callback(std::shared_ptr<void>&& conn_ctx) {
@@ -562,7 +582,7 @@ namespace futils {
             static void datagram_recv_notify_callback(std::shared_ptr<void>&& conn_ctx) {
                 auto ctx = std::static_pointer_cast<Opened<TConfig>>(std::move(conn_ctx));
                 auto mux = std::static_pointer_cast<HandlerMap<TConfig>>(ctx->ctx.get_multiplexer_ptr().lock());
-                mux->recv_notify.push({std::move(ctx), stream::invalid_id});
+                mux->recv_notify.push({std::move(ctx), stream::invalid_id, nullptr});
             }
 
             void schedule_send() {
@@ -582,22 +602,14 @@ namespace futils {
                         }
                     }
                     else {
-                        std::shared_ptr<stream::impl::Conn<StreamTypeConfig>> streams = ctx->get_streams();
-                        stream::impl::Conn<StreamTypeConfig>* ptr = streams.get();
                         if (notify->id.type() == stream::StreamType::bidi) {
-                            auto stream = ptr->find_bidi(notify->id);
-                            if (stream) {
-                                if (server_config.on_bidi_stream_recv) {
-                                    server_config.on_bidi_stream_recv(server_config.app_ctx, std::move(ctx), std::move(stream));
-                                }
+                            if (server_config.on_bidi_stream_recv) {
+                                server_config.on_bidi_stream_recv(server_config.app_ctx, std::move(ctx), std::static_pointer_cast<BidiStream>(std::move(notify->stream)));
                             }
                         }
                         else {
-                            auto stream = ptr->find_recv_uni(notify->id);
-                            if (stream) {
-                                if (server_config.on_uni_stream_recv) {
-                                    server_config.on_uni_stream_recv(server_config.app_ctx, std::move(ctx), std::move(stream));
-                                }
+                            if (server_config.on_uni_stream_recv) {
+                                server_config.on_uni_stream_recv(server_config.app_ctx, std::move(ctx), std::static_pointer_cast<RecvUniStream>(std::move(notify->stream)));
                             }
                         }
                     }

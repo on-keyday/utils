@@ -24,12 +24,33 @@ namespace futils {
             std::uint64_t max_field_section_size = 0;
         };
 
+        template <class QuicStreamConfig>
+        bool append_to_read_buf(quic::stream::impl::RecvUniStream<QuicStreamConfig>& q, flex_storage& read_buf) {
+            using Reader = quic::stream::impl::RecvSorter<typename QuicStreamConfig::recv_stream_lock>;
+            Reader* re = q->get_receiver_ctx().get();
+            if (q->receiver.is_closed()) {
+                return false;
+            }
+            auto eof = re->read_best([&](auto& data) {
+                read_buf.append(data);
+            });
+            if (data.size() == 0 && !eof) {
+                return false;
+            }
+            if (eof) {
+                q->user_read_full();
+                break;
+            }
+            return true;
+        }
+
         template <class Config>
         struct ControlStream {
             using QuicRecvStream = quic::stream::impl::RecvUniStream<typename Config::quic_config>;
             using QuicSendStream = quic::stream::impl::SendUniStream<typename Config::quic_config>;
-            std::shared_ptr<QuicSendStream> send_control;
-            std::shared_ptr<QuicRecvStream> recv_control;
+            std::weak_ptr<QuicSendStream> send_control;
+            std::weak_ptr<QuicRecvStream> recv_control;
+            flex_storage read_buf;
 
            private:
             bool write_push_frame(frame::Type type, std::uint32_t push_id) {
@@ -80,6 +101,16 @@ namespace futils {
                     return false;
                 }
                 return true;
+            }
+
+            bool read_settings(auto&& settings) {
+                QuicRecvStream* q = recv_control.get();
+                Reader* r = q->receiver.get_receiver_ctx().get();
+                frame::FrameHeaderArea area;
+                flex_storage buf;
+                auto eof = r->read_best([&](auto& data) {
+                    buf.append(data);
+                });
             }
         };
 
@@ -184,7 +215,7 @@ namespace futils {
             }
 
            public:
-            bool write_header(auto&& write) {
+            bool write_header(bool fin, auto&& write) {
                 auto s = stream.lock();
                 QuicStream* q = s.get();
                 if (!q || q->sender.is_fin()) {
@@ -207,7 +238,7 @@ namespace futils {
                 }
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::HEADER, section.size());
-                auto res = q->sender.add_multi_data(false, true, header, section);
+                auto res = q->sender.add_multi_data(fin, true, header, section);
                 if (res.result != quic::IOResult::ok) {
                     set_failed();
                     return false;
@@ -228,23 +259,7 @@ namespace futils {
                 if (!q) {
                     return false;
                 }
-                Reader* re = q->receiver.get_receiver_ctx().get();
-                bool one = false;
-                if (q->receiver.is_closed()) {
-                    return false;
-                }
-                auto eof = re->read_best([&](auto& data) {
-                    read_buf.append(data);
-                });
-                if (data.size() == 0 && !eof) {
-                    return one;
-                }
-                one = true;
-                if (eof) {
-                    q->receiver.user_read_full();
-                    break;
-                }
-                return true;
+                stream::append_to_read_buf(q->receiver, read_buf);
             }
 
            public:
@@ -272,6 +287,7 @@ namespace futils {
                     if (!append_to_read_buf()) {
                         return false;
                     }
+                    r.reset_buffer(read_buf);
                 }
                 auto offset = r.offset();
                 r.reset_buffer(hdrs.encoded_field);
@@ -290,6 +306,19 @@ namespace futils {
             }
 
             bool read(auto&& callback) {
+                auto locked = stream.lock();
+                QuicStream* q = locked.get();
+                if (!q) {
+                    return false;
+                }
+                if (q->receiver.is_closed()) {
+                    if (state == StateMachine::client_data_recv) {
+                        set_state(StateMachine::client_end);
+                    }
+                    else if (state == StateMachine::server_data_recv) {
+                        set_state(StateMachine::server_header_send);
+                    }
+                }
                 if (!is_valid_state(StateMachine::client_data_recv) ||
                     !is_valid_state(StateMachine::server_data_recv)) {
                     return false;
@@ -308,13 +337,14 @@ namespace futils {
                     if (!append_to_read_buf()) {
                         return false;
                     }
+                    r.reset_buffer(read_buf);
                 }
                 callback(hdrs.data);
                 read_buf.shift_front(r.offset());
                 return true;
             }
 
-            bool write(view::rvec data) {
+            bool write(view::rvec data, bool fin) {
                 QuicStream* q = stream.get();
                 if (q->sender.is_fin()) {
                     return false;
@@ -325,11 +355,7 @@ namespace futils {
                 }
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::DATA, data.size());
-                auto res = q->sender.add_data(header, false, true);
-                if (res != quic::IOResult::ok) {
-                    return false;
-                }
-                res = q->sender.add_data(data, false, true);
+                auto res = q->sender.add_multi_data(fin, true, header, data);
                 if (res != quic::IOResult::ok) {
                     return false;
                 }
