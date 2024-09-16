@@ -76,7 +76,6 @@ void handler_thread(Data* data) {
     http3::stream::RequestStream<H3Config> reqs;
     reqs.stream = req;
     reqs.conn = data->conn;
-    reqs.reader = r;
     reqs.write_header([](auto&&, auto&& add_field) {
         add_field(":method", "GET");
         add_field(":scheme", "https");

@@ -330,9 +330,27 @@ namespace futils {
                 return false;
             }
 
+            // expose internal send buffer
+            // this is maybe unsafe
+            // use this method carefully
+            auto get_sender() {
+                const auto lock = uni.lock();
+                return src.get_impl();
+            }
+
             auto get_sender_ctx() {
                 const auto lock = uni.lock();
                 return src.get_specific();
+            }
+
+            void set_application_context(auto&& ctx) {
+                const auto lock = uni.lock();
+                src.set_application_context(std::forward<decltype(ctx)>(ctx));
+            }
+
+            auto get_application_context() {
+                const auto lock = uni.lock();
+                return src.get_application_context();
             }
 
             // request cancelation
@@ -574,9 +592,27 @@ namespace futils {
                 return false;
             }
 
+            // expose internal saver
+            // this method is maybe unsafe
+            // so use this method carefully
+            auto get_receiver() {
+                const auto lock = uni.lock();
+                return saver.get_impl();
+            }
+
             auto get_receiver_ctx() {
                 const auto locked = uni.lock();
                 return saver.get_specific();
+            }
+
+            void set_application_context(auto&& ctx) {
+                const auto lock = uni.lock();
+                saver.set_application_context(std::forward<decltype(ctx)>(ctx));
+            }
+
+            auto get_application_context() {
+                const auto lock = uni.lock();
+                return saver.get_application_context();
             }
 
             // notify application user read all data

@@ -12,6 +12,6 @@ namespace futils::fnet::quic::stream::impl {
     template <class TConfig, class Lock = typename TConfig::recv_stream_lock>
     void set_on_send_callback(SendUniStream<TConfig>& r, void (*on_send)(std::shared_ptr<void>&& conn_ctx, StreamID id)) {
         using Saver = typename TConfig::stream_handler::send_buf;
-        r.get_sender_ctx()->on_data_added_cb = on_send;
+        r.get_sender()->on_data_added_cb = on_send;
     }
 }  // namespace futils::fnet::quic::stream::impl

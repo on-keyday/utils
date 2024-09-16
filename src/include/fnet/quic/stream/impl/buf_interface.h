@@ -19,6 +19,10 @@ namespace futils {
         struct SendBufInterface {
             T impl;
 
+            constexpr T* get_impl() {
+                return std::addressof(impl);
+            }
+
             constexpr void append(core::StreamWriteBufferState& state, auto&&... a) {
                 impl.append(state, std::forward<decltype(a)>(a)...);
             }
@@ -65,6 +69,10 @@ namespace futils {
         template <class T>
         struct RecvBufInterface {
             T impl;
+
+            constexpr T* get_impl() {
+                return std::addressof(impl);
+            }
 
             std::pair<bool, error::Error> save(std::shared_ptr<void>&& conn_ctx, StreamID id, FrameType type, Fragment frag, std::uint64_t recv_bytes, std::uint64_t err_code) {
                 return impl.save(std::move(conn_ctx), id, type, frag, recv_bytes, err_code);

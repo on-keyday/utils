@@ -23,6 +23,7 @@ namespace futils {
         struct SendBuffer {
             void (*on_data_added_cb)(std::shared_ptr<void>&& conn_ctx, StreamID id) = nullptr;
             Buffer src;
+            std::shared_ptr<void> app_ctx;
 
             auto data() {
                 return src.data();
@@ -53,9 +54,10 @@ namespace futils {
                 src.shrink_to_fit();
             }
 
-            auto get_specific() {
-                return this;
+            void get_specific() {
+                return;
             }
+
             void send_callback(auto d) {}
             void recv_callback(auto d) {}
             std::uint64_t fairness_limit() const {
@@ -66,6 +68,14 @@ namespace futils {
                 if (on_data_added_cb) {
                     on_data_added_cb(std::move(conn_ctx), id);
                 }
+            }
+
+            void set_application_context(std::shared_ptr<void>&& ctx) {
+                app_ctx = std::forward<decltype(ctx)>(ctx);
+            }
+
+            auto get_application_context() const {
+                return app_ctx;
             }
         };
     }  // namespace fnet::quic::stream::impl

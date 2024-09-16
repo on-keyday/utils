@@ -26,6 +26,7 @@ namespace futils {
         template <class Arg = std::shared_ptr<void>>
         struct FragmentSaver {
            private:
+            std::shared_ptr<void> app_ctx;
             Arg arg;
             SaveFragmentCallback<Arg> callback = nullptr;
             AutoUpdateCallback<Arg> auto_update = nullptr;
@@ -72,6 +73,14 @@ namespace futils {
             }
             void send_callback(auto d) {
                 do_auto_update(d);
+            }
+
+            void set_application_context(std::shared_ptr<void>&& ctx) {
+                app_ctx = std::forward<decltype(ctx)>(ctx);
+            }
+
+            auto get_application_context() {
+                return app_ctx;
             }
         };
     }  // namespace fnet::quic::stream::impl

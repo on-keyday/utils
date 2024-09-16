@@ -145,21 +145,21 @@ namespace futils {
         struct RequestStream {
             using QuicStream = quic::stream::impl::BidiStream<typename Config::quic_config>;
             using Reader = quic::stream::impl::RecvSorter<typename Config::reader_lock>;
-            std::shared_ptr<QuicStream> stream;
+            std::weak_ptr<QuicStream> stream;
             std::shared_ptr<Connection<Config>> conn;
-            std::shared_ptr<Reader> reader;
             flex_storage read_buf;
             using String = typename Config::qpack_config::string;
 
             bool write_header(auto&& write) {
-                QuicStream* q = stream.get();
-                if (q->sender.is_fin()) {
+                auto s = stream.lock();
+                QuicStream* q = s.get();
+                if (!q || q->sender.is_fin()) {
                     return false;
                 }
                 binary::WriteStreamingBuffer<String> buf;
                 view::wvec section;
                 if (!buf.stream([&](auto& w) {
-                        if (!conn->write_field_section(stream->sender.id(), w, write)) {
+                        if (!conn->write_field_section(q->sender.id(), w, write)) {
                             return false;
                         }
                         section = w.written();
@@ -178,9 +178,13 @@ namespace futils {
 
            private:
             bool append_to_read_buf() {
-                Reader* re = reader.get();
+                auto locked = stream.lock();
+                QuicStream* q = locked.get();
+                if (!q) {
+                    return false;
+                }
+                Reader* re = q->receiver.get_receiver_ctx().get();
                 bool one = false;
-                QuicStream* q = stream.get();
                 if (q->receiver.is_closed()) {
                     return false;
                 }
@@ -202,6 +206,11 @@ namespace futils {
 
            public:
             bool read_header(auto&& read) {
+                auto locked = stream.lock();
+                QuicStream* q = locked.get();
+                if (!q) {
+                    return false;
+                }
                 if (read_buf.size() == 0) {
                     if (!append_to_read_buf()) {
                         return false;
@@ -219,7 +228,7 @@ namespace futils {
                 }
                 auto offset = r.offset();
                 r.reset_buffer(hdrs.encoded_field);
-                auto err = conn->read_field_section(stream->receiver.id(), r, read);
+                auto err = conn->read_field_section(q->receiver.id(), r, read);
                 if (!err) {
                     return false;
                 }
