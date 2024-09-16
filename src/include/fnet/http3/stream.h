@@ -149,6 +149,9 @@ namespace futils {
                 return true;
             }
 
+            // write should be void(add_entry,add_field)
+            // add_entry is bool(header,value)
+            // add_field is bool(header,value,FieldPolicy policy=FieldPolicy::proior_static)
             bool write_field_section(quic::stream::StreamID id, binary::writer& w, auto&& write) {
                 auto locked = lock();
                 auto err = table.write_header(id, w, [&](auto&& add_entry, auto&& add_field) {
@@ -185,6 +188,7 @@ namespace futils {
             server_data_recv,
             server_header_send,
             server_data_send,
+            server_end,
 
             failed,
         };
@@ -215,6 +219,9 @@ namespace futils {
             }
 
            public:
+            // write should be void(add_entry,add_field)
+            // add_entry is bool(header,value)
+            // add_field is bool(header,value,FieldPolicy policy=FieldPolicy::proior_static)
             bool write_header(bool fin, auto&& write) {
                 auto s = stream.lock();
                 QuicStream* q = s.get();
@@ -344,15 +351,8 @@ namespace futils {
                 return true;
             }
 
-            bool write(view::rvec data, bool fin) {
-                QuicStream* q = stream.get();
-                if (q->sender.is_fin()) {
-                    return false;
-                }
-                if (!is_valid_state(StateMachine::client_data_send) ||
-                    !is_valid_state(StateMachine::server_data_send)) {
-                    return false;
-                }
+           private:
+            bool do_write(QuicStream* q, view::rvec data, bool fin) {
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::DATA, data.size());
                 auto res = q->sender.add_multi_data(fin, true, header, data);
@@ -362,6 +362,53 @@ namespace futils {
                 return true;
             }
 
+           public:
+            bool write(view::rvec data, bool fin) {
+                auto locked = stream.lock();
+                QuicStream* q = locked.get();
+                if (!q || q->sender.is_fin()) {
+                    return false;
+                }
+                if (!is_valid_state(StateMachine::client_data_send) ||
+                    !is_valid_state(StateMachine::server_data_send)) {
+                    return false;
+                }
+                return do_write(q, data, fin);
+            }
+
+            bool write(auto&& cb) {
+                if (!is_valid_state(StateMachine::client_data_send) ||
+                    !is_valid_state(StateMachine::server_data_send)) {
+                    return false;
+                }
+                auto locked = stream.lock();
+                QuicStream* q = locked.get();
+                if (!q || q->sender.is_fin()) {
+                    return false;
+                }
+                if (!is_valid_state(StateMachine::client_data_send) ||
+                    !is_valid_state(StateMachine::server_data_send)) {
+                    return false;
+                }
+                return cb([&](view::rvec data, bool fin) {
+                    if (do_write(q, data, fin)) {
+                        if (fin) {
+                            if (state == StateMachine::client_data_send) {
+                                set_state(StateMachine::client_end);
+                            }
+                            else {
+                                set_state(StateMachine::server_end);
+                            }
+                        }
+                        return true;
+                    }
+                    return false;
+                });
+            }
+
+            // write should be void(add_entry,add_field)
+            // add_entry is bool(header,value)
+            // add_field is bool(header,value,FieldPolicy policy=FieldPolicy::proior_static)
             bool write_push_promise(std::uint64_t push_id, auto&& write) {
                 QuicStream* q = stream.get();
                 if (q->id().dir() == quic::stream::Origin::client) {
