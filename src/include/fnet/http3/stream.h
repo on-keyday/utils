@@ -383,7 +383,7 @@ namespace futils {
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::DATA, data.size());
                 auto res = q->sender.add_multi_data(fin, true, header, data);
-                if (res != quic::IOResult::ok) {
+                if (res.result != quic::IOResult::ok) {
                     return false;
                 }
                 return true;
@@ -462,8 +462,8 @@ namespace futils {
                 }
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::PUSH_PROMISE, quic::varint::len(push_id) + section.size());
-                auto res = q->sender.add_multi_data(false, true, header, id_w.written(), section);
-                if (res != quic::IOResult::ok) {
+                quic::stream::core::StreamWriteBufferState res = q->sender.add_multi_data(false, true, header, id_w.written(), section);
+                if (res.result != quic::IOResult::ok) {
                     return false;
                 }
                 return true;
