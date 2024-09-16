@@ -44,11 +44,11 @@ namespace futils {
             return true;
         }
 
-        template <class Config>
+        template <class QuicStreamConfig>
         struct ControlStream {
-            using QuicRecvStream = quic::stream::impl::RecvUniStream<typename Config::quic_config>;
-            using QuicSendStream = quic::stream::impl::SendUniStream<typename Config::quic_config>;
-            using Reader = quic::stream::impl::RecvSorter<typename Config::recv_stream_lock>;
+            using QuicRecvStream = quic::stream::impl::RecvUniStream<QuicStreamConfig>;
+            using QuicSendStream = quic::stream::impl::SendUniStream<QuicStreamConfig>;
+            using Reader = quic::stream::impl::RecvSorter<typename QuicStreamConfig::recv_stream_lock>;
             std::shared_ptr<QuicSendStream> send_control;
             std::shared_ptr<QuicRecvStream> recv_control;
             flex_storage read_buf;
