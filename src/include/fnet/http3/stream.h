@@ -35,9 +35,6 @@ namespace futils {
             auto eof = re->read_best([&](auto& data) {
                 read_buf.append(data);
             });
-            if (data.size() == 0 && !eof) {
-                return false;
-            }
             if (eof) {
                 q.user_read_full();
             }
