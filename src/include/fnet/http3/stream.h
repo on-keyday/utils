@@ -11,6 +11,7 @@
 #include "../util/qpack/qpack.h"
 #include "error.h"
 #include "../quic/transport_error.h"
+#include "unistream.h"
 
 namespace futils {
     namespace fnet::http3::stream {
