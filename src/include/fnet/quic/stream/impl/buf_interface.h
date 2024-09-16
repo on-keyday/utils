@@ -64,6 +64,14 @@ namespace futils {
             constexpr void on_data_added(std::shared_ptr<void>&& conn_ctx, StreamID id) {
                 impl.on_data_added(std::move(conn_ctx), id);
             }
+
+            constexpr void set_application_context(auto&& ctx) {
+                impl.set_application_context(std::forward<decltype(ctx)>(ctx));
+            }
+
+            constexpr auto get_application_context() {
+                return impl.get_application_context();
+            }
         };
 
         template <class T>
@@ -88,6 +96,14 @@ namespace futils {
 
             constexpr auto get_specific() {
                 return impl.get_specific();
+            }
+
+            constexpr void set_application_context(auto&& ctx) {
+                impl.set_application_context(std::forward<decltype(ctx)>(ctx));
+            }
+
+            constexpr auto get_application_context() {
+                return impl.get_application_context();
             }
         };
     }  // namespace fnet::quic::stream::impl

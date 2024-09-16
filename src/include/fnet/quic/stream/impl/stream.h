@@ -353,6 +353,14 @@ namespace futils {
                 return src.get_application_context();
             }
 
+            // maybe_setter is T maybe_setter(T current, auto&& setter)
+            // setter is void setter(T new)
+            auto get_or_set_application_context(auto&& maybe_setter) {
+                return maybe_setter(src.get_application_context(), [&](auto&& ctx) {
+                    src.set_application_context(std::forward<decltype(ctx)>(ctx));
+                });
+            }
+
             // request cancelation
             IOResult request_reset(std::uint64_t code) {
                 const auto locked = uni.lock();
@@ -613,6 +621,14 @@ namespace futils {
             auto get_application_context() {
                 const auto lock = uni.lock();
                 return saver.get_application_context();
+            }
+
+            // maybe_setter is T maybe_setter(T current, auto&& setter)
+            // setter is void setter(T new)
+            auto get_or_set_application_context(auto&& maybe_setter) {
+                return maybe_setter(saver.get_application_context(), [&](auto&& ctx) {
+                    saver.set_application_context(std::forward<decltype(ctx)>(ctx));
+                });
             }
 
             // notify application user read all data
