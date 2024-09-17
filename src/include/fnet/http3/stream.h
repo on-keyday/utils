@@ -29,11 +29,12 @@ namespace futils {
         bool append_to_read_buf(quic::stream::impl::RecvUniStream<QuicStreamConfig>& q, flex_storage& read_buf) {
             using Reader = quic::stream::impl::RecvSorter<typename QuicStreamConfig::recv_stream_lock>;
             Reader* re = q.get_receiver_ctx().get();
-            if (q.receiver.is_closed()) {
+            if (q.is_closed()) {
                 return false;
             }
             auto eof = re->read_best([&](auto& data) {
                 read_buf.append(data);
+                return true;
             });
             if (eof) {
                 q.user_read_full();
