@@ -176,7 +176,7 @@ namespace futils {
                 recv_que.clear();
             }
 
-            bool add_datagram(view::rvec data) {
+            bool write(view::rvec data) {
                 if (peer_param_size == 0 || data.size() > peer_param_size) {
                     return false;
                 }

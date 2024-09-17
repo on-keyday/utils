@@ -97,18 +97,18 @@ void request(futils::coro::C* c, void* p) {
         }
         auto id = stream->id();
 #ifdef HAS_FORMAT
-        stream->add_data(std::format("GET /search?q={} HTTP/1.1\r\nHost: google.com\r\n", n), false);
+        stream->write(std::format("GET /search?q={} HTTP/1.1\r\nHost: google.com\r\n", n), false);
 #else
         std::string data;
         data = "GET /search?q=Q" + futils::number::to_string<std::string>(n) + " HTTP/1.1\r\nHost: www.google.com\r\n";
 #endif
-        // stream->add_data("Accept-Encoding: gzip\r\n", false, true);
+        // stream->write("Accept-Encoding: gzip\r\n", false, true);
         c->suspend();
         assert(id == stream->id());
-        stream->add_data("\r\n", true, true);
+        stream->write("\r\n", true, true);
         c->suspend();
         assert(id == stream->id());
-        stream->add_data({}, true, true);
+        stream->write({}, true, true);
         break;
     }
     futils::wrap::cout_wrap() << "request sent " << n << "\n";

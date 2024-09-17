@@ -61,7 +61,7 @@ namespace futils {
                 quic::varint::write(w, push_id);
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, type, quic::varint::len(push_id));
-                auto err = q->add_multi_data(false, true, header, w.written());
+                auto err = q->write_ex(false, true, header, w.written());
                 if (err != quic::IOResult::ok) {
                     return false;
                 }
@@ -94,7 +94,7 @@ namespace futils {
                 });
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::SETTINGS, buf.size());
-                auto result = q->add_multi_data(false, true, header, buf);
+                auto result = q->write_ex(false, true, header, buf);
                 if (result.result != quic::IOResult::ok) {
                     return false;
                 }
@@ -139,11 +139,11 @@ namespace futils {
                 }
                 unistream::UniStreamHeaderArea area;
                 auto hdr = unistream::get_header(area, unistream::Type::CONTROL);
-                ctrl.send_control->add_multi_data(false, true, hdr);
+                ctrl.send_control->write_ex(false, true, hdr);
                 hdr = unistream::get_header(area, unistream::Type::QPACK_ENCODER);
-                send_encoder->add_multi_data(false, true, hdr);
+                send_encoder->write_ex(false, true, hdr);
                 hdr = unistream::get_header(area, unistream::Type::QPACK_DECODER);
-                send_decoder->add_multi_data(false, true, hdr);
+                send_decoder->write_ex(false, true, hdr);
                 return ctrl.write_settings(write_settings);
             }
 
@@ -268,7 +268,7 @@ namespace futils {
                 }
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::HEADER, section.size());
-                auto res = q->sender.add_multi_data(fin, true, header, section);
+                auto res = q->sender.write_ex(fin, true, header, section);
                 if (res.result != quic::IOResult::ok) {
                     set_failed();
                     return false;
@@ -289,7 +289,7 @@ namespace futils {
                 if (!q) {
                     return false;
                 }
-                stream::append_to_read_buf(q->receiver, read_buf);
+                return stream::append_to_read_buf(q->receiver, read_buf);
             }
 
            public:
@@ -378,7 +378,7 @@ namespace futils {
             bool do_write(QuicStream* q, view::rvec data, bool fin) {
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::DATA, data.size());
-                auto res = q->sender.add_multi_data(fin, true, header, data);
+                auto res = q->sender.write_ex(fin, true, header, data);
                 if (res.result != quic::IOResult::ok) {
                     return false;
                 }
@@ -458,7 +458,7 @@ namespace futils {
                 }
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::PUSH_PROMISE, quic::varint::len(push_id) + section.size());
-                quic::stream::core::StreamWriteBufferState res = q->sender.add_multi_data(false, true, header, id_w.written(), section);
+                quic::stream::core::StreamWriteBufferState res = q->sender.write_ex(false, true, header, id_w.written(), section);
                 if (res.result != quic::IOResult::ok) {
                     return false;
                 }

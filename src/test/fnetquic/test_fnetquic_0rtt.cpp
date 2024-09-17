@@ -105,7 +105,7 @@ int main() {
     });
     */
     assert(stream);
-    stream->add_data("GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n", true);
+    stream->write("GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\n", true);
     while (true) {
         auto [payload, _, idle] = ctx->create_udp_payload();
         if (!idle) {

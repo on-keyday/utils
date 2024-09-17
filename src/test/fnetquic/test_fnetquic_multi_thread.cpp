@@ -68,15 +68,15 @@ void thread(QCTX ctx, RecvChan c, int i) {
         break;
     }
 #ifdef HAS_FORMAT
-    auto res = uni->add_data(std::format("GET /get HTTP/1.1\r\nHost: www.google.com\r\n", i + 1), false);
+    auto res = uni->write(std::format("GET /get HTTP/1.1\r\nHost: www.google.com\r\n", i + 1), false);
 #else
     std::string req = "GET /search?q=" + futils::number::to_string<std::string>(i + 1) + " HTTP/1.1\r\nHost: www.google.com\r\n";
-    auto res = uni->add_data(req, false);
+    auto res = uni->write(req, false);
 #endif
     assert(res.result == futils::fnet::quic::IOResult::ok);
-    res = uni->add_data("Accept-Encoding: gzip\r\n", false);
+    res = uni->write("Accept-Encoding: gzip\r\n", false);
     assert(res.result == futils::fnet::quic::IOResult::ok);
-    res = uni->add_data("\r\n", true, true);
+    res = uni->write("\r\n", true, true);
     assert(res.result == futils::fnet::quic::IOResult::ok);
     while (!uni->is_closed()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));

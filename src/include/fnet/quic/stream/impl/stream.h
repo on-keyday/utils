@@ -280,10 +280,10 @@ namespace futils {
                 return discard_written_data_impl(uni.data.fin).result != IOResult::fatal;
             }
 
-            // add_multi_data adds multiple data
-            // this is better performance than multiple call of add_data because of reduction of lock.
-            // see also description of add_data to know about parameters
-            core::StreamWriteBufferState add_multi_data(bool fin, bool discard_written, auto&&... data) {
+            // write_ex adds multiple data
+            // this is better performance than multiple call of write because of reduction of lock.
+            // see also description of write to know about parameters
+            core::StreamWriteBufferState write_ex(bool fin, bool discard_written, auto&&... data) {
                 const auto locked = uni.lock();
                 if (uni.data.fin) {
                     if (discard_written) {
@@ -316,8 +316,8 @@ namespace futils {
             // if discard_written is true, discard written data from runtime buffer
             // you can call this with discard_written = true to discard buffer even if fin is set
             // but use discard_written_data() instead to discard only.
-            core::StreamWriteBufferState add_data(view::rvec data, bool fin = false, bool discard_written = false) {
-                return add_multi_data(fin, discard_written, data);
+            core::StreamWriteBufferState write(view::rvec data, bool fin = false, bool discard_written = false) {
+                return write_ex(fin, discard_written, data);
             }
 
             // set sender user level handler

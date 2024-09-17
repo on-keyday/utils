@@ -74,7 +74,7 @@ int main() {
     conn_peer->apply_peer_initial_limits(local);
     auto stream_1 = conn_local->open_bidi();
     assert(stream_1 && stream_1->sender.id() == 0);
-    stream_1->sender.add_data("Hello peer!", false);
+    stream_1->sender.write("Hello peer!", false);
     futils::byte traffic[1000];
     futils::binary::writer w{traffic};
     // std::vector<std::weak_ptr<futils::fnet::quic::ack::ACKLostRecord>> locals, peers;

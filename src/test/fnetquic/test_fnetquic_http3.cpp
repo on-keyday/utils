@@ -64,9 +64,9 @@ void handler_thread(Data* data) {
     }
 
     http3::unistream::UniStreamHeaderArea hdr;
-    ctrl->add_data(http3::unistream::get_header(hdr, http3::unistream::Type::CONTROL));
+    ctrl->write(http3::unistream::get_header(hdr, http3::unistream::Type::CONTROL));
     auto settings = http3::frame::get_header(hdr, http3::frame::Type::SETTINGS, 0);
-    ctrl->add_data(settings);
+    ctrl->write(settings);
     auto req = s->open_bidi();
     if (!req) {
         return;
