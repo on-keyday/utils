@@ -94,8 +94,8 @@ namespace futils {
                 });
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::SETTINGS, buf.size());
-                auto err = q->add_multi_data(false, true, header, buf);
-                if (err != quic::IOResult::ok) {
+                auto result = q->add_multi_data(false, true, header, buf);
+                if (result.result != quic::IOResult::ok) {
                     return false;
                 }
                 return true;
