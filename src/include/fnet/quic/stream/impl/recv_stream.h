@@ -270,7 +270,7 @@ namespace futils {
                 };
                 if (use_try_lock) {
                     if (!locker.try_lock()) {
-                        return {{}, false};
+                        return false;
                     }
                     auto unlock = helper::defer([&] {
                         locker.unlock();
