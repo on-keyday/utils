@@ -102,7 +102,7 @@ namespace futils {
                 return true;
             }
 
-            bool read_settings(auto&& settings) {
+            bool read_settings(auto&& read) {
                 QuicRecvStream* q = recv_control.get();
                 Reader* r = q->receiver.get_receiver_ctx().get();
                 frame::Settings settings;
@@ -116,7 +116,7 @@ namespace futils {
                     }
                 }
                 return settings.visit_settings([&](auto&& setting) {
-                    settings(setting.id, setting.value);
+                    read(setting.id, setting.value);
                     return true;
                 });
             }
