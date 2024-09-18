@@ -104,7 +104,6 @@ namespace futils {
 
             bool read_settings(auto&& read) {
                 QuicRecvStream* q = recv_control.get();
-                Reader* r = q->get_receiver_ctx().get();
                 frame::Settings settings;
                 binary::reader r{read_buf};
                 while (!settings.parse(r)) {
