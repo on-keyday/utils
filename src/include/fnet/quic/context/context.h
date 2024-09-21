@@ -1464,6 +1464,10 @@ namespace futils {
                 return {packet, path_verifier.get_writing_path(), true};
             }
 
+            constexpr path::PathID get_active_path() const {
+                return path_verifier.get_writing_path();
+            }
+
             // thread unsafe call
             // returns (should_send)
             bool parse_udp_payload(view::wvec data, path::PathID path = path::original_path) {
