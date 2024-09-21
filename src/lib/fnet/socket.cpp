@@ -167,6 +167,101 @@ namespace futils {
             });
         }
 
+        expected<view::rvec> Socket::writemsg(const NetAddrPort& addr, SockMsg<view::rvec> msg, int flag) {
+            return get_raw().and_then([&](std::uintptr_t sock) -> expected<view::rvec> {
+                sockaddr_storage st;
+                auto [addrptr, addrlen] = NetAddrPort_to_sockaddr(&st, addr);
+#ifdef FUTILS_PLATFORM_WINDOWS
+                WSAMSG wmsg{};
+                wmsg.name = (sockaddr*)addrptr;
+                wmsg.namelen = addrlen;
+                wmsg.Control.buf = (CHAR*)msg.control.as_char();
+                wmsg.Control.len = msg.control.size();
+                wmsg.dwBufferCount = 1;
+                WSABUF buf{};
+                buf.buf = (CHAR*)msg.data.as_char();
+                buf.len = msg.data.size();
+                wmsg.lpBuffers = &buf;
+                wmsg.dwFlags = flag;
+                DWORD dataTransferred = 0;
+                auto res = lazy::WSASendMsg_(sock, &wmsg, flag, &dataTransferred, nullptr, nullptr);
+                if (res != 0) {
+                    return unexpect(error::Errno());
+                }
+                return msg.data.substr(0, dataTransferred);
+#else
+                struct msghdr hdr;
+                hdr.msg_name = (void*)addrptr;
+                hdr.msg_namelen = addrlen;
+                hdr.msg_control = (void*)msg.control.as_char();
+                hdr.msg_controllen = msg.control.size();
+                struct iovec iov;
+                iov.iov_base = (void*)msg.data.as_char();
+                iov.iov_len = msg.data.size();
+                hdr.msg_iov = &iov;
+                hdr.msg_iovlen = 1;
+                hdr.msg_flags = flag;
+                auto res = lazy::sendmsg_(sock, &hdr, flag);
+                if (res < 0) {
+                    return unexpect(error::Errno());
+                }
+                return msg.data.substr(res);
+#endif
+            });
+        }
+
+        expected<std::pair<view::wvec, NetAddrPort>> Socket::readmsg(SockMsg<view::wvec> msg, int flag, bool is_stream) {
+            return get_raw().and_then([&](std::uintptr_t sock) -> expected<std::pair<view::wvec, NetAddrPort>> {
+                sockaddr_storage st{};
+#ifdef FUTILS_PLATFORM_WINDOWS
+                WSAMSG wmsg{};
+                wmsg.name = (sockaddr*)&st;
+                wmsg.namelen = sizeof(st);
+                wmsg.Control.buf = (CHAR*)msg.control.as_char();
+                wmsg.Control.len = msg.control.size();
+                wmsg.dwBufferCount = 1;
+                WSABUF buf{};
+                buf.buf = (CHAR*)msg.data.as_char();
+                buf.len = msg.data.size();
+                wmsg.lpBuffers = &buf;
+                wmsg.dwFlags = flag;
+                DWORD dataTransferred = 0;
+                auto res = lazy::WSARecvMsg_(sock, &wmsg, &dataTransferred, nullptr, nullptr);
+                if (res != 0) {
+                    return unexpect(error::Errno());
+                }
+                if (dataTransferred == 0 && is_stream) {
+                    return unexpect(error::eof);
+                }
+                return std::make_pair(
+                    msg.data.substr(0, dataTransferred),
+                    wmsg.name ? sockaddr_to_NetAddrPort(wmsg.name, wmsg.namelen) : NetAddrPort{});
+#else
+                struct msghdr hdr;
+                hdr.msg_name = (void*)&st;
+                hdr.msg_namelen = sizeof(st);
+                hdr.msg_control = (void*)msg.control.as_char();
+                hdr.msg_controllen = msg.control.size();
+                struct iovec iov;
+                iov.iov_base = (void*)msg.data.as_char();
+                iov.iov_len = msg.data.size();
+                hdr.msg_iov = &iov;
+                hdr.msg_iovlen = 1;
+                hdr.msg_flags = flag;
+                auto res = lazy::recvmsg_(sock, &hdr, flag);
+                if (res < 0) {
+                    return unexpect(error::Errno());
+                }
+                if (res == 0 && is_stream) {
+                    return unexpect(error::eof);
+                }
+                return std::make_pair(
+                    msg.data.substr(0, res),
+                    hdr.msg_name ? sockaddr_to_NetAddrPort((sockaddr*)hdr.msg_name, hdr.msg_namelen) : NetAddrPort{});
+#endif
+            });
+        }
+
         expected<std::pair<view::wvec, NetAddrPort>> Socket::readfrom(view::wvec data, int flag, bool is_stream) {
             return get_raw().and_then([&](std::uintptr_t sock) -> expected<std::pair<view::wvec, NetAddrPort>> {
                 sockaddr_storage soct{};

@@ -164,6 +164,9 @@ namespace futils {
             if (view::rvec(name) == "AcceptEx") {
                 return get_fn(WSAID_ACCEPTEX, LPFN_ACCEPTEX{});
             }
+            if (view::rvec(name) == "WSARecvMsg") {
+                return get_fn(WSAID_WSARECVMSG, LPFN_WSARECVMSG{});
+            }
             return {nullptr, false};
         }
 

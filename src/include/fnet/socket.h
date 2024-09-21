@@ -125,16 +125,23 @@ namespace futils {
 
             // I/O methods
 
-            // returns (remain,err)
+            // returns remaining data
             expected<view::rvec> write(view::rvec data, int flag = 0);
 
-            // returns (read,err)
+            // returns read bytes
             expected<view::wvec> read(view::wvec data, int flag = 0, bool is_stream = true);
 
-            // returns (remain,err)
+            // returns remaining data
             expected<view::rvec> writeto(const NetAddrPort& addr, view::rvec data, int flag = 0);
 
+            // returns read bytes and address
             expected<std::pair<view::wvec, NetAddrPort>> readfrom(view::wvec data, int flag = 0, bool is_stream = false);
+
+            // returns read bytes and address
+            expected<view::rvec> writemsg(const NetAddrPort& addr, SockMsg<view::rvec> msg, int flag = 0);
+
+            // returns read bytes and address
+            expected<std::pair<view::wvec, NetAddrPort>> readmsg(SockMsg<view::wvec> msg, int flag = 0, bool is_stream = true);
 
             // wait_readable waits socket until to be readable using select function or until timeout
             expected<void> wait_readable(std::uint32_t sec, std::uint32_t usec);
@@ -237,6 +244,31 @@ namespace futils {
             // set buffer size
             expected<void> set_send_buffer_size(size_t size);
             expected<void> set_recv_buffer_size(size_t size);
+
+            // get buffer size
+            expected<size_t> get_send_buffer_size();
+            expected<size_t> get_recv_buffer_size();
+
+            // GSO is Generic Segmentation Offload
+            // this is linux only
+            // see also https://www.kernel.org/doc/html/latest/networking/gso.html
+            expected<void> set_gso(bool enable);
+            expected<bool> get_gso();
+
+            // set_packet_info sets IP_PKTINFO
+            expected<void> set_recv_packet_info_v4(bool enable);
+            expected<bool> get_recv_packet_info_v4();
+            // set_packet_info_v6 sets IPV6_RECVPKTINFO
+            expected<void> set_recv_packet_info_v6(bool enable);
+            expected<bool> get_recv_packet_info_v6();
+
+            // for ipv4
+            expected<void> set_recv_tos(bool enable);
+            expected<bool> get_recv_tos();
+
+            // for ipv6
+            expected<void> set_recv_tclass(bool enable);
+            expected<bool> get_recv_tclass();
 
             // set_skipnotif sets SetFileCompletionNotificationModes()
             // this works on windows

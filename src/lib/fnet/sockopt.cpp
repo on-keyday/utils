@@ -256,5 +256,105 @@ namespace futils {
         expected<void> Socket::set_recv_buffer_size(size_t size) {
             return set_option(SOL_SOCKET, SO_RCVBUF, int(size));
         }
+
+        expected<size_t> Socket::get_send_buffer_size() {
+            int size = 0;
+            return get_option(SOL_SOCKET, SO_SNDBUF, size).transform([&] { return size_t(size); });
+        }
+
+        expected<size_t> Socket::get_recv_buffer_size() {
+            int size = 0;
+            return get_option(SOL_SOCKET, SO_RCVBUF, size).transform([&] { return size_t(size); });
+        }
+
+        expected<void> Socket::set_gso(bool enable) {
+#ifdef FUTILS_PLATFORM_LINUX
+            int val = enable ? 1 : 0;
+            return set_option(SOL_UDP, UDP_SEGMENT, val);
+#else
+            return unexpect(error::Error("GSO is not supported", error::Category::lib, error::fnet_usage_error));
+#endif
+        }
+
+        expected<bool> Socket::get_gso() {
+#ifdef FUTILS_PLATFORM_LINUX
+            int val = 0;
+            return get_option(SOL_UDP, UDP_SEGMENT, val).transform([&] { return val != 0; });
+#else
+            return unexpect(error::Error("GSO is not supported", error::Category::lib, error::fnet_usage_error));
+#endif
+        }
+
+        expected<void> Socket::set_recv_packet_info_v4(bool enable) {
+#ifdef FUTILS_PLATFORM_LINUX
+            int val = enable ? 1 : 0;
+            return set_option(IPPROTO_IP, IP_RECVPKTINFO, val);
+#else
+            return unexpect(error::Error("IP_RECVPKTINFO is not supported", error::Category::lib, error::fnet_usage_error));
+#endif
+        }
+
+        expected<bool> Socket::get_recv_packet_info_v4() {
+#ifdef FUTILS_PLATFORM_LINUX
+            int val = 0;
+            return get_option(IPPROTO_IP, IP_RECVPKTINFO, val).transform([&] { return val != 0; });
+#else
+            return unexpect(error::Error("IP_RECVPKTINFO is not supported", error::Category::lib, error::fnet_usage_error));
+#endif
+        }
+
+        expected<void> Socket::set_recv_packet_info_v6(bool enable) {
+#ifdef FUTILS_PLATFORM_LINUX
+            int val = enable ? 1 : 0;
+            return set_option(IPPROTO_IPV6, IPV6_RECVPKTINFO, val);
+#else
+            return unexpect(error::Error("IPV6_RECVPKTINFO is not supported", error::Category::lib, error::fnet_usage_error));
+#endif
+        }
+
+        expected<bool> Socket::get_recv_packet_info_v6() {
+#ifdef FUTILS_PLATFORM_LINUX
+            int val = 0;
+            return get_option(IPPROTO_IPV6, IPV6_RECVPKTINFO, val).transform([&] { return val != 0; });
+#else
+            return unexpect(error::Error("IPV6_RECVPKTINFO is not supported", error::Category::lib, error::fnet_usage_error));
+#endif
+        }
+
+        expected<void> Socket::set_recv_tos(bool enable) {
+#ifdef FUTILS_PLATFORM_LINUX
+            int val = enable ? 1 : 0;
+            return set_option(IPPROTO_IP, IP_RECVTOS, val);
+#else
+            return unexpect(error::Error("IP_RECVTOS is not supported", error::Category::lib, error::fnet_usage_error));
+#endif
+        }
+
+        expected<bool> Socket::get_recv_tos() {
+#ifdef FUTILS_PLATFORM_LINUX
+            int val = 0;
+            return get_option(IPPROTO_IP, IP_RECVTOS, val).transform([&] { return val != 0; });
+#else
+            return unexpect(error::Error("IP_RECVTOS is not supported", error::Category::lib, error::fnet_usage_error));
+#endif
+        }
+
+        expected<void> Socket::set_recv_tclass(bool enable) {
+#ifdef FUTILS_PLATFORM_LINUX
+            int val = enable ? 1 : 0;
+            return set_option(IPPROTO_IPV6, IPV6_RECVTCLASS, val);
+#else
+            return unexpect(error::Error("IPV6_RECVTCLASS is not supported", error::Category::lib, error::fnet_usage_error));
+#endif
+        }
+
+        expected<bool> Socket::get_recv_tclass() {
+#ifdef FUTILS_PLATFORM_LINUX
+            int val = 0;
+            return get_option(IPPROTO_IPV6, IPV6_RECVTCLASS, val).transform([&] { return val != 0; });
+#else
+            return unexpect(error::Error("IPV6_RECVTCLASS is not supported", error::Category::lib, error::fnet_usage_error));
+#endif
+        }
     }  // namespace fnet
 }  // namespace futils

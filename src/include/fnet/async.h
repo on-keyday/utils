@@ -14,10 +14,18 @@
 #include <optional>
 
 namespace futils::fnet {
+
+    template <class View>
+    struct SockMsg {
+        View data;
+        View control;
+    };
+
     enum class NotifyState {
         wait,  // waiting notification, callback will be called
         done,  // operation done, callback will not be called
     };
+
     struct fnet_class_export Canceler {
        private:
         std::uint64_t cancel_code = 0;

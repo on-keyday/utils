@@ -32,6 +32,7 @@ namespace futils {
         LAZY(send)
         LAZY(recv)
         LAZY(sendto)
+
         LAZY(recvfrom)
         LAZY(setsockopt)
         LAZY(getsockopt)
@@ -63,6 +64,8 @@ namespace futils {
         LAZY(GetAddrInfoExOverlappedResult)
         LAZY(__WSAFDIsSet)
         LAZY(WSAEnumProtocolsW)
+        LAZY(WSASendMsg)
+        inline Func<std::remove_pointer_t<LPFN_WSARECVMSG>> WSARecvMsg_(ws2_32, "WSARecvMsg");
 #undef LAZY
 #define LAZY(func) inline Func<decltype(func)> func##_(kernel32, #func);
 
@@ -70,12 +73,15 @@ namespace futils {
         LAZY(CancelIoEx)
         LAZY(GetQueuedCompletionStatusEx)
         LAZY(SetFileCompletionNotificationModes)
+
 #else
         LAZY(socket)
         LAZY(freeaddrinfo)
         LAZY(close)
         LAZY(ioctl)
         LAZY(getaddrinfo)
+        LAZY(sendmsg)
+        LAZY(recvmsg)
 #ifdef FUTILS_PLATFORM_LINUX
         LAZY(epoll_create1)
         LAZY(epoll_ctl)
