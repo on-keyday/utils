@@ -157,7 +157,7 @@ void thread(QCTX ctx, RecvChan c, int i) {
     }
 }
 
-void log_packet(std::shared_ptr<void>&, futils::fnet::quic::path::PathID, futils::fnet::quic::packet::PacketSummary su, futils::view::rvec payload, bool is_send) {
+void log_packet(std::shared_ptr<void>&, futils::view::rvec, futils::fnet::quic::path::PathID, futils::fnet::quic::packet::PacketSummary su, futils::view::rvec payload, bool is_send) {
     std::string res = is_send ? "send: " : "recv: ";
     res += to_string(su.type);
     res += " ";
@@ -190,7 +190,7 @@ void log_packet(std::shared_ptr<void>&, futils::fnet::quic::path::PathID, futils
 }
 futils::fnet::quic::status::LossTimerState prev_state = futils::fnet::quic::status::LossTimerState::no_timer;
 futils::fnet::quic::time::Time prev_deadline = {};
-void record_timer(std::shared_ptr<void>&, const futils::fnet::quic::status::LossTimer& timer, futils::fnet::quic::time::Time now) {
+void record_timer(std::shared_ptr<void>&, futils::view::rvec, const futils::fnet::quic::status::LossTimer& timer, futils::fnet::quic::time::Time now) {
     auto print = [&] {
 #ifdef HAS_FORMAT
         // #warning "what?"
@@ -211,17 +211,17 @@ void record_timer(std::shared_ptr<void>&, const futils::fnet::quic::status::Loss
         }
     }
 }
-void rtt_event(std::shared_ptr<void>&, const futils::fnet::quic::status::RTT& rtt, futils::fnet::quic::time::Time now) {
+void rtt_event(std::shared_ptr<void>&, futils::view::rvec, const futils::fnet::quic::status::RTT& rtt, futils::fnet::quic::time::Time now) {
     futils::wrap::cout_wrap() << futils::wrap::packln("current rtt: ", rtt.smoothed_rtt(), "ms (σ:", rtt.rttvar(), "ms)", " latest rtt: ", rtt.latest_rtt(), "ms");
 }
 
 futils::fnet::quic::log::ConnLogCallbacks cbs{
-    .drop_packet = [](std::shared_ptr<void>&, futils::fnet::quic::PacketType, futils::fnet::quic::packetnum::Value, futils::fnet::error::Error err, futils::view::rvec packet, bool decrypted) { futils::wrap::cout_wrap() << futils::wrap::packln("drop packet: ", err.error<std::string>()); },
-    .debug = [](std::shared_ptr<void>&, const char* msg) { futils::wrap::cout_wrap() << msg << "\n"; },
+    .drop_packet = [](std::shared_ptr<void>&, futils::view::rvec, futils::fnet::quic::PacketType, futils::fnet::quic::packetnum::Value, futils::fnet::error::Error err, futils::view::rvec packet, bool decrypted) { futils::wrap::cout_wrap() << futils::wrap::packln("drop packet: ", err.error<std::string>()); },
+    .debug = [](std::shared_ptr<void>&, futils::view::rvec, const char* msg) { futils::wrap::cout_wrap() << msg << "\n"; },
     .sending_packet = log_packet,
     .recv_packet = log_packet,
     .loss_timer_state = record_timer,
-    .mtu_probe = [](std::shared_ptr<void>&, std::uint64_t size) { futils::wrap::cout_wrap() << "mtu probe: " << size << " byte\n"; },
+    .mtu_probe = [](std::shared_ptr<void>&, futils::view::rvec, std::uint64_t size) { futils::wrap::cout_wrap() << "mtu probe: " << size << " byte\n"; },
     .rtt_state = rtt_event,
 };
 

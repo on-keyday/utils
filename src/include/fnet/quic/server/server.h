@@ -284,6 +284,8 @@ namespace futils {
             using RecvUniStream = stream::impl::RecvUniStream<StreamTypeConfig>;
             using SendUniStream = stream::impl::SendUniStream<StreamTypeConfig>;
             std::shared_ptr<void> app_ctx = nullptr;
+
+            void (*prepare_connection)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
             void (*init_recv_stream)(std::shared_ptr<void>&, RecvUniStream&) = nullptr;
             void (*init_send_stream)(std::shared_ptr<void>&, SendUniStream&) = nullptr;
             void (*accept_uni_stream)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<RecvUniStream>&&) = nullptr;
@@ -405,6 +407,13 @@ namespace futils {
                 }
             }
 
+            void prepare_connection(const std::shared_ptr<context::Context<TConfig>>& ctx) {
+                if (server_config.prepare_connection) {
+                    auto copy = ctx;
+                    server_config.prepare_connection(server_config.app_ctx, std::move(copy));
+                }
+            }
+
             void accept_connection(std::shared_ptr<context::Context<TConfig>>&& ctx) {
                 if (server_config.accept_connection) {
                     server_config.accept_connection(server_config.app_ctx, std::move(ctx));
@@ -456,7 +465,7 @@ namespace futils {
                     multiplexer->init_recv_stream(*stream);
                     multiplexer->accept_uni_stream(std::move(ptr), std::move(stream));
                 });
-
+                this->prepare_connection(rel);
                 {
                     const auto l = helper::lock(ptr->l);
                     if (!ptr->ctx.accept_start(origDst)) {

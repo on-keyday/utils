@@ -1251,6 +1251,14 @@ namespace futils {
                 app_ctx = std::forward<decltype(ctx)>(ctx);
             }
 
+            void set_trace_id(view::rvec id) {
+                logger.trace_id = id;
+            }
+
+            view::rvec get_trace_id() const {
+                return logger.trace_id;
+            }
+
             // get earliest timer deadline
             // thread unsafe call
             time::Time get_earliest_deadline() const {
