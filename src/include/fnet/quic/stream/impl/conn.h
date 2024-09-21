@@ -225,10 +225,10 @@ namespace futils {
            public:
             // remove removes stream from manager
             // return values are:
-            // ok - successfuly removed
+            // ok - successfully removed
             // fatal - bug
             // invalid_data - invalid stream id
-            // no_data - already deleted
+            // no_data - already deleted or not created yet
             // not_in_io_state - stream is not closed yet
             IOResult remove(StreamID id) {
                 if (id.origin() == local_origin()) {

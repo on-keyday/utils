@@ -227,8 +227,16 @@ namespace futils {
             StateMachine state = StateMachine::no_state_machine;
 
            private:
-            bool is_valid_state(StateMachine s) {
-                return state == StateMachine::no_state_machine || state == s;
+            bool is_valid_state_impl(StateMachine s) {
+                return state == s;
+            }
+
+            bool is_valid_state_impl(StateMachine s1, StateMachine s2, auto&&... s) {
+                return state == s1 || is_valid_state_impl(s2, s...);
+            }
+
+            bool is_valid_state(StateMachine s, auto&&... ss) {
+                return state == StateMachine::no_state_machine || is_valid_state_impl(s, ss...);
             }
 
             void set_state(StateMachine s) {
@@ -251,8 +259,7 @@ namespace futils {
                 if (!q || q->sender.is_fin()) {
                     return false;
                 }
-                if (!is_valid_state(StateMachine::client_header_send) ||
-                    !is_valid_state(StateMachine::server_header_send)) {
+                if (!is_valid_state(StateMachine::client_header_send, StateMachine::server_header_send)) {
                     return false;
                 }
                 binary::WriteStreamingBuffer<String> buf;
@@ -299,8 +306,7 @@ namespace futils {
                 if (!q) {
                     return false;
                 }
-                if (!is_valid_state(StateMachine::client_header_recv) ||
-                    !is_valid_state(StateMachine::server_header_recv)) {
+                if (!is_valid_state(StateMachine::client_header_recv, StateMachine::server_header_recv)) {
                     return false;
                 }
                 if (read_buf.size() == 0) {
@@ -349,8 +355,7 @@ namespace futils {
                         set_state(StateMachine::server_header_send);
                     }
                 }
-                if (!is_valid_state(StateMachine::client_data_recv) ||
-                    !is_valid_state(StateMachine::server_data_recv)) {
+                if (!is_valid_state(StateMachine::client_data_recv, StateMachine::server_data_recv)) {
                     return false;
                 }
                 if (read_buf.size() == 0) {
@@ -392,25 +397,19 @@ namespace futils {
                 if (!q || q->sender.is_fin()) {
                     return false;
                 }
-                if (!is_valid_state(StateMachine::client_data_send) ||
-                    !is_valid_state(StateMachine::server_data_send)) {
+                if (!is_valid_state(StateMachine::client_data_send, StateMachine::server_data_send)) {
                     return false;
                 }
                 return do_write(q, data, fin);
             }
 
             bool write(auto&& cb) {
-                if (!is_valid_state(StateMachine::client_data_send) ||
-                    !is_valid_state(StateMachine::server_data_send)) {
-                    return false;
-                }
                 auto locked = stream.lock();
                 QuicStream* q = locked.get();
                 if (!q || q->sender.is_fin()) {
                     return false;
                 }
-                if (!is_valid_state(StateMachine::client_data_send) ||
-                    !is_valid_state(StateMachine::server_data_send)) {
+                if (!is_valid_state(StateMachine::client_data_send, StateMachine::server_data_send)) {
                     return false;
                 }
                 return cb([&](view::rvec data, bool fin) {
