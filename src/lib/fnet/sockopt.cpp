@@ -249,5 +249,12 @@ namespace futils {
             int on = incl ? 1 : 0;
             return set_option(IPPROTO_IPV6, IPV6_HDRINCL, on);
         }
+
+        expected<void> Socket::set_send_buffer_size(size_t size) {
+            return set_option(SOL_SOCKET, SO_SNDBUF, int(size));
+        }
+        expected<void> Socket::set_recv_buffer_size(size_t size) {
+            return set_option(SOL_SOCKET, SO_RCVBUF, int(size));
+        }
     }  // namespace fnet
 }  // namespace futils

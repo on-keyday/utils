@@ -234,6 +234,10 @@ namespace futils {
             // this enable on windows
             expected<void> set_connreset(bool enable);
 
+            // set buffer size
+            expected<void> set_send_buffer_size(size_t size);
+            expected<void> set_recv_buffer_size(size_t size);
+
             // set_skipnotif sets SetFileCompletionNotificationModes()
             // this works on windows
             // this is usable for TCP iocp but UDP is unsafe
