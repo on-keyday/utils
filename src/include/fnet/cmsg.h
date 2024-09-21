@@ -16,14 +16,6 @@ namespace futils::fnet {
         std::uint32_t level = 0;
         std::uint32_t type = 0;
         ::futils::view::rvec msg;
-        bool set_msg(auto&& v) {
-            if (v.size() > ~std::uint64_t(0)) {
-                return false;
-            }
-            (*this).len = v.size();
-            (*this).msg = std::forward<decltype(v)>(v);
-            return true;
-        }
         constexpr bool encode(::futils::binary::writer& w) const;
         constexpr bool decode(::futils::binary::reader& r);
         static constexpr size_t fixed_header_size = 16;
@@ -38,7 +30,10 @@ namespace futils::fnet {
         if (!::futils::binary::write_num(w, static_cast<std::uint32_t>((*this).type), false)) {
             return false;
         }
-        auto tmp_0_ = (*this).len;
+        if (!((*this).len >= 16)) {
+            return false;
+        }
+        auto tmp_0_ = (*this).len - 16;
         if (tmp_0_ != (*this).msg.size()) {
             return false;
         }
@@ -57,7 +52,10 @@ namespace futils::fnet {
         if (!::futils::binary::read_num(r, (*this).type, false)) {
             return false;
         }
-        auto tmp_1_ = (*this).len;
+        if (!((*this).len >= 16)) {
+            return false;
+        }
+        auto tmp_1_ = (*this).len - 16;
         if (!r.read((*this).msg, tmp_1_)) {
             return false;
         }

@@ -428,6 +428,39 @@ namespace futils {
                 return handler.send_schedule(fw, observer, do_default);
             }
 
+            void iterate_local_bidi_stream(auto&& cb) {
+                const auto locked = control.base.open_bidi_lock();
+                for (auto& [id, s] : local_bidi) {
+                    cb(s);
+                }
+            }
+
+            void iterate_remote_bidi_stream(auto&& cb) {
+                const auto locked = control.base.accept_bidi_lock();
+                for (auto& [id, s] : remote_bidi) {
+                    cb(s);
+                }
+            }
+
+            void iterate_bidi_stream(auto&& cb) {
+                iterate_local_bidi_stream(cb);
+                iterate_remote_bidi_stream(cb);
+            }
+
+            void iterate_send_uni_stream(auto&& cb) {
+                const auto locked = control.base.open_uni_lock();
+                for (auto& [id, s] : local_uni) {
+                    cb(s);
+                }
+            }
+
+            void iterate_recv_uni_stream(auto&& cb) {
+                const auto locked = control.base.accept_uni_lock();
+                for (auto& [id, s] : remote_uni) {
+                    cb(s);
+                }
+            }
+
             // update is std::uint64_t/*new_limit*/(Limiter,std::uint64_t/*initial limit*/)
             // return value less than current limit has no effect to update limit
             bool update_max_uni_streams(auto&& update) {
