@@ -138,7 +138,7 @@ namespace futils {
                         }
                     }
                     if (packet_type != PacketType::Unknown) {
-                        strutil::append(pb, "packet_type=");
+                        strutil::append(pb, " packet_type=");
                         if (auto msg = to_string(packet_type)) {
                             strutil::append(pb, msg);
                         }
@@ -192,5 +192,5 @@ namespace futils {
                 }
             };
         }  // namespace quic
-    }      // namespace fnet
+    }  // namespace fnet
 }  // namespace futils
