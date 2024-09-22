@@ -286,20 +286,23 @@ namespace futils {
         }
 
         expected<void> Socket::set_recv_packet_info_v4(bool enable) {
+            // TODO(on-keyday): in other unix like platform,
+            // use IP_RECVPKTINFO instead of IP_PKTINFO
+            // see also https://github.com/quic-go/quic-go/blob/master/sys_conn_helper_darwin.go#L15
 #ifdef FUTILS_PLATFORM_LINUX
             int val = enable ? 1 : 0;
-            return set_option(IPPROTO_IP, IP_RECVPKTINFO, val);
+            return set_option(IPPROTO_IP, IP_PKTINFO, val);
 #else
-            return unexpect(error::Error("IP_RECVPKTINFO is not supported", error::Category::lib, error::fnet_usage_error));
+            return unexpect(error::Error("IP_PKTINFO is not supported", error::Category::lib, error::fnet_usage_error));
 #endif
         }
 
         expected<bool> Socket::get_recv_packet_info_v4() {
 #ifdef FUTILS_PLATFORM_LINUX
             int val = 0;
-            return get_option(IPPROTO_IP, IP_RECVPKTINFO, val).transform([&] { return val != 0; });
+            return get_option(IPPROTO_IP, IP_PKTINFO, val).transform([&] { return val != 0; });
 #else
-            return unexpect(error::Error("IP_RECVPKTINFO is not supported", error::Category::lib, error::fnet_usage_error));
+            return unexpect(error::Error("IP_PKTINFO is not supported", error::Category::lib, error::fnet_usage_error));
 #endif
         }
 
