@@ -22,6 +22,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
+#include <netinet/udp.h>
 #include <unistd.h>
 #include <sys/un.h>
 #ifdef FUTILS_PLATFORM_LINUX

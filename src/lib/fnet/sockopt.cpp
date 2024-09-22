@@ -270,7 +270,7 @@ namespace futils {
         expected<void> Socket::set_gso(bool enable) {
 #ifdef FUTILS_PLATFORM_LINUX
             int val = enable ? 1 : 0;
-            return set_option(SOL_UDP, UDP_SEGMENT, val);
+            return set_option(IPPROTO_UDP, UDP_SEGMENT, val);
 #else
             return unexpect(error::Error("GSO is not supported", error::Category::lib, error::fnet_usage_error));
 #endif
@@ -279,7 +279,7 @@ namespace futils {
         expected<bool> Socket::get_gso() {
 #ifdef FUTILS_PLATFORM_LINUX
             int val = 0;
-            return get_option(SOL_UDP, UDP_SEGMENT, val).transform([&] { return val != 0; });
+            return get_option(IPPROTO_UDP, UDP_SEGMENT, val).transform([&] { return val != 0; });
 #else
             return unexpect(error::Error("GSO is not supported", error::Category::lib, error::fnet_usage_error));
 #endif
