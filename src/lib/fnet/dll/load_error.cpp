@@ -27,13 +27,13 @@ namespace futils::fnet::lazy {
         if (err_str) {
             PltSpecific ps;
             ps.storage = view::rvec(err_str);
-            err = error::ErrList{err, ps};
+            err = error::ErrList{ps, err};
         }
         if (err.code() != 0) {
-            err = error::ErrList{err, sysErr};
+            err = error::ErrList{sysErr, err};
         }
         if (sysErr2.code() != 0 && sysErr.code() != sysErr2.code()) {
-            err = error::ErrList{err, sysErr2};
+            err = error::ErrList{sysErr2, err};
         }
         return err;
     }
