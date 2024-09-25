@@ -174,6 +174,27 @@ namespace futils {
                 }
             }
 
+            expected<size_t> readfrom_until_block(view::wvec data, auto&& callback) {
+                bool red = false;
+                error::Error err;
+                size_t size = 0;
+                while (true) {
+                    auto recv = readfrom(data);
+                    if (!recv) {
+                        if (isSysBlock(recv.error())) {
+                            if (!red) {
+                                return recv.transform([&](std::pair<view::wvec, NetAddrPort>) { return size; });
+                            }
+                            return size;  // as no error
+                        }
+                        return recv.transform([&](std::pair<view::wvec, NetAddrPort>) { return size; });
+                    }
+                    size += recv->first.size();
+                    callback(recv->first, recv->second);
+                    red = true;
+                }
+            }
+
             // get/set attributes of socket
 
             expected<NetAddrPort> get_local_addr();
