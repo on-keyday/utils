@@ -1251,8 +1251,8 @@ namespace futils {
                 app_ctx = std::forward<decltype(ctx)>(ctx);
             }
 
-            void set_trace_id(view::rvec id) {
-                logger.trace_id = id;
+            void set_trace_id(flex_storage&& id) {
+                logger.trace_id = std::move(id);
             }
 
             view::rvec get_trace_id() const {

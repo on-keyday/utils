@@ -31,7 +31,7 @@ namespace futils {
 
         struct ConnLogger {
             std::shared_ptr<void> ctx;
-            view::rvec trace_id;
+            flex_storage trace_id;
             const ConnLogCallbacks* callbacks = nullptr;
 
             void drop_packet(PacketType type, packetnum::Value val, error::Error err, view::rvec raw_paket, bool decrypted) {

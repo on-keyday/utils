@@ -88,7 +88,7 @@ namespace futils {
 
                 void error(auto&& pb) {
                     strutil::appends(pb,
-                                     "quic", is_app ? "(app)" : "", ": ",
+                                     "quic", is_app ? "(app)" : "", ":",
                                      msg);
                     if (by_peer) {
                         strutil::append(pb, " by peer");
