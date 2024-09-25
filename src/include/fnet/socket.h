@@ -472,7 +472,7 @@ namespace futils {
             }
 
             template <class Notify, class Fn, class BufMgr, class Del>
-            expected<AsyncResult> readfrom_async_deferred(AsyncContDataWithAddress<AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+            expected<AsyncResult> readfrom_async_deferred(AsyncContDataWithNotify<Notify, AsyncContDataWithAddress<AsyncContData<Fn, BufMgr, Del>>>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
                 if (!data_ptr) {
                     return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }

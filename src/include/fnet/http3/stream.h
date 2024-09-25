@@ -164,7 +164,7 @@ namespace futils {
                     return false;
                 }
                 auto ok = r->read(view::wvec(buf, head.type.len));
-                if (ok->first.size() != head.type.len) {
+                if (ok.first.size() != head.type.len) {
                     q->request_stop_sending(std::uint64_t(http3::Error::H3_INTERNAL_ERROR));
                     return false;
                 }
