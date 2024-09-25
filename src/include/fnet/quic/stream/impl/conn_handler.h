@@ -73,6 +73,12 @@ namespace futils {
             SendScheduleCB send_schedule_cb = nullptr;
             AutoIncreaser auto_incr;
 
+            void set_auto_increase(bool uni, bool bidi, bool max_data) {
+                auto_incr.auto_increase_uni_stream = uni;
+                auto_incr.auto_increase_bidi_stream = bidi;
+                auto_incr.auto_increase_max_data = max_data;
+            }
+
             void uni_open(std::shared_ptr<SendUniStream<TConfig>> s) {
                 if (!uni_open_cb) {
                     return;
