@@ -328,7 +328,7 @@ namespace futils {
                 return read_async(data_ptr->buffer_mgr.get_buffer(), data_ptr, +lambda, flag)
                     .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
                         if (r.state == NotifyState::done) {
-                            lambda(std::move(*this), data_ptr, r.processed_bytes);
+                            lambda(this->clone(), data_ptr, r.processed_bytes);
                         }
                         return std::move(r);
                     })
@@ -369,7 +369,7 @@ namespace futils {
                 return read_async(data_ptr->buffer_mgr.get_buffer(), data_ptr, +lambda, flag)
                     .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
                         if (r.state == NotifyState::done) {
-                            lambda(std::move(*this), data_ptr, r.processed_bytes);
+                            lambda(this->clone(), data_ptr, r.processed_bytes);
                         }
                         return std::move(r);
                     })
@@ -402,7 +402,7 @@ namespace futils {
                 return write_async(data_ptr->buffer_mgr.get_buffer(), data_ptr, +lambda, flag)
                     .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
                         if (r.state == NotifyState::done) {
-                            lambda(std::move(*this), data_ptr, r.processed_bytes);
+                            lambda(this->clone(), data_ptr, r.processed_bytes);
                         }
                         return std::move(r);
                     })
@@ -443,7 +443,7 @@ namespace futils {
                 return write_async(data_ptr->buffer_mgr.get_buffer(), data_ptr, +lambda, flag)
                     .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
                         if (r.state == NotifyState::done) {
-                            lambda(std::move(*this), data_ptr, r.processed_bytes);
+                            lambda(this->clone(), data_ptr, r.processed_bytes);
                         }
                         return std::move(r);
                     })
@@ -478,7 +478,7 @@ namespace futils {
                 return readfrom_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
                     .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
                         if (r.state == NotifyState::done) {
-                            lambda(std::move(*this), std::move(data_ptr->buffer_mgr.get_address()), data_ptr, r.processed_bytes);
+                            lambda(this->clone(), std::move(data_ptr->buffer_mgr.get_address()), data_ptr, r.processed_bytes);
                         }
                         return std::move(r);
                     })
@@ -520,7 +520,7 @@ namespace futils {
                 return readfrom_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
                     .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
                         if (r.state == NotifyState::done) {
-                            lambda(std::move(*this), std::move(data_ptr->buffer_mgr.get_address()), data_ptr, r.processed_bytes);
+                            lambda(this->clone(), std::move(data_ptr->buffer_mgr.get_address()), data_ptr, r.processed_bytes);
                         }
                         return std::move(r);
                     })
@@ -555,7 +555,7 @@ namespace futils {
                 return writeto_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
                     .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
                         if (r.state == NotifyState::done) {
-                            lambda(std::move(*this), data_ptr, r.processed_bytes);
+                            lambda(this->clone(), data_ptr, r.processed_bytes);
                         }
                         return std::move(r);
                     })
@@ -596,7 +596,7 @@ namespace futils {
                 return writeto_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
                     .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
                         if (r.state == NotifyState::done) {
-                            lambda(std::move(*this), data_ptr, r.processed_bytes);
+                            lambda(this->clone(), data_ptr, r.processed_bytes);
                         }
                         return std::move(r);
                     })
