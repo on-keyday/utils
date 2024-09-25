@@ -481,7 +481,7 @@ namespace futils {
 
                 auto lambda = [](Socket&& socket, NetAddrPort&& addr, void* c, NotifyResult&& result) {
                     HeapData* data_ptr = static_cast<HeapData*>(c);
-                    const auto deferred = [&](void* ptr, bool del_only) {
+                    const auto deferred = +[](void* ptr, bool del_only) {
                         auto* data_ptr = static_cast<HeapData*>(ptr);
                         const auto d = helper::defer([&] {
                             data_ptr->del(data_ptr);
@@ -558,7 +558,7 @@ namespace futils {
 
                 auto lambda = [](Socket&& socket, void* c, NotifyResult&& result) {
                     HeapData* data_ptr = static_cast<HeapData*>(c);
-                    const auto deferred = [&](void* ptr, bool del_only) {
+                    const auto deferred = +[](void* ptr, bool del_only) {
                         auto* data_ptr = static_cast<HeapData*>(ptr);
                         const auto d = helper::defer([&] {
                             data_ptr->del(data_ptr);
