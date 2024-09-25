@@ -78,6 +78,10 @@ namespace futils {
                 return value.as_value();
             }
 
+            constexpr std::uint64_t as_uint() const {
+                return value.as_value();
+            }
+
             constexpr std::uint64_t seq_count() const {
                 if (!valid()) {
                     return ~0;
