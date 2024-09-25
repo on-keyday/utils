@@ -477,7 +477,7 @@ namespace futils {
                     return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                using HeapData = AsyncContDataWithAddress<AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>>;
+                using HeapData = AsyncContDataWithNotify<Notify, AsyncContDataWithAddress<AsyncContData<Fn, BufMgr, Del>>>;
 
                 auto lambda = [](Socket&& socket, NetAddrPort&& addr, void* c, NotifyResult&& result) {
                     HeapData* data_ptr = static_cast<HeapData*>(c);
