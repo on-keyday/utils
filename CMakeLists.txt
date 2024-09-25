@@ -271,6 +271,7 @@ endif()
 # libfnet
 target_sources(fnet PRIVATE
   "src/lib/fnet/dll/lazy.cpp"
+  "src/lib/fnet/dll/load_error.cpp"
   "src/lib/fnet/socket.cpp"
   "src/lib/fnet/addrinfo.cpp"
   "src/lib/fnet/tls.cpp"

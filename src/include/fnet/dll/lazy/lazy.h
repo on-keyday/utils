@@ -307,7 +307,7 @@ namespace futils {
         };
 
         namespace test {
-            inline void a(int, int*, bool){};
+            inline void a(int, int*, bool) {};
 
             inline void check_instance() {
                 DLL dll(fnet_lazy_dll_path("path"), false);
@@ -318,6 +318,7 @@ namespace futils {
 
         // for ssl reset
         bool libcrypto_init(futils::fnet::lazy::DLLInit l, InitState on_load);
-
+        // dlerror wrapper
+        const char* platform_specific_error();
     }  // namespace fnet::lazy
 }  // namespace futils

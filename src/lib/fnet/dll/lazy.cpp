@@ -204,6 +204,10 @@ namespace futils {
         DLL kernel32{L"kernel32.dll", true, nullptr, kernel32_lookup};
         DLL libssl{L"libssl.dll", false};
         DLL libcrypto{L"libcrypto.dll", false, libcrypto_init};
+
+        const char* platform_specific_error() {
+            return nullptr;
+        }
 #elif defined(FNET_HAS_DLOPEN)
         DLL libanl{"libanl.so", false};
         DLL libssl{"libssl.so", false};
@@ -225,6 +229,10 @@ namespace futils {
 
         func_t DLL::lookup_platform(const char* func) {
             return func_t(dlsym(target, func));
+        }
+
+        const char* platform_specific_error() {
+            return dlerror();
         }
 #else  // no dynamic loading
         bool DLL::load_platform() {

@@ -7,6 +7,7 @@
 
 #include <fnet/dll/dllcpp.h>
 #include <fnet/dll/lazy/ssldll.h>
+#include <fnet/dll/lazy/load_error.h>
 #include <fnet/tls/tls.h>
 #include <fnet/tls/liberr.h>
 #include <fnet/dll/errno.h>
@@ -143,12 +144,7 @@ namespace futils {
             TLSConfig conf;
             set_error(0);
             if (!load_ssl()) {
-                auto err = error::Error("failed to load ssl library", error::Category::lib, error::fnet_lib_load_error);
-                auto sysErr = error::Errno();
-                if (err.code() != 0) {
-                    return unexpect(error::ErrList{err, sysErr});
-                }
-                return unexpect(err);
+                return unexpect(lazy::load_error("SSL library not loaded"));
             }
             auto ctx = lazy::ssl::SSL_CTX_new_(lazy::ssl::TLS_method_());
             if (!ctx) {
