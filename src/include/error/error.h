@@ -778,7 +778,7 @@ namespace futils::error {
             return t;
         }
 
-        constexpr ErrorBuffer error()
+        constexpr ErrorBuffer error() const
             requires(std::is_default_constructible_v<ErrorBuffer>)
         {
             return error<ErrorBuffer>();

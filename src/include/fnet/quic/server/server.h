@@ -435,7 +435,9 @@ namespace futils {
             void add_new_conn(view::rvec origDst, view::wvec d, path::PathID pid) {
                 std::shared_ptr<Opened<TConfig>> opened = Opened<TConfig>::create();
                 Opened<TConfig>* ptr = opened.get();
-                if (!ptr->ctx.init(get_config(opened, pid))) {
+                auto config = get_config(opened, pid);
+                if (!ptr->ctx.init(config)) {
+                    config.logger.report_error(ptr->ctx.get_conn_error());
                     return;  // failed to init
                 }
                 ConnHandler* handler = ptr->ctx.get_streams()->get_conn_handler();
