@@ -122,6 +122,10 @@ namespace futils {
                 auto_incr.auto_increase(d);
             }
 
+            void on_remove_stream(auto d) {
+                auto_incr.auto_increase(d);
+            }
+
             void set_arg(Arg&& a) {
                 arg = std::move(a);
             }

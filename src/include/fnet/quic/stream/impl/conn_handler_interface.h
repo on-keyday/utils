@@ -51,6 +51,10 @@ namespace futils {
             constexpr void recv_callback(auto this_) {
                 impl.recv_callback(this_);
             }
+
+            constexpr void on_remove_stream(auto this_) {
+                impl.on_remove_stream(this_);
+            }
         };
     }  // namespace fnet::quic::stream::impl
 }  // namespace futils

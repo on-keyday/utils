@@ -222,6 +222,30 @@ namespace futils {
                 return IOResult::ok;
             }
 
+            IOResult remove_internal(StreamID id, bool from_user) {
+                IOResult result = IOResult::invalid_data;
+                if (id.origin() == local_origin()) {
+                    if (id.type() == StreamType::bidi) {
+                        result = remove_impl(id, control.base.open_bidi_lock(), local_bidi);
+                    }
+                    else if (id.type() == StreamType::uni) {
+                        result = remove_impl(id, control.base.open_uni_lock(), local_uni);
+                    }
+                }
+                else if (id.origin() == peer_origin()) {
+                    if (id.type() == StreamType::bidi) {
+                        result = remove_impl(id, control.base.accept_bidi_lock(), remote_bidi);
+                    }
+                    else if (id.type() == StreamType::uni) {
+                        result = remove_impl(id, control.base.accept_uni_lock(), remote_uni);
+                    }
+                }
+                if (result == IOResult::ok && from_user) {
+                    handler.on_remove_stream(this);
+                }
+                return result;
+            }
+
            public:
             // remove removes stream from manager
             // return values are:
@@ -231,23 +255,7 @@ namespace futils {
             // no_data - already deleted or not created yet
             // not_in_io_state - stream is not closed yet
             IOResult remove(StreamID id) {
-                if (id.origin() == local_origin()) {
-                    if (id.type() == StreamType::bidi) {
-                        return remove_impl(id, control.base.open_bidi_lock(), local_bidi);
-                    }
-                    else if (id.type() == StreamType::uni) {
-                        return remove_impl(id, control.base.open_uni_lock(), local_uni);
-                    }
-                }
-                else if (id.origin() == peer_origin()) {
-                    if (id.type() == StreamType::bidi) {
-                        return remove_impl(id, control.base.accept_bidi_lock(), remote_bidi);
-                    }
-                    else if (id.type() == StreamType::uni) {
-                        return remove_impl(id, control.base.accept_uni_lock(), remote_uni);
-                    }
-                }
-                return IOResult::invalid_data;
+                return remove_internal(id, true);
             }
 
            private:
@@ -291,15 +299,22 @@ namespace futils {
             }
 
             error::Error recv_stream_related(const frame::Frame& frame, StreamID id) {
+                bool remove_some = false;
+                const auto d = helper::defer([&] {
+                    if (remove_some) {
+                        handler.on_remove_stream(this);
+                    }
+                });
                 auto [local, bidi, err] = check_creation(frame.type.type_detail(), id);
                 if (err) {
                     return err;
                 }
                 auto maybe_remove = [&](auto&& s) -> error::Error {
                     if (remove_auto && s->is_removable()) {
-                        if (auto fat = remove(id); fat == IOResult::fatal) {
+                        if (auto fat = remove_internal(id, false); fat == IOResult::fatal) {
                             return error::Error("unexpected error on removing stream", error::Category::lib, error::fnet_quic_stream_error);
                         }
+                        remove_some = true;
                     }
                     return error::none;
                 };
@@ -372,9 +387,16 @@ namespace futils {
             // should implement send_schedule for your application purpose
             IOResult default_send_schedule(frame::fwriter& fw, auto&& observer) {
                 IOResult r = IOResult::ok;
+                bool remove_some = false;
+                const auto d = helper::defer([&] {
+                    if (remove_some) {
+                        handler.on_remove_stream(this);
+                    }
+                });
                 auto maybe_remove = [&](auto& it, auto& m) {
                     if (remove_auto && it->second->is_removable()) {
                         it = m.erase(it);
+                        remove_some = true;
                         return true;
                     }
                     return false;
