@@ -168,7 +168,7 @@ namespace futils {
                     q->request_stop_sending(std::uint64_t(http3::Error::H3_INTERNAL_ERROR));
                     return false;
                 }
-                switch (head.type) {
+                switch (unistream::Type(head.type.value)) {
                     case unistream::Type::QPACK_ENCODER:
                         if (recv_encoder) {
                             q->request_stop_sending(std::uint64_t(http3::Error::H3_STREAM_CREATION_ERROR));
