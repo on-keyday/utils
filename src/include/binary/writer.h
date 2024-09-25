@@ -300,6 +300,10 @@ namespace futils {
             size_t offset = 0;
 
            public:
+            constexpr size_t size() const noexcept {
+                return buffer.size();
+            }
+
             constexpr auto stream(auto&& cb) {
                 basic_writer<C> w{resizable_buffer_writer<T>(), &buffer, buffer};
                 w.reset(offset);
@@ -372,5 +376,5 @@ namespace futils {
             }
 
         }  // namespace test
-    }      // namespace binary
+    }  // namespace binary
 }  // namespace futils

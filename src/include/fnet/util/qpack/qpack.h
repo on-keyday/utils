@@ -57,22 +57,51 @@ namespace futils {
             fields::FieldEncodeContext<TypeConfig> enc;
             fields::FieldDecodeContext<TypeConfig> dec;
             using String = typename TypeConfig::string;
-            binary::WriteStreamingBuffer<String> enc_stream;
-            binary::WriteStreamingBuffer<String> dec_stream;
+            binary::WriteStreamingBuffer<String> enc_send_stream;
+            binary::WriteStreamingBuffer<String> dec_send_stream;
+            binary::WriteStreamingBuffer<String> enc_recv_stream;
+            binary::WriteStreamingBuffer<String> dec_recv_stream;
+            // expires_delta is the number of entries distance that should be dropped
+            // this is implementation specific
+            // if index - enc.get_dropped() < expires_delta, the entry is expired and not used
+            // to encode or decode as index
+            // this is used to prevent the table from blocking entry insertion by use of old entries
             std::uint64_t expires_delta = 0;
 
-            QpackError read_encoder_stream(binary::reader& r) {
-                while (true) {
-                    auto base = r.offset();
-                    auto err = encoder::parse_instruction(dec, r);
-                    if (err == QpackError::input_length) {
-                        r.reset(base);
-                        return QpackError::none;
+            // read_encoder_stream reads the encoder stream and updates the encoder state
+            // returns QpackError::none if the stream is successfully read
+            QpackError read_encoder_stream() {
+                return enc_recv_stream.stream([&](binary::writer& w) {
+                    binary::reader r{w.written()};
+                    while (true) {
+                        auto base = r.offset();
+                        auto err = encoder::parse_instruction(dec, r);
+                        if (err == QpackError::input_length) {
+                            w.commit(base);
+                            return QpackError::none;
+                        }
+                        if (err != QpackError::none) {
+                            return err;
+                        }
                     }
-                    if (err != QpackError::none) {
-                        return err;
+                });
+            }
+
+            QpackError read_decoder_stream() {
+                return dec_recv_stream.stream([&](binary::writer& w) {
+                    binary::reader r{w.written()};
+                    while (true) {
+                        auto base = r.offset();
+                        auto err = decoder::parse_instruction(enc, r);
+                        if (err == QpackError::input_length) {
+                            w.commit(base);
+                            return QpackError::none;
+                        }
+                        if (err != QpackError::none) {
+                            return err;
+                        }
                     }
-                }
+                });
             }
 
             bool is_expired(std::uint64_t index) const {
@@ -105,7 +134,7 @@ namespace futils {
                 if (auto err = enc.update_capacity(capa); err != QpackError::none) {
                     return err;
                 }
-                return enc_stream.stream([&](auto& enc_stream) {
+                return enc_send_stream.stream([&](auto& enc_stream) {
                     return encoder::render_capacity(enc_stream, capa);
                 });
             }
@@ -129,7 +158,7 @@ namespace futils {
                             return enc.get_dropped() > d_refs.head_value;
                         },
                         [&](std::uint64_t new_ref) {
-                            return enc_stream.stream([&](auto& enc_stream) {
+                            return enc_send_stream.stream([&](auto& enc_stream) {
                                 return encoder::render_duplicate(enc_stream, d_refs.head_value);
                             });
                         });
@@ -144,7 +173,7 @@ namespace futils {
                             return false;
                         },
                         [&](std::uint64_t new_ref) {
-                            return enc_stream.stream([&](auto& enc_stream) {
+                            return enc_send_stream.stream([&](auto& enc_stream) {
                                 return encoder::render_insert_index_literal(enc_stream, s_refs.head, true, value);
                             });
                         });
@@ -163,7 +192,7 @@ namespace futils {
                             return enc.get_dropped() > d_refs.head;
                         },
                         [&](std::uint64_t new_ref) {
-                            return enc_stream.stream([&](auto& enc_stream) {
+                            return enc_send_stream.stream([&](auto& enc_stream) {
                                 return encoder::render_insert_index_literal(enc_stream, d_refs.head_value, false, value);
                             });
                         });
@@ -175,7 +204,7 @@ namespace futils {
                     head, value,
                     [] { return false; },
                     [&](std::uint64_t new_ref) {
-                        return enc_stream.stream([&](auto& enc_stream) {
+                        return enc_send_stream.stream([&](auto& enc_stream) {
                             return encoder::render_insert_literal(enc_stream, head, value);
                         });
                     });
@@ -300,7 +329,7 @@ namespace futils {
                             return enc.get_dropped() > d_refs.head_value;
                         },
                         [&](std::uint64_t new_ref) {
-                            if (auto err = enc_stream.stream([&](auto& enc_stream) {
+                            if (auto err = enc_send_stream.stream([&](auto& enc_stream) {
                                     return encoder::render_duplicate(enc_stream, d_refs.head_value);
                                 });
                                 err != QpackError::none) {
@@ -328,7 +357,7 @@ namespace futils {
                             return enc.get_dropped() > d_refs.head;
                         },
                         [&](std::uint64_t new_ref) {
-                            if (auto err = enc_stream.stream([&](auto& enc_stream) {
+                            if (auto err = enc_send_stream.stream([&](auto& enc_stream) {
                                     return encoder::render_insert_index_literal(enc_stream, d_refs.head_value, false, value);
                                 });
                                 err != QpackError::none) {
@@ -349,7 +378,7 @@ namespace futils {
                     key, value,
                     [] { return false; },
                     [&](std::uint64_t new_ref) {
-                        if (auto err = enc_stream.stream([&](auto& enc_stream) {
+                        if (auto err = enc_send_stream.stream([&](auto& enc_stream) {
                                 return encoder::render_insert_literal(enc_stream, key, value);
                             });
                             err != QpackError::none) {
@@ -447,7 +476,7 @@ namespace futils {
                     read(field);
                     field = {};
                 }
-                return dec_stream.stream([&](auto& dec_stream) {
+                return dec_send_stream.stream([&](auto& dec_stream) {
                     return decoder::render_instruction(dec, dec_stream, decoder::Instruction::section_ack, id);
                 });
             }

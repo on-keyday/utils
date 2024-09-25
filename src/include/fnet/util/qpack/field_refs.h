@@ -26,7 +26,7 @@ namespace futils {
                     return inserted - dropped;
                 }
 
-                constexpr bool is_valid_relatvie_index(std::uint64_t index) const {
+                constexpr bool is_valid_relative_index(std::uint64_t index) const {
                     const auto range_max = get_relative_range();
                     return index < range_max;
                 }
@@ -134,7 +134,7 @@ namespace futils {
                     return track.usage + calc_usage(head, value) <= track.capacity;
                 }
 
-                // returns entrie index
+                // returns entry index
                 // if insertion is blocked (HOL-blocking),
                 // returns no_ref
                 constexpr std::uint64_t add_field(auto&& head, auto&& value) {
@@ -381,5 +381,5 @@ namespace futils {
                 return ref;
             }
         }  // namespace fields
-    }      // namespace qpack
+    }  // namespace qpack
 }  // namespace futils

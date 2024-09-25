@@ -126,6 +126,7 @@ namespace futils {
             qpack::Context<typename Config::qpack_config> table;
             using QuicRecvStream = quic::stream::impl::RecvUniStream<typename Config::quic_config>;
             using QuicSendStream = quic::stream::impl::SendUniStream<typename Config::quic_config>;
+            using Reader = quic::stream::impl::RecvSorter<typename Config::quic_config::recv_stream_lock>;
             std::shared_ptr<QuicRecvStream> recv_decoder;
             std::shared_ptr<QuicRecvStream> recv_encoder;
 
@@ -147,11 +148,118 @@ namespace futils {
                 return ctrl.write_settings(write_settings);
             }
 
-            using Lock = typename Config::conn_lock;
-            Lock locker;
+           private:
+            bool accept_uni_stream(std::shared_ptr<QuicRecvStream> s) {
+                if (recv_decoder && recv_encoder && ctrl.recv_control) {
+                    s->request_stop_sending(std::uint64_t(http3::Error::H3_STREAM_CREATION_ERROR));
+                    return false;
+                }
+                QuicRecvStream* q = s.get();
+                Reader* r = s->get_receiver_ctx().get();
+                futils::byte buf[8];
+                auto data = r->peek(buf);
+                unistream::UniStreamHeader head;
+                binary::reader reader{data};
+                if (!head.parse(reader)) {
+                    return false;
+                }
+                auto ok = r->read(view::wvec(buf, head.type.len));
+                if (!ok) {
+                    q->request_stop_sending(std::uint64_t(http3::Error::H3_INTERNAL_ERROR));
+                    return false;
+                }
+                switch (head.type) {
+                    case unistream::Type::QPACK_ENCODER:
+                        if (recv_encoder) {
+                            q->request_stop_sending(std::uint64_t(http3::Error::H3_STREAM_CREATION_ERROR));
+                            return false;
+                        }
+                        recv_encoder = s;
+                        return progress_recv_encoder();
+                    case unistream::Type::QPACK_DECODER:
+                        if (recv_decoder) {
+                            q->request_stop_sending(std::uint64_t(http3::Error::H3_STREAM_CREATION_ERROR));
+                            return false;
+                        }
+                        recv_decoder = s;
+                        return progress_recv_decoder();
+                    case unistream::Type::CONTROL:
+                        if (ctrl.recv_control) {
+                            q->request_stop_sending(std::uint64_t(http3::Error::H3_STREAM_CREATION_ERROR));
+                            return false;
+                        }
+                        ctrl.recv_control = s;
+                        return progress_recv_control();
+                    default:
+                        return false;
+                }
+            }
+
+            void progress_recv_decoder() {
+                if (recv_decoder) {
+                    Reader* r = recv_decoder.get()->get_receiver_ctx().get();
+                    r->read_best([&](auto& data) {
+                        table.dec_recv_stream.stream([&](binary::writer& w) {
+                            w.write(data);
+                        });
+                    });
+                    table.read_decoder_stream();
+                }
+            }
+
+            void progress_recv_encoder() {
+                if (recv_encoder) {
+                    Reader* r = recv_encoder.get()->get_receiver_ctx().get();
+                    r->read_best([&](auto& data) {
+                        table.enc_recv_stream.stream([&](binary::writer& w) {
+                            w.write(data);
+                        });
+                    });
+                    table.read_encoder_stream();
+                }
+            }
+
+            void progress_recv_control() {
+                if (ctrl.recv_control) {
+                    Reader* r = ctrl.recv_control.get()->get_receiver_ctx().get();
+                    r->read_best([&](auto& data) {
+                        ctrl.read_buf.append(data);
+                        ctrl.read_settings([&](std::uint64_t id, std::uint64_t value) {
+                            if (id == std::uint64_t(SettingID::max_field_section_size)) {
+                                table.set_max_field_section_size(value);
+                            }
+                        });
+                    });
+                }
+            }
+
+           public:
+            bool read_uni_stream(std::shared_ptr<QuicRecvStream> s) {
+                if (!s) {
+                    return false;
+                }
+                auto locked = lock();
+                if (s == recv_decoder) {
+                    progress_recv_decoder();
+                    return true;
+                }
+                if (s == recv_encoder) {
+                    progress_recv_encoder();
+                    return true;
+                }
+                if (s == ctrl.recv_control) {
+                    progress_recv_control();
+                    return true;
+                }
+                return accept_uni_stream(s);
+            }
+
             quic::AppError app_err;
             std::uint64_t peer_max_push_id = 0;
 
+           private:
+            using Lock = typename Config::conn_lock;
+            Lock locker;
             auto lock() {
                 locker.lock();
                 return helper::defer([&] {
@@ -159,6 +267,26 @@ namespace futils {
                 });
             }
 
+            void progress_qpack_stream() {
+                if (send_decoder && table.dec_send_stream.size()) {
+                    QuicSendStream* q = send_decoder.get();
+                    table.dec_send_stream.stream([&](binary::writer& w) {
+                        q->write_ex(false, true, w.written());
+                        w.commit();
+                    });
+                }
+                if (send_encoder && table.enc_send_stream.size()) {
+                    QuicSendStream* q = send_encoder.get();
+                    table.enc_send_stream.stream([&](binary::writer& w) {
+                        q->write_ex(false, true, w.written());
+                        w.commit();
+                    });
+                }
+                progress_recv_decoder();
+                progress_recv_encoder();
+            }
+
+           public:
             bool read_field_section(quic::stream::StreamID id, binary::reader& r, auto&& read) {
                 auto locked = lock();
                 auto err = table.read_header(id, r, read);
@@ -169,12 +297,14 @@ namespace futils {
                     app_err.set_error_code(Error::H3_INTERNAL_ERROR);
                     return false;
                 }
+                progress_qpack_stream();
                 return true;
             }
 
             // write should be void(add_entry,add_field)
             // add_entry is bool(header,value)
             // add_field is bool(header,value,FieldPolicy policy=FieldPolicy::proior_static)
+            // after write, the encoder and decoder stream will be written if there is any data
             bool write_field_section(quic::stream::StreamID id, binary::writer& w, auto&& write) {
                 auto locked = lock();
                 auto err = table.write_header(id, w, [&](auto&& add_entry, auto&& add_field) {
@@ -189,6 +319,7 @@ namespace futils {
                     app_err.set_error_code(Error::H3_INTERNAL_ERROR);
                     return false;
                 }
+
                 return true;
             }
 

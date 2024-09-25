@@ -241,6 +241,38 @@ namespace futils {
                 }
             }
 
+            view::wvec peek(view::wvec data, bool use_try_lock = false) {
+                auto do_peek = [&] {
+                    auto sub = data;
+                    for (auto& tgt : sorted) {
+                        if (tgt.offset != read_pos) {
+                            break;
+                        }
+                        if (tgt.data.size() > sub.size()) {
+                            view::copy(sub, tgt.data.rvec().substr(0, sub.size()));
+                            sub = sub.substr(sub.size());
+                            break;
+                        }
+                        view::copy(sub, tgt.data);
+                        sub = sub.substr(tgt.data.size());
+                    }
+                    return data.substr(0, data.size() - sub.size());
+                };
+                if (use_try_lock) {
+                    if (!locker.try_lock()) {
+                        return {};
+                    }
+                    auto unlock = helper::defer([&] {
+                        locker.unlock();
+                    });
+                    return do_peek();
+                }
+                else {
+                    auto unlock = lock();
+                    return do_peek();
+                }
+            }
+
            private:
             std::pair<flex_storage, bool> read_direct_impl() {
                 if (sorted.size() == 0) {
