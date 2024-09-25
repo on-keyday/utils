@@ -175,21 +175,24 @@ namespace futils {
                             return false;
                         }
                         recv_encoder = s;
-                        return progress_recv_encoder();
+                        progress_recv_encoder();
+                        return true;
                     case unistream::Type::QPACK_DECODER:
                         if (recv_decoder) {
                             q->request_stop_sending(std::uint64_t(http3::Error::H3_STREAM_CREATION_ERROR));
                             return false;
                         }
                         recv_decoder = s;
-                        return progress_recv_decoder();
+                        progress_recv_decoder();
+                        return true;
                     case unistream::Type::CONTROL:
                         if (ctrl.recv_control) {
                             q->request_stop_sending(std::uint64_t(http3::Error::H3_STREAM_CREATION_ERROR));
                             return false;
                         }
                         ctrl.recv_control = s;
-                        return progress_recv_control();
+                        progress_recv_control();
+                        return true;
                     default:
                         return false;
                 }
