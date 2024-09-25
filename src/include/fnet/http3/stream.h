@@ -194,6 +194,7 @@ namespace futils {
                         progress_recv_control();
                         return true;
                     default:
+                        q->request_stop_sending(std::uint64_t(http3::Error::H3_STREAM_CREATION_ERROR));
                         return false;
                 }
             }
