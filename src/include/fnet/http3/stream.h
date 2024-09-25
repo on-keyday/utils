@@ -232,7 +232,7 @@ namespace futils {
                         ctrl.read_buf.append(data);
                         ctrl.read_settings([&](std::uint64_t id, std::uint64_t value) {
                             if (id == std::uint64_t(SettingID::max_field_section_size)) {
-                                table.set_max_field_section_size(value);
+                                table.enc.set_max_capacity(value);
                             }
                         });
                         return true;
