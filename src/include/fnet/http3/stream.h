@@ -206,6 +206,7 @@ namespace futils {
                         table.dec_recv_stream.stream([&](binary::writer& w) {
                             w.write(data);
                         });
+                        return true;
                     });
                     table.read_decoder_stream();
                 }
@@ -218,6 +219,7 @@ namespace futils {
                         table.enc_recv_stream.stream([&](binary::writer& w) {
                             w.write(data);
                         });
+                        return true;
                     });
                     table.read_encoder_stream();
                 }
@@ -233,6 +235,7 @@ namespace futils {
                                 table.set_max_field_section_size(value);
                             }
                         });
+                        return true;
                     });
                 }
             }
