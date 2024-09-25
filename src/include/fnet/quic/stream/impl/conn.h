@@ -483,19 +483,19 @@ namespace futils {
                 }
             }
 
-            // update is std::uint64_t/*new_limit*/(Limiter,std::uint64_t/*initial limit*/)
+            // update is `std::uint64_t/*new_limit*/(Limiter,std::uint64_t/*initial limit*/)`
             // return value less than current limit has no effect to update limit
             bool update_max_uni_streams(auto&& update) {
                 return control.update_max_uni_streams(update);
             }
 
-            // update is std::uint64_t/*new_limit*/(Limiter,std::uint64_t/*initial limit*/)
+            // update is `std::uint64_t/*new_limit*/(Limiter,std::uint64_t/*initial limit*/)`
             // return value less than current limit has no effect to update limit
             bool update_max_bidi_streams(auto&& update) {
                 return control.update_max_bidi_streams(update);
             }
 
-            // update is std::uint64_t/*new_limit*/(Limiter,std::uint64_t/*initial limit*/)
+            // update is `std::uint64_t/*new_limit*/(Limiter,std::uint64_t/*initial limit*/)`
             // return value less than current limit has no effect to update limit
             bool update_max_data(auto&& update) {
                 return control.update_max_data(update);
