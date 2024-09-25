@@ -54,10 +54,10 @@ int main() {
         add_field("set-cookie", "symbols: !@#$%^&*()_+{}|:\"<>?`-=[]\\;',./", futils::qpack::FieldPolicy::no_dynamic);
     });
 
-    futils::binary::reader r{ctx.enc_send_stream.stream([&](auto& s) { return s.written(); })};
     ctx.dec.set_max_capacity(2000);
-    ctx.read_encoder_stream(r);
-    r.reset_buffer(w.written());
+    ctx.enc_recv_stream.stream([&](auto& s) { return s.write(ctx.enc_send_stream.stream([&](auto& s) { return s.written(); })); });
+    ctx.read_encoder_stream();
+    futils::binary::reader r{w.written()};
     ctx.read_header(0, r, [](auto&& field) {
         futils::wrap::cout_wrap() << field.key << ": " << field.value << "\n";
     });

@@ -341,8 +341,14 @@ namespace futils {
         }
 
         fnet_dll_implement(expected<WaitAddrInfo>) resolve_address(view::rvec hostname, view::rvec port, SockAttr attr) {
+            set_error(0);
             if (!lazy::load_addrinfo()) {
-                return unexpect(error::Error("socket library not loaded", error::Category::lib, error::fnet_lib_load_error));
+                auto err = error::Error("socket library not loaded", error::Category::lib, error::fnet_lib_load_error);
+                auto sysErr = error::Errno();
+                if (err.code() != 0) {
+                    return unexpect(error::ErrList{err, sysErr});
+                }
+                return unexpect(err);
             }
             Host host{};
             Port port_{};
@@ -366,8 +372,14 @@ namespace futils {
         }
 
         fnet_dll_export(expected<WaitAddrInfo>) get_self_host_address(view::rvec port, SockAttr attr) {
+            set_error(0);
             if (!lazy::load_addrinfo()) {
-                return unexpect(error::Error("socket library not loaded", error::Category::lib, error::fnet_lib_load_error));
+                auto err = error::Error("socket library not loaded", error::Category::lib, error::fnet_lib_load_error);
+                auto sysErr = error::Errno();
+                if (err.code() != 0) {
+                    return unexpect(error::ErrList{err, sysErr});
+                }
+                return unexpect(err);
             }
             char host[256]{0};
             auto err = lazy::gethostname_(host, sizeof(host));

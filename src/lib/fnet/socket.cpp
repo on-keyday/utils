@@ -389,8 +389,14 @@ namespace futils {
         }
 
         fnet_dll_implement(expected<Socket>) make_socket(SockAttr attr, event::IOEvent* event) {
+            set_error(0);
             if (!lazy::load_socket()) {
-                return unexpect("cannot load socket dll", error::Category::lib, error::fnet_lib_load_error);
+                auto err = error::Error("cannot load socket dll", error::Category::lib, error::fnet_lib_load_error);
+                auto sysErr = error::Errno();
+                if (err.code() != 0) {
+                    return unexpect(error::ErrList{err, sysErr});
+                }
+                return unexpect(err);
             }
             if (!event) {
                 auto& events = init_event();

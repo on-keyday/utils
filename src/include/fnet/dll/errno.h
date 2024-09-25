@@ -24,7 +24,7 @@ namespace futils {
 #endif
         }
 
-        void set_error(auto err) {
+        inline void set_error(auto err) {
 #ifdef FUTILS_PLATFORM_WINDOWS
             SetLastError(err);
 #else

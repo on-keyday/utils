@@ -9,6 +9,7 @@
 #include <fnet/dll/lazy/ssldll.h>
 #include <fnet/tls/tls.h>
 #include <fnet/tls/liberr.h>
+#include <fnet/dll/errno.h>
 
 namespace futils {
     namespace fnet::tls {
@@ -140,8 +141,14 @@ namespace futils {
 
         fnet_dll_implement(expected<TLSConfig>) configure_with_error() {
             TLSConfig conf;
+            set_error(0);
             if (!load_ssl()) {
-                return unexpect(error::Error("failed to load ssl library", error::Category::lib, error::fnet_lib_load_error));
+                auto err = error::Error("failed to load ssl library", error::Category::lib, error::fnet_lib_load_error);
+                auto sysErr = error::Errno();
+                if (err.code() != 0) {
+                    return unexpect(error::ErrList{err, sysErr});
+                }
+                return unexpect(err);
             }
             auto ctx = lazy::ssl::SSL_CTX_new_(lazy::ssl::TLS_method_());
             if (!ctx) {
