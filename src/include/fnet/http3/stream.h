@@ -110,7 +110,7 @@ namespace futils {
                     if (read_buf.size() && settings.type != std::uint64_t(frame::Type::SETTINGS)) {
                         return false;
                     }
-                    if (!append_to_read_buf(q, read_buf)) {
+                    if (!append_to_read_buf(*q, read_buf)) {
                         return false;
                     }
                 }
