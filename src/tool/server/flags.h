@@ -1,0 +1,53 @@
+/*
+    futils - utility library
+    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
+    Released under the MIT license
+    https://opensource.org/licenses/mit-license.php
+*/
+
+#pragma once
+#include <cmdline/template/parse_and_err.h>
+#include <env/env_sys.h>
+#include <fnet/dll/dll_path.h>
+struct Flags : futils::cmdline::templ::HelpOption {
+    std::string port = "8091";
+    bool quic = false;
+    bool single_thread = false;
+    bool memory_debug = false;
+    bool verbose = false;
+    bool bind_public = false;
+    std::string public_key;
+    std::string private_key;
+    futils::wrap::path_string libssl;
+    futils::wrap::path_string libcrypto;
+    bool ssl = false;
+    void bind(futils::cmdline::option::Context& ctx) {
+        bind_help(ctx);
+        load_env();
+        ctx.VarString(&port, "port", "port number (default:8091)", "PORT");
+        ctx.VarBool(&quic, "http3", "launch http3 server");
+        ctx.VarBool(&single_thread, "single", "single thread mode");
+        ctx.VarBool(&memory_debug, "memory-debug", "add memory debug hook");
+        ctx.VarBool(&verbose, "verbose", "verbose log");
+        ctx.VarString(&public_key, "public-key", "public key file", "FILE");
+        ctx.VarString(&private_key, "private-key", "private key file", "FILE");
+        ctx.VarString(&libssl, "libssl", "libssl path", "FILE");
+        ctx.VarString(&libcrypto, "libcrypto", "libcrypto path", "FILE");
+        ctx.VarBool(&ssl, "ssl", "enable ssl");
+        ctx.VarBool(&bind_public, "bind-public", "bind to public address (default: only localhost)");
+    }
+#ifdef _WIN32
+#define SUFFIX ".dll"
+#else
+#define SUFFIX ".so"
+#endif
+    void load_env() {
+        auto env = futils::env::sys::env_getter();
+        env.get_or(libssl, "FNET_LIBSSL", fnet_lazy_dll_path("libssl" SUFFIX));
+        env.get_or(libcrypto, "FNET_LIBCRYPTO", fnet_lazy_dll_path("libcrypto" SUFFIX));
+        env.get_or(public_key, "FNET_PUBLIC_KEY", "cert.pem");
+        env.get_or(private_key, "FNET_PRIVATE_KEY", "private.pem");
+        verbose = env.get<std::string>("FNET_VERBOSE_LOG") == "1";
+        bind_public = env.get<std::string>("FNET_BIND_PUBLIC") == "1";
+    }
+};

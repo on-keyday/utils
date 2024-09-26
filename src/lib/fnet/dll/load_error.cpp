@@ -6,6 +6,7 @@
 */
 
 
+#include <fnet/dll/dllcpp.h>
 #include <fnet/dll/lazy/load_error.h>
 #include <fnet/storage.h>
 

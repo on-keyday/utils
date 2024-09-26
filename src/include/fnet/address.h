@@ -198,7 +198,10 @@ namespace futils {
 
             template <class Str>
             constexpr void to_string(Str& str, bool detect_ipv4_mapped = false, bool ipv4mapped_as_ipv4 = false) const {
-                if (type() == NetAddrType::ipv4) {
+                if (type() == NetAddrType::null) {
+                    strutil::append(str, "<null sockaddr>");
+                }
+                else if (type() == NetAddrType::ipv4) {
                     ipaddr::ipv4_to_string(str, data());
                 }
                 else if (type() == NetAddrType::ipv6) {

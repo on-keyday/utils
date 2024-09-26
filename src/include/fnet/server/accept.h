@@ -34,8 +34,8 @@ namespace futils {
             }
 
             inline expected<std::pair<Socket, SockAddr>> prepare_listener(view::rvec port, int backlog = 10,
-                                                                          bool reuse = true, bool ipv6only = false) {
-                return fnet::get_self_server_address(port, fnet::sockattr_tcp())
+                                                                          bool reuse = true, bool ipv6only = false, view::rvec host = {}) {
+                return fnet::get_self_server_address(port, fnet::sockattr_tcp(), host)
                     .and_then([&](WaitAddrInfo&& w) {
                         return w.wait();
                     })
@@ -62,5 +62,5 @@ namespace futils {
             }
 
         }  // namespace server
-    }      // namespace fnet
+    }  // namespace fnet
 }  // namespace futils

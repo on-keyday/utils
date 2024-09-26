@@ -81,7 +81,7 @@ namespace futils {
            public:
             constexpr Socket() = default;
             ~Socket();
-            constexpr Socket(Socket&& sock)
+            constexpr Socket(Socket&& sock) noexcept
                 : ctx(std::exchange(sock.ctx, nullptr)) {}
 
             // explicit clone
@@ -90,7 +90,7 @@ namespace futils {
             // this is NOT a dup() or DuplicateHandle(), only increment reference count
             Socket clone() const;
 
-            Socket& operator=(Socket&& sock) {
+            Socket& operator=(Socket&& sock) noexcept {
                 if (this == &sock) {
                     return *this;
                 }

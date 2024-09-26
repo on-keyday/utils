@@ -24,41 +24,8 @@
 #include <format>
 #include <timer/clock.h>
 #include <timer/to_string.h>
+#include "flags.h"
 
-struct Flags : futils::cmdline::templ::HelpOption {
-    std::string port = "8091";
-    bool quic = false;
-    bool single_thread = false;
-    bool memory_debug = false;
-    bool verbose = false;
-    std::string public_key;
-    std::string private_key;
-    futils::wrap::path_string libssl;
-    futils::wrap::path_string libcrypto;
-    bool ssl = false;
-    void bind(futils::cmdline::option::Context& ctx) {
-        bind_help(ctx);
-        load_env();
-        ctx.VarString(&port, "port", "port number (default:8091)", "PORT");
-        ctx.VarBool(&quic, "quic", "enable quic server");
-        ctx.VarBool(&single_thread, "single", "single thread mode");
-        ctx.VarBool(&memory_debug, "memory-debug", "add memory debug hook");
-        ctx.VarBool(&verbose, "verbose", "verbose log");
-        ctx.VarString(&public_key, "public-key", "public key file", "FILE");
-        ctx.VarString(&private_key, "private-key", "private key file", "FILE");
-        ctx.VarString(&libssl, "libssl", "libssl path", "FILE");
-        ctx.VarString(&libcrypto, "libcrypto", "libcrypto path", "FILE");
-        ctx.VarBool(&ssl, "ssl", "enable ssl");
-    }
-
-    void load_env() {
-        auto env = futils::env::sys::env_getter();
-        libssl = env.get_or<futils::wrap::path_string>("FNET_LIBSSL", "");
-        libcrypto = env.get_or<futils::wrap::path_string>("FNET_LIBCRYPTO", "");
-        public_key = env.get_or<std::string>("FNET_PUBLIC_KEY", "");
-        private_key = env.get_or<std::string>("FNET_PRIVATE_KEY", "");
-    }
-};
 namespace serv = futils::fnet::server;
 auto& cout = futils::wrap::cout_wrap();
 
@@ -124,7 +91,7 @@ void server_entry(void* p, serv::Client&& cl, serv::StateContext ctx) {
     serv::http_handler(p, std::move(cl), ctx);
 }
 
-int quic_server();
+int quic_server(Flags& flag);
 bool verbose = false;
 
 int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
@@ -133,7 +100,7 @@ int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
         futils::test::set_alloc_hook(true);
     }
     if (flag.quic) {
-        return quic_server();
+        return quic_server(flag);
     }
     serv::HTTPServ serv;
     if (flag.ssl) {
@@ -173,7 +140,7 @@ int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
     });
     s->set_max_and_active(std::thread::hardware_concurrency() - 1, 5);
     s->set_reduce_skip(10);
-    auto server = serv::prepare_listener(flag.port, 10000);
+    auto server = serv::prepare_listener(flag.port, 10000, true, false, flag.bind_public ? futils::view::rvec{} : "localhost");
     if (!server) {
         futils::wrap::cout_wrap() << "failed to create server " << server.error().error<std::string>();
         return -1;
@@ -231,6 +198,7 @@ int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
 
 int main(int argc, char** argv) {
     Flags flags;
+    flags.load_env();
     return futils::cmdline::templ::parse_or_err<std::string>(
         argc, argv, flags, [](auto&& str, bool) { cout << str; },
         [](Flags& flags, futils::cmdline::option::Context& ctx) {
