@@ -37,7 +37,9 @@ int main() {
     std::string buffer;
     futils::binary::writer w(futils::binary::resizable_buffer_writer<std::string>(), &buffer);
     futils::byte stack_memory[1024 * 100]{};
+#ifdef FUTILS_PLATFORM_WINDOWS
     auto [unwind_offset, _] = futils::platform::windows::prepare_jit_unwind(w);
+#endif
     auto exec_offset = w.offset();
     auto reloc = futils::jit::x64::coro::write_coroutine(w, stack_memory, routine);
     auto edit = futils::jit::EditableMemory::allocate(buffer.size());
@@ -45,7 +47,9 @@ int main() {
     for (auto& r : reloc.relocations) {
         futils::jit::x64::coro::relocate(edit.get_memory(), r, stack_memory);
     }
+#ifdef FUTILS_PLATFORM_WINDOWS
     futils::platform::windows::apply_jit_unwind(edit.get_memory(), unwind_offset, stack_memory);
+#endif
     auto exec = edit.make_executable();
     auto f = exec.as_function<int, int*>(exec_offset);
     int x = 0;

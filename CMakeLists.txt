@@ -152,6 +152,8 @@ add_executable(fnetquic_internet "src/test/fnetquic/test_fnetquic_Internet.cpp")
 add_executable(fnet_ip "src/test/fnet/test_fnet_ip.cpp")
 add_executable(fnet_telnet "src/test/fnet/test_fnet_telnet.cpp")
 add_executable(fnetquic_http3 "src/test/fnetquic/test_fnetquic_http3.cpp")
+add_executable(fnet_cancel "src/test/fnet/test_fnet_cancel.cpp")
+add_executable(fnetquic_h3_local "src/test/fnetquic/test_fnetquic_h3_local.cpp")
 
 #tests(low)
 add_executable(callstack "src/test/low/test_callstack.cpp")
@@ -307,6 +309,7 @@ endif()
 target_sources(fnetserv PRIVATE
   "src/lib/fnet/server/state.cpp"
   "src/lib/fnet/server/httpserv.cpp"
+  "src/lib/fnet/server/quic_serve.cpp"
 )
 
 # coro
@@ -382,6 +385,8 @@ target_link_libraries(fnetquic_0rtt fnet futils)
 target_link_libraries(fnetquic_internet fnet futils)
 target_link_libraries(fnet_telnet fnet)
 target_link_libraries(fnetquic_http3 fnet futils)
+target_link_libraries(fnet_cancel fnet futils)
+target_link_libraries(fnetquic_h3_local fnet futils)
 
 # test(libfnetserv)
 target_link_libraries(fnetserv fnet)

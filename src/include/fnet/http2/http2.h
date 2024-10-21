@@ -6,111 +6,204 @@
 */
 
 #pragma once
-#include "h2conn.h"
-#include "h2stream.h"
-#include <unordered_map>
+#include "h2handler.h"
+#include <view/concat.h>
+#include <view/transform.h>
 
-namespace futils {
-    namespace fnet::http2 {
-        struct FrameHandler : std::enable_shared_from_this<FrameHandler> {
-            stream::Conn conn;
-            std::unordered_map<std::uint32_t, std::shared_ptr<stream::Stream>> streams;
-            flex_storage recv_buffer;
+namespace futils::fnet::http2 {
+    struct HTTP2 {
+       private:
+        std::weak_ptr<stream::Stream> handler_;
 
-            Error recv_frame(const frame::Frame& f) {
-                if (frame::is_connection_level(f.type) ||
-                    (f.type == frame::Type::window_update &&
-                     f.id == 0)) {
-                    if (f.id != 0) {
-                        return Error{H2Error::protocol, false, "unexpected frame id"};
-                    }
-                    return conn.recv_frame(f);
+       public:
+        HTTP2(const std::shared_ptr<stream::Stream>& h)
+            : handler_(h) {}
+        HTTP2(std::shared_ptr<stream::Stream>&& h)
+            : handler_(std::move(h)) {}
+
+        std::shared_ptr<stream::Stream> get_stream() const {
+            return handler_.lock();
+        }
+
+        template <class Method, class Path, class Header>
+        Error write_request(Method&& method, Path&& path, Header&& header, view::rvec body = {}, bool fin = true, bool clear_text = false) {
+            auto handler = handler_.lock();
+            if (!handler) {
+                return Error{H2Error::internal, false, "handler is not set"};
+            }
+            auto err = handler->send_headers(
+                [&](auto&& set_header) {
+                    set_header(+":method", std::forward<Method>(method));
+                    set_header(+":path", std::forward<Path>(path));
+                    set_header(+":scheme", clear_text ? "http" : "https");
+                    http1::apply_call_or_iter(
+                        std::forward<Header>(header),
+                        [&](auto&& key, auto&& value) {
+                            // this checks only the key is valid for HTTP/1.1
+                            // so pseudo headers are detected here
+                            if (!http1::header::is_valid_key(key)) {
+                                return http1::header::HeaderError::invalid_header_key;
+                            }
+                            if (!http1::header::is_valid_value(value)) {
+                                return http1::header::HeaderError::invalid_header_value;
+                            }
+                            // add :authority header
+                            if (strutil::equal(key, "Host", strutil::ignore_case())) {
+                                set_header(":authority", std::forward<decltype(value)>(value));
+                                return http1::header::HeaderError::none;
+                            }
+                            auto lower_key = view::make_transform(key, [](auto&& c) { return strutil::to_lower(c); });
+                            set_header(lower_key, std::forward<decltype(value)>(value));
+                        });
+                },
+                body.size() == 0 && fin);
+            if (err) {
+                return err;
+            }
+            if (body.size() > 0) {
+                err = handler->send_data(body, fin);
+            }
+            return err;
+        }
+
+        template <class Status, class Header>
+        Error write_response(Status&& status, Header&& header, view::rvec body = {}, bool fin = true) {
+            auto handler = handler_.lock();
+            if (!handler) {
+                return Error{H2Error::internal, false, "handler is not set"};
+            }
+            if (int(status) < 100 || int(status) > 599) {
+                return Error{H2Error::internal, false, "invalid status code"};
+            }
+            auto err = handler->send_headers(
+                [&](auto&& set_header) {
+                    char buf[4];
+                    auto st = int(status);
+                    buf[0] = '0' + (st / 100) % 10;
+                    buf[1] = '0' + (st / 10) % 10;
+                    buf[2] = '0' + st % 10;
+                    buf[3] = '\0';
+                    set_header(+":status", +buf);
+                    http1::apply_call_or_iter(
+                        std::forward<decltype(header)>(header),
+                        [&](auto&& key, auto&& value) {
+                            // this checks only the key is valid for HTTP/1.1
+                            // so pseudo headers are detected here
+                            if (!http1::header::is_valid_key(key)) {
+                                return http1::header::HeaderError::invalid_header_key;
+                            }
+                            if (!http1::header::is_valid_value(value)) {
+                                return http1::header::HeaderError::invalid_header_value;
+                            }
+                            auto lower_key = view::make_transform(key, [](auto&& c) { return strutil::to_lower(c); });
+                            set_header(lower_key, std::forward<decltype(value)>(value));
+                            return http1::header::HeaderError::none;
+                        });
+                },
+                body.size() == 0 && fin);
+            if (err) {
+                return err;
+            }
+            if (body.size() > 0) {
+                err = handler->send_data(body, fin);
+            }
+            return err;
+        }
+
+        template <class Method, class Path, class Header>
+        Error read_request(Method&& method, Path&& path, Header&& header) {
+            auto handler = handler_.lock();
+            if (!handler) {
+                return Error{H2Error::internal, false, "handler is not set"};
+            }
+            auto ok = handler->receive_header([&](auto&& key, auto&& value) {
+                if (strutil::equal(key, ":method", strutil::ignore_case())) {
+                    auto seq = make_ref_seq(value);
+                    http1::range_to_string_or_call(seq, method, {.start = 0, .end = seq.size()});
                 }
-                auto found = streams.find(f.id);
-                std::shared_ptr<stream::Stream> s;
-                if (found == streams.end()) {
-                    s = std::allocate_shared<stream::Stream>(glheap_allocator<stream::Stream>{});
-                    streams.emplace(f.id, s);
+                else if (strutil::equal(key, ":path", strutil::ignore_case())) {
+                    auto seq = make_ref_seq(value);
+                    http1::range_to_string_or_call(seq, path, {.start = 0, .end = seq.size()});
+                }
+                else if (strutil::equal(key, ":authority", strutil::ignore_case())) {
+                    flex_storage host("host");
+                    auto concat = view::make_concat<flex_storage&, flex_storage&>(host, value);
+                    auto seq2 = make_ref_seq(concat);
+                    header(seq2,
+                           http1::FieldRange{
+                               .key = {0, host.size()},
+                               .value = {host.size(), host.size() + value.size()},
+                           });
                 }
                 else {
-                    s = found->second;
+                    auto concat = view::make_concat<flex_storage&, flex_storage&>(key, value);
+                    auto seq = make_ref_seq(concat);
+                    header(seq,
+                           http1::FieldRange{
+                               .key = {0, key.size()},
+                               .value = {key.size(), key.size() + value.size()},
+                           });
                 }
-                if (auto err = s->recv_frame(f)) {
-                    return err;
+            });
+            if (!ok) {
+                return Error{
+                    .code = H2Error::internal,
+                    .stream = true,
+                    .debug = "failed to read request",
+                    .is_resumable = true,
+                };
+            }
+            return no_error;
+        }
+
+        template <class Status, class Header>
+        Error read_response(Status&& status, Header&& header) {
+            auto handler = handler_.lock();
+            if (!handler) {
+                return Error{H2Error::internal, false, "handler is not set"};
+            }
+            auto ok = handler->receive_header([&](auto&& key, auto&& value) {
+                if (strutil::equal(key, ":status", strutil::ignore_case())) {
+                    auto seq = make_ref_seq(value);
+                    http1::range_to_string_or_call(seq, status, {.start = 0, .start = seq.size()});
                 }
-            }
-
-            Error read_frames() {
-                bool ok = false;
-                while (true) {
-                    binary::reader r{recv_buffer};
-                    auto err = frame::parse_frame(r, conn.state.recv_settings().max_frame_size, [&](const auto& f, const frame::UnknownFrame&, Error err) {
-                        ok = true;
-                        if constexpr (std::is_same_v<decltype(f), const frame::UnknownFrame&>) {
-                            return no_error;  // ignore
-                        }
-                        else {
-                            if (err) {
-                                return err;
-                            }
-                            return recv_frame(f);
-                        }
-                    });
-                    if (err) {
-                        return err;
-                    }
-                    if (!ok) {
-                        break;
-                    }
-                    recv_buffer.shift_front(r.offset());
-                    ok = false;
+                else {
+                    auto view = view::make_concat<flex_storage&, flex_storage&>(key, value);
+                    auto seq = make_ref_seq(view);
+                    header(seq,
+                           http1::FieldRange{
+                               .key = {0, key.size()},
+                               .value = {key.size(), key.size() + value.size()},
+                           });
                 }
-                return no_error;
+            });
+            if (!ok) {
+                return Error{
+                    .code = H2Error::internal,
+                    .stream = true,
+                    .debug = "failed to read response",
+                    .is_resumable = ok == http1::header::HeaderError::no_data,
+                };
             }
+            return no_error;
+        }
 
-            Error add_recv(view::rvec data) {
-                recv_buffer.append(data);
-                return read_frames();
+        template <class Body>
+        Error read_data(Body&& body) {
+            auto handler = handler_.lock();
+            if (!handler) {
+                return Error{H2Error::internal, false, "handler is not set"};
             }
-
-            Error send_settings(auto&& set_settings) {
-                return conn.send_settings(set_settings);
+            auto ok = handler->receive_data(std::forward<decltype(body)>(body));
+            if (!ok) {
+                return Error{
+                    .code = H2Error::internal,
+                    .stream = true,
+                    .debug = "failed to read data",
+                    .is_resumable = ok == http1::body::BodyReadResult::incomplete,
+                };
             }
-
-            Error send_goaway(std::uint32_t code, view::rvec debug = {}) {
-                return conn.send_goaway(code, debug);
-            }
-
-            Error send_ping(std::uint64_t opaque) {
-                return conn.send_ping(opaque);
-            }
-
-            Error send_settings(setting::PredefinedSettings settings, bool diff = false) {
-                return send_settings([&](auto&& write) {
-                    using sk = setting::SettingKey;
-#define WRITE_IF(key, value)                             \
-    if ((settings.value) != (com.recv.settings.value)) { \
-        write(key, settings.value);                      \
-    }
-                    if (diff) {
-                        WRITE_IF(k(sk::table_size), max_header_table_size);
-                        WRITE_IF(k(sk::enable_push), enable_push ? 1 : 0);
-                        WRITE_IF(k(sk::max_concurrent), max_concurrent_stream);
-                        WRITE_IF(k(sk::initial_windows_size), initial_window_size);
-                        WRITE_IF(k(sk::max_frame_size), max_frame_size);
-                        WRITE_IF(k(sk::header_list_size), max_header_list_size);
-#undef WRITE_IF
-                    }
-                    else {
-                        write(k(sk::table_size), settings.max_header_table_size);
-                        write(k(sk::enable_push), settings.enable_push ? 1 : 0);
-                        write(k(sk::max_concurrent), settings.max_concurrent_stream);
-                        write(k(sk::initial_windows_size), settings.initial_window_size);
-                        write(k(sk::max_frame_size), settings.max_frame_size);
-                        write(k(sk::header_list_size), settings.max_header_list_size);
-                    }
-                });
-            }
-        };
-    }  // namespace fnet::http2
-}  // namespace futils
+            return no_error;
+        }
+    };
+}  // namespace futils::fnet::http2

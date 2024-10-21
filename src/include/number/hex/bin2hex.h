@@ -11,8 +11,8 @@
 
 namespace futils::number::hex {
 
-    template <class Result>
-    constexpr void to_hex(Result& result, auto&& in) {
+    template <class Header>
+    constexpr void to_hex(Header& result, auto&& in) {
         auto seq = make_ref_seq(in);
         while (!seq.eos()) {
             auto c = seq.current();

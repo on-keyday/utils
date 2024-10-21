@@ -33,6 +33,8 @@ namespace futils::fnet {
             return unexpect("operation completed", error::Category::lib, error::fnet_async_error);
         }
         auto t = static_cast<WinSockTable*>(b);
+        // if CancelIoEx success, completion notification is notified by IOCP
+        // so we don't need to call completion callback here and not release lock
         WinSockIOTableHeader& io = w ? static_cast<WinSockIOTableHeader&>(t->w) : t->r;
         return io.l.interrupt(cancel_code, [&]() -> expected<void> {
             if (!lazy::CancelIoEx_(HANDLE(io.base->sock), &io.ol)) {
@@ -56,31 +58,33 @@ namespace futils::fnet {
                 err = error::Errno();
             }
             // cb.call must release hdr
-            auto cb = hdr->cb;
+            auto user = hdr->cb.user;
+            auto notify = hdr->cb.notify;
+            auto call = hdr->cb.call.exchange(nullptr);
             if (err) {
-                cb.call(&cb, hdr, unexpect(std::move(err)));
+                call(notify, user, hdr, unexpect(std::move(err)));
             }
             else {
-                cb.call(&cb, hdr, entry->dwNumberOfBytesTransferred);
+                call(notify, user, hdr, entry->dwNumberOfBytesTransferred);
             }
         }
     }  // namespace event
 
-    void call_stream(futils::fnet::NotifyCallback* cb, IOTableHeader* base, NotifyResult&& result) {
+    void call_stream(void (*notify_base)(), void* user, IOTableHeader* base, NotifyResult&& result) {
         auto hdr = static_cast<WinSockIOTableHeader*>(base);
         auto sock = make_socket(hdr->base);
         hdr->l.unlock();  // release, so can do next IO
-        auto notify = reinterpret_cast<stream_notify_t>(cb->notify);
-        notify(std::move(sock), cb->user, std::move(result));
+        auto notify = reinterpret_cast<stream_notify_t>(notify_base);
+        notify(std::move(sock), user, std::move(result));
     }
 
-    void call_recvfrom(futils::fnet::NotifyCallback* cb, IOTableHeader* base, NotifyResult&& result) {
+    void call_recvfrom(void (*notify_base)(), void* user, IOTableHeader* base, NotifyResult&& result) {
         auto hdr = static_cast<WinSockReadTable*>(base);
         auto sock = make_socket(hdr->base);
         auto addr = sockaddr_to_NetAddrPort((sockaddr*)&hdr->from, hdr->from_len);
         hdr->l.unlock();  // release, so can do next IO
-        auto notify = reinterpret_cast<recvfrom_notify_t>(cb->notify);
-        notify(std::move(sock), std::move(addr), cb->user, std::move(result));
+        auto notify = reinterpret_cast<recvfrom_notify_t>(notify_base);
+        notify(std::move(sock), std::move(addr), user, std::move(result));
     }
 
     AsyncResult on_success(WinSockTable* t, std::uint64_t code, bool w, size_t bytes) {

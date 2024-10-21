@@ -5,7 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
-// sslfuncs - OpenSSL/BoringSSL function forward declration
+// sslfuncs - OpenSSL/BoringSSL function forward declarations
 // because this library mentioning about OpenSSL and to avoid lawsuit
 // these two note is written
 // * This product includes cryptographic software written by Eric Young (eay@cryptsoft.com)
@@ -184,6 +184,14 @@ namespace ssl_import {
 
             int SSL_in_init(const SSL* ssl);
 
+            const char* SSL_get_version(const SSL* ssl);
+
+            const char* SSL_alert_desc_string_long(int value);
+
+            typedef void (*SSL_CTX_keylog_cb_func)(const SSL* ssl, const char* line);
+
+            void SSL_CTX_set_keylog_callback(SSL_CTX* ctx, SSL_CTX_keylog_cb_func cb);
+
         }  // namespace ssl
 
         namespace crypto {
@@ -313,7 +321,7 @@ namespace ssl_import {
                 const EVP_CIPHER* EVP_chacha20();
                 const EVP_CIPHER* EVP_chacha20_poly1305();
             }  // namespace crypto
-        }      // namespace open_ssl
+        }  // namespace open_ssl
 
         namespace boring_ssl {
             namespace ssl {
@@ -364,8 +372,8 @@ namespace ssl_import {
                     size_t in_tag_len, const uint8_t* ad, size_t ad_len);
 
             }  // namespace crypto
-        }      // namespace boring_ssl
-    }          // namespace ls
+        }  // namespace boring_ssl
+    }  // namespace ls
 
     constexpr size_t ssl_appdata_index = 0;
 }  // namespace ssl_import

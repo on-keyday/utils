@@ -31,7 +31,7 @@ namespace futils {
             }
         };
 
-        void add_padding_for_encryption(frame::fwriter& fw, packetnum::WireVal wire, size_t auth_tag) {
+        inline void add_padding_for_encryption(frame::fwriter& fw, packetnum::WireVal wire, size_t auth_tag) {
             // least 4 byte needed for sample skip size
             // see https://datatracker.ietf.org/doc/html/rfc9001#section-5.4.2
             if (fw.w.written().size() + wire.len < auth_tag) {

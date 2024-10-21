@@ -5,11 +5,12 @@
     https://opensource.org/licenses/mit-license.php
 */
 
+#pragma once
 #include "../quic/stream/impl/stream.h"
 #include "../quic/stream/impl/recv_stream.h"
 #include "frame.h"
 #include "../util/qpack/qpack.h"
-#include "error.h"
+#include "error_enum.h"
 #include "../quic/transport_error.h"
 #include "unistream.h"
 
@@ -151,7 +152,7 @@ namespace futils {
            private:
             bool accept_uni_stream(std::shared_ptr<QuicRecvStream> s) {
                 if (recv_decoder && recv_encoder && ctrl.recv_control) {
-                    s->request_stop_sending(std::uint64_t(http3::Error::H3_STREAM_CREATION_ERROR));
+                    s->request_stop_sending(std::uint64_t(http3::H3Error::H3_STREAM_CREATION_ERROR));
                     return false;
                 }
                 QuicRecvStream* q = s.get();
@@ -165,13 +166,13 @@ namespace futils {
                 }
                 auto ok = r->read(view::wvec(buf, head.type.len));
                 if (ok.first.size() != head.type.len) {
-                    q->request_stop_sending(std::uint64_t(http3::Error::H3_INTERNAL_ERROR));
+                    q->request_stop_sending(std::uint64_t(http3::H3Error::H3_INTERNAL_ERROR));
                     return false;
                 }
                 switch (unistream::Type(head.type.value)) {
                     case unistream::Type::QPACK_ENCODER:
                         if (recv_encoder) {
-                            q->request_stop_sending(std::uint64_t(http3::Error::H3_STREAM_CREATION_ERROR));
+                            q->request_stop_sending(std::uint64_t(http3::H3Error::H3_STREAM_CREATION_ERROR));
                             return false;
                         }
                         recv_encoder = s;
@@ -179,7 +180,7 @@ namespace futils {
                         return true;
                     case unistream::Type::QPACK_DECODER:
                         if (recv_decoder) {
-                            q->request_stop_sending(std::uint64_t(http3::Error::H3_STREAM_CREATION_ERROR));
+                            q->request_stop_sending(std::uint64_t(http3::H3Error::H3_STREAM_CREATION_ERROR));
                             return false;
                         }
                         recv_decoder = s;
@@ -187,14 +188,14 @@ namespace futils {
                         return true;
                     case unistream::Type::CONTROL:
                         if (ctrl.recv_control) {
-                            q->request_stop_sending(std::uint64_t(http3::Error::H3_STREAM_CREATION_ERROR));
+                            q->request_stop_sending(std::uint64_t(http3::H3Error::H3_STREAM_CREATION_ERROR));
                             return false;
                         }
                         ctrl.recv_control = s;
                         progress_recv_control();
                         return true;
                     default:
-                        q->request_stop_sending(std::uint64_t(http3::Error::H3_STREAM_CREATION_ERROR));
+                        q->request_stop_sending(std::uint64_t(http3::H3Error::H3_STREAM_CREATION_ERROR));
                         return false;
                 }
             }
@@ -301,7 +302,7 @@ namespace futils {
                     if (err == qpack::QpackError::input_length) {
                         return false;
                     }
-                    app_err.set_error_code(Error::H3_INTERNAL_ERROR);
+                    app_err.set_error_code(H3Error::H3_INTERNAL_ERROR);
                     return false;
                 }
                 progress_qpack_stream();
@@ -312,7 +313,7 @@ namespace futils {
             // add_entry is bool(header,value)
             // add_field is bool(header,value,FieldPolicy policy=FieldPolicy::proior_static)
             // after write, the encoder and decoder stream will be written if there is any data
-            bool write_field_section(quic::stream::StreamID id, binary::writer& w, auto&& write) {
+            H3Error write_field_section(quic::stream::StreamID id, binary::writer& w, auto&& write) {
                 auto locked = lock();
                 auto err = table.write_header(id, w, [&](auto&& add_entry, auto&& add_field) {
                     auto add_entry_wrap = qpack::http3_entry_validate_wrapper(add_entry);
@@ -321,16 +322,15 @@ namespace futils {
                 });
                 if (err != qpack::QpackError::none) {
                     if (err == qpack::QpackError::output_length) {
-                        return false;
+                        return H3Error::H3_INTERNAL_ERROR;
                     }
-                    app_err.set_error_code(Error::H3_INTERNAL_ERROR);
-                    return false;
+                    app_err.set_error_code(H3Error::H3_INTERNAL_ERROR);
+                    return H3Error::H3_INTERNAL_ERROR;
                 }
-
-                return true;
+                return H3Error::H3_NO_ERROR;
             }
 
-            void set_error(Error err) {
+            void set_error(H3Error err) {
                 auto locked = lock();
                 app_err.set_error_code(err);
             }
@@ -391,32 +391,34 @@ namespace futils {
             // write should be void(add_entry,add_field)
             // add_entry is bool(header,value)
             // add_field is bool(header,value,FieldPolicy policy=FieldPolicy::proior_static)
-            bool write_header(bool fin, auto&& write) {
+            H3Error write_header(bool fin, auto&& write) {
                 auto s = stream.lock();
                 QuicStream* q = s.get();
                 if (!q || q->sender.is_fin()) {
-                    return false;
+                    return H3Error::H3_STREAM_CREATION_ERROR;
                 }
                 if (!is_valid_state(StateMachine::client_header_send, StateMachine::server_header_send)) {
-                    return false;
+                    return H3Error::H3_INTERNAL_ERROR;
                 }
                 binary::WriteStreamingBuffer<String> buf;
                 view::wvec section;
-                if (!buf.stream([&](auto& w) {
-                        if (!conn->write_field_section(q->sender.id(), w, write)) {
-                            return false;
+                if (auto err = buf.stream([&](auto& w) {
+                        Connection<Config>* c = conn.get();
+                        if (auto err = c->write_field_section(q->sender.id(), w, write); err != H3Error::H3_NO_ERROR) {
+                            return err;
                         }
                         section = w.written();
-                        return true;
-                    })) {
-                    return false;
+                        return H3Error::H3_NO_ERROR;
+                    });
+                    err != H3Error::H3_NO_ERROR) {
+                    return err;
                 }
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::HEADER, section.size());
                 auto res = q->sender.write_ex(fin, true, header, section);
                 if (res.result != quic::IOResult::ok) {
                     set_failed();
-                    return false;
+                    return H3Error::H3_INTERNAL_ERROR;
                 }
                 if (state == StateMachine::client_start) {
                     set_state(StateMachine::client_data_send);
@@ -424,7 +426,7 @@ namespace futils {
                 else {
                     set_state(StateMachine::server_data_send);
                 }
-                return true;
+                return H3Error::H3_NO_ERROR;
             }
 
            private:
@@ -476,6 +478,14 @@ namespace futils {
                 else {
                     set_state(StateMachine::server_data_recv);
                 }
+                if (q->receiver.is_closed()) {
+                    if (state == StateMachine::client_data_recv) {
+                        set_state(StateMachine::client_end);
+                    }
+                    else if (state == StateMachine::server_data_recv) {
+                        set_state(StateMachine::server_header_send);
+                    }
+                }
                 return true;
             }
 
@@ -518,52 +528,62 @@ namespace futils {
             }
 
            private:
-            bool do_write(QuicStream* q, view::rvec data, bool fin) {
+            H3Error do_write(QuicStream* q, view::rvec data, bool fin) {
                 frame::FrameHeaderArea area;
                 auto header = frame::get_header(area, frame::Type::DATA, data.size());
                 auto res = q->sender.write_ex(fin, true, header, data);
                 if (res.result != quic::IOResult::ok) {
-                    return false;
+                    return H3Error::H3_INTERNAL_ERROR;
                 }
-                return true;
+                return H3Error::H3_NO_ERROR;
             }
 
            public:
-            bool write(view::rvec data, bool fin) {
+            H3Error write(view::rvec data, bool fin) {
                 auto locked = stream.lock();
                 QuicStream* q = locked.get();
                 if (!q || q->sender.is_fin()) {
-                    return false;
+                    return H3Error::H3_STREAM_CREATION_ERROR;
                 }
                 if (!is_valid_state(StateMachine::client_data_send, StateMachine::server_data_send)) {
-                    return false;
+                    return H3Error::H3_INTERNAL_ERROR;
                 }
                 return do_write(q, data, fin);
             }
 
-            bool write(auto&& cb) {
+            H3Error write(auto&& cb) {
                 auto locked = stream.lock();
                 QuicStream* q = locked.get();
                 if (!q || q->sender.is_fin()) {
-                    return false;
+                    return H3Error::H3_STREAM_CREATION_ERROR;
                 }
                 if (!is_valid_state(StateMachine::client_data_send, StateMachine::server_data_send)) {
-                    return false;
+                    return H3Error::H3_INTERNAL_ERROR;
                 }
-                return cb([&](view::rvec data, bool fin) {
-                    if (do_write(q, data, fin)) {
-                        if (fin) {
-                            if (state == StateMachine::client_data_send) {
-                                set_state(StateMachine::client_end);
-                            }
-                            else {
-                                set_state(StateMachine::server_end);
-                            }
-                        }
-                        return true;
+                auto invoke = [&](view::rvec data, bool fin) {
+                    if (auto err = do_write(q, data, fin); err != H3Error::H3_NO_ERROR) {
+                        return err;
                     }
-                    return false;
-                });
+                    if (fin) {
+                        if (state == StateMachine::client_data_send) {
+                            set_state(StateMachine::client_end);
+                        }
+                        else {
+                            set_state(StateMachine::server_end);
+                        }
+                    }
+                    return H3Error::H3_NO_ERROR;
+                };
+                if constexpr (std::is_invocable_r_v<H3Error, decltype(cb), decltype(invoke)>) {
+                    return cb(invoke);
+                }
+                else if constexpr (std::is_invocable_r_v<bool, decltype(cb), decltype(invoke)>) {
+                    return cb(invoke) ? H3Error::H3_NO_ERROR : H3Error::H3_INTERNAL_ERROR;
+                }
+                else {
+                    cb(invoke);
+                    return H3Error::H3_NO_ERROR;
+                }
             }
 
             // write should be void(add_entry,add_field)

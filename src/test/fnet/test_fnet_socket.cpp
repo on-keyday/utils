@@ -10,7 +10,8 @@
 #include <fnet/addrinfo.h>
 #include <cassert>
 #include <string>
-#include <fnet/util/http/http_headers.h>
+#include <fnet/http1/header.h>
+#include <fnet/http1/body.h>
 #include <fnet/connect.h>
 #include <map>
 
@@ -20,7 +21,7 @@ struct SockHolder {
     // fnet::Socket::completion_recv_t comp;
     bool end;
     std::string str;
-    futils::http::header::StatusCode code;
+    futils::fnet::http1::header::StatusCode code;
     std::string body;
     std::multimap<std::string, std::string> header;
 };
@@ -49,10 +50,18 @@ int main() {
         if (len == bufmax) {
             read();
         }
-        futils::http::header::read_response<std::string>(h->str, h->code, h->header, h->body, [&](auto& seq, size_t expect, bool end_call) {
-            read();
-            return true;
-        });
+        futils::fnet::http1::ReadContext ctx;
+        auto seq = futils::make_ref_seq(h->str);
+        while (true) {
+            auto err = futils::fnet::http1::header::parse_response(ctx, seq, futils::helper::nop, h->code, helper::nop, futils::fnet::http1::default_header_callback<std::string>(h->header));
+            if (!err) {
+                if (ctx.is_resumable()) {
+                    read();
+                    continue;
+                }
+            }
+            break;
+        }
     };
     /*
     holder.comp = completion;

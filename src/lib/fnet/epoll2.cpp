@@ -15,16 +15,55 @@
 
 namespace futils::fnet {
 
+    Canceler make_canceler(std::uint64_t code, bool w, void* b) {
+        Canceler c;
+        c.cancel_code = code;
+        c.w = w;
+        c.b = b;
+        static_cast<SockTable*>(b)->incr();  // b must be SockTable
+        return c;
+    }
+
     expected<void> Socket::set_skipnotify(bool skip_notif, bool skip_event) {
         return unexpect(error::Error("not supported on linux", error::Category::lib, error::fnet_usage_error));
     }
 
     Canceler::~Canceler() {
-        // TODO(on-keyday): implement
+        if (b) {
+            static_cast<EpollTable*>(b)->decr();
+        }
     }
 
     expected<void> Canceler::cancel() {
-        return unexpect("operation not supported", error::Category::lib, error::fnet_async_error);
+        if (!b) {
+            return unexpect("operation completed", error::Category::lib, error::fnet_async_error);
+        }
+        auto t = static_cast<EpollTable*>(b);
+        // at here, if we can get callback, we execute it
+        EpollIOTableHeader& io = w ? static_cast<EpollIOTableHeader&>(t->w) : t->r;
+        void (*notify)() = nullptr;
+        void* user = nullptr;
+        NotifyCallback::call_t call = nullptr;
+        auto result = io.l.interrupt(cancel_code, [&]() -> expected<void> {
+            while (io.epoll_lock) {
+                timespec spec;
+                spec.tv_sec = 0;
+                spec.tv_nsec = 1;
+                nanosleep(&spec, &spec);
+            }
+            if (auto call_ = io.cb.call.exchange(nullptr)) {
+                call = call_;
+                notify = io.cb.notify;
+                user = io.cb.user;
+                return expected<void>();
+            }
+            return unexpect("operation already done", error::Category::lib, error::fnet_async_error);
+        });
+        if (!result) {
+            return unexpect(result.error());
+        }
+        call(notify, user, &io, unexpect("operation canceled", error::Category::lib, error::fnet_async_error));
+        return {};
     }
 
     namespace event {
@@ -40,9 +79,10 @@ namespace futils::fnet {
                         spec.tv_nsec = 1;
                         nanosleep(&spec, &spec);
                     }
-                    if (tbl->r.cb.call) {
-                        auto cb = tbl->r.cb;
-                        tbl->r.cb.call(&cb, &tbl->r, std::nullopt);
+                    if (auto call = tbl->r.cb.call.exchange(nullptr)) {
+                        auto notify = tbl->r.cb.notify;
+                        auto user = tbl->r.cb.user;
+                        call(notify, user, &tbl->r, std::nullopt);
                     }
                 }
             }
@@ -54,31 +94,30 @@ namespace futils::fnet {
                         spec.tv_nsec = 1;
                         nanosleep(&spec, &spec);
                     }
-                    if (tbl->w.cb.call) {
-                        auto cb = tbl->w.cb;
-                        tbl->w.cb.call(&cb, &tbl->w, std::nullopt);
+                    if (auto call = tbl->w.cb.call.exchange(nullptr)) {
+                        auto notify = tbl->w.cb.notify;
+                        auto user = tbl->w.cb.user;
+                        call(notify, user, &tbl->w, std::nullopt);
                     }
                 }
             }
         }
     }  // namespace event
 
-    void call_stream(futils::fnet::NotifyCallback* cb, IOTableHeader* base, NotifyResult&& result) {
+    void call_stream(void (*notify_base)(), void* user, IOTableHeader* base, NotifyResult&& result) {
         auto hdr = static_cast<EpollIOTableHeader*>(base);
         auto sock = make_socket(hdr->base);
-        hdr->cb = {};     // clear for epoll_lock
         hdr->l.unlock();  // release, so can do next IO
-        auto notify = reinterpret_cast<stream_notify_t>(cb->notify);
-        notify(std::move(sock), cb->user, std::move(result));
+        auto notify = reinterpret_cast<stream_notify_t>(notify_base);
+        notify(std::move(sock), user, std::move(result));
     }
 
-    void call_recvfrom(futils::fnet::NotifyCallback* cb, IOTableHeader* base, NotifyResult&& result) {
+    void call_recvfrom(void (*notify_base)(), void* user, IOTableHeader* base, NotifyResult&& result) {
         auto hdr = static_cast<EpollIOTableHeader*>(base);
         auto sock = make_socket(hdr->base);
-        hdr->cb = {};     // clear for epoll_lock
         hdr->l.unlock();  // release, so can do next IO
-        auto notify = reinterpret_cast<recvfrom_notify_t>(cb->notify);
-        notify(std::move(sock), NetAddrPort(), cb->user, std::move(result));
+        auto notify = reinterpret_cast<recvfrom_notify_t>(notify_base);
+        notify(std::move(sock), NetAddrPort(), user, std::move(result));
     }
 
     AsyncResult on_success(EpollTable* t, std::uint64_t code, bool w, size_t bytes) {
@@ -86,12 +125,16 @@ namespace futils::fnet {
         auto dec = t->decr();
         assert(dec != 0);
         if (w) {
+            t->w.cb.call = nullptr;
+            t->w.cb.notify = nullptr;
+            t->w.cb.user = nullptr;
             t->w.l.unlock();
-            t->w.cb = {};  // clear for epoll lock
         }
         else {
+            t->r.cb.call = nullptr;
+            t->r.cb.notify = nullptr;
+            t->r.cb.user = nullptr;
             t->r.l.unlock();
-            t->r.cb = {};  // clear for epoll lock
         }
         return {Canceler(), NotifyState::done, bytes};
     }
@@ -108,7 +151,7 @@ namespace futils::fnet {
             return unexpect(error::Errno());
         }
         // TODO(on-keyday): implement cancel
-        return AsyncResult{Canceler(), NotifyState::wait, 0};
+        return AsyncResult{make_canceler(cancel_code, is_write, t), NotifyState::wait, 0};
     }
 
     expected<AsyncResult> async_stream_operation(EpollTable* t, view::rvec buffer, std::uint32_t flag, void* c, stream_notify_t notify, bool is_write) {

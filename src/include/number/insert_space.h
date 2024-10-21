@@ -13,8 +13,8 @@
 
 namespace futils {
     namespace number {
-        template <class Result, class T, class Char = char>
-        constexpr NumErr insert_space(Result& result, size_t count, T input, int radix = 10, Char c = ' ') {
+        template <class Header, class T, class Char = char>
+        constexpr NumErr insert_space(Header& result, size_t count, T input, int radix = 10, Char c = ' ') {
             if (!acceptable_radix(radix)) {
                 return NumError::invalid;
             }

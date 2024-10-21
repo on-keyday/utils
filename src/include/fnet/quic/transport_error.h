@@ -88,7 +88,7 @@ namespace futils {
 
                 void error(auto&& pb) {
                     strutil::appends(pb,
-                                     "quic", is_app ? "(app)" : "", ":",
+                                     "quic", is_app ? "(app)" : "", ": ",
                                      msg);
                     if (by_peer) {
                         strutil::append(pb, " by peer");
@@ -103,7 +103,7 @@ namespace futils {
                             if (auto msg = errmsg(transport_error)) {
                                 strutil::append(pb, msg);
                                 if (is_CRYPTO_ERROR(transport_error)) {
-                                    strutil::append(pb, "(");
+                                    strutil::append(pb, "(0x");
                                     number::to_string(pb, std::uint64_t(transport_error) & 0xFF, 16);
                                     strutil::append(pb, ")");
                                 }

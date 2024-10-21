@@ -500,6 +500,10 @@ namespace futils {
             constexpr bool empty() const noexcept {
                 return size() == 0;
             }
+
+            constexpr void clear() {
+                resize(0);
+            }
         };
 
         template <class Alloc>

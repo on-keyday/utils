@@ -73,7 +73,7 @@ void check_header_compression_part(Header& encode_header, Tables& table) {
     };
     auto err = futils::hpack::encode(payload, table.encode_table, encode_header, table.encode_size_limit, true, on_modify);
     assert(err == futils::hpack::HpackError::none);
-    err = futils::hpack::decode<std::string>(payload, table.decode_table, futils::hpack::emplacer(decode_header), table.decode_size_limit, table.max_size_limit, on_modify);
+    err = futils::hpack::decode<std::string>(payload, table.decode_table, decode_header, table.decode_size_limit, table.max_size_limit, on_modify);
     assert(err == futils::hpack::HpackError::none);
     assert(encode_header == decode_header);
     assert(table.encode_table == table.decode_table);

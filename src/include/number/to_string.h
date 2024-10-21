@@ -25,9 +25,9 @@ namespace futils {
 
         DEFINE_ENUM_FLAGOP(ToStrFlag)
 
-        template <class Result, class T>
+        template <class Header, class T>
             requires std::is_integral_v<T>
-        constexpr NumErr to_string(Result& result, T in, int radix = 10, ToStrFlag flag = ToStrFlag::none) {
+        constexpr NumErr to_string(Header& result, T in, int radix = 10, ToStrFlag flag = ToStrFlag::none) {
             if (!acceptable_radix(radix)) {
                 return NumError::invalid;
             }
@@ -128,8 +128,8 @@ namespace futils {
                 }
             }
 
-            template <class Result, class InT>
-            constexpr number::NumErr write_decimal(Result& result, InT value, int width, int radix, ToStrFlag flag) {
+            template <class Header, class InT>
+            constexpr number::NumErr write_decimal(Header& result, InT value, int width, int radix, ToStrFlag flag) {
                 while (value % radix == 0 && width > 0) {
                     value /= radix;
                     width--;
@@ -139,9 +139,9 @@ namespace futils {
             }
         }  // namespace internal
 
-        template <class Result, class T, class InT = std::uint32_t, class Exp = std::int16_t>
+        template <class Header, class T, class InT = std::uint32_t, class Exp = std::int16_t>
             requires std::is_floating_point_v<T>
-        constexpr NumErr to_string(Result& result, T in, int radix = 10, int decdigit = 9, ToStrFlag flag = ToStrFlag::none) {
+        constexpr NumErr to_string(Header& result, T in, int radix = 10, int decdigit = 9, ToStrFlag flag = ToStrFlag::none) {
             if (radix != 10 && radix != 16) {
                 return number::NumError::invalid;
             }
@@ -212,17 +212,17 @@ namespace futils {
             return true;
         }
 
-        template <class Result, class T>
-        constexpr Result to_string(T in, int radix = 10, ToStrFlag flag = ToStrFlag::none) {
-            Result result{};
+        template <class Header, class T>
+        constexpr Header to_string(T in, int radix = 10, ToStrFlag flag = ToStrFlag::none) {
+            Header result{};
             to_string(result, in, radix, flag);
             return result;
         }
 
-        template <class Result, class T, class InT = std::uint32_t, class Exp = std::int16_t>
+        template <class Header, class T, class InT = std::uint32_t, class Exp = std::int16_t>
             requires std::is_floating_point_v<T>
-        constexpr Result to_string(T in, int radix = 10, int decdigit = 9, ToStrFlag flag = ToStrFlag::none) {
-            Result result;
+        constexpr Header to_string(T in, int radix = 10, int decdigit = 9, ToStrFlag flag = ToStrFlag::none) {
+            Header result;
             to_string(result, in, radix, decdigit, flag);
             return result;
         }

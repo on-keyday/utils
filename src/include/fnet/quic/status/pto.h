@@ -16,7 +16,7 @@
 namespace futils {
     namespace fnet::quic::status {
 
-        time::time_t calc_probe_timeout_duration(time::time_t smoothed_rtt, time::time_t rttvar, const time::Clock& clock, std::uint64_t pto_exponent) {
+        inline time::time_t calc_probe_timeout_duration(time::time_t smoothed_rtt, time::time_t rttvar, const time::Clock& clock, std::uint64_t pto_exponent) {
             return smoothed_rtt + max_(rttvar << 2,  // rttvar*4
                                        clock.to_clock_granularity(1) * pto_exponent);
         }

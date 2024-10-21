@@ -13,26 +13,13 @@
 #include <binary/writer.h>
 #include "hpack_huffman_table.h"
 #include <binary/bit.h>
+#include "hpack_error.h"
 
 namespace futils {
     namespace hpack {
-        enum class HpackError {
-            none,
-            too_large_number,
-            too_short_number,
-            internal,
-            input_length,
-            output_length,
-            invalid_mask,
-            invalid_value,
-            not_exists,
-            table_update,
-        };
-
-        using HpkErr = wrap::EnumWrap<HpackError, HpackError::none, HpackError::internal>;
 
         template <class String>
-        constexpr size_t gethuffmanlen(const String& str) {
+        constexpr size_t get_huffman_len(const String& str) {
             size_t ret = 0;
             size_t size = 0;
             if constexpr (std::is_pointer_v<std::decay_t<decltype(str)>>) {
@@ -171,7 +158,7 @@ namespace futils {
             else {
                 size = value.size();
             }
-            if (auto huflen = gethuffmanlen(value); size > huflen) {
+            if (auto huflen = get_huffman_len(value); size > huflen) {
                 auto err = encode_integer<prefixed>(w, huflen, common_prefix | flag_huffman);
                 if (err != HpackError::none) {
                     return err;

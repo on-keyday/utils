@@ -40,7 +40,7 @@ namespace futils {
 
         using UniStreamHeaderArea = byte[16];
 
-        view::wvec get_header(UniStreamHeaderArea& area, Type type) {
+        inline view::wvec get_header(UniStreamHeaderArea& area, Type type) {
             UniStreamHeader head;
             head.type = std::uint64_t(type);
             binary::writer w{area};

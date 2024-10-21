@@ -83,7 +83,7 @@ namespace futils {
                 }
             }
 
-            bool State::serve(Socket& listener, bool (*cb)(void*), void* user) {
+            bool State::serve(expected<std::pair<Socket, NetAddrPort>> (*listener)(void*), void* listener_p, bool (*cb)(void*), void* user) {
                 if (!listener) {
                     return false;
                 }
@@ -104,7 +104,7 @@ namespace futils {
                         Enter active(count.current_handling_handler_thread);
                         q.runner.invoke();
                     }
-                    auto new_socks = listener.accept_select(0, 1000);
+                    auto new_socks = listener(listener_p);
                     if (new_socks) {
                         handle(std::move(new_socks->first), std::move(new_socks->second));
                     }
@@ -138,5 +138,5 @@ namespace futils {
             }
 
         }  // namespace server
-    }      // namespace fnet
+    }  // namespace fnet
 }  // namespace futils

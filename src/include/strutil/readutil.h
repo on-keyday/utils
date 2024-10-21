@@ -14,8 +14,8 @@
 
 namespace futils {
     namespace strutil {
-        template <bool consume = true, class Result, class T, class Cmp, class Compare = decltype(default_compare())>
-        constexpr bool read_until(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare()) {
+        template <bool consume = true, class Header, class T, class Cmp, class Compare = decltype(default_compare())>
+        constexpr bool read_until(Header& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare()) {
             while (!seq.eos()) {
                 if (auto n = seq.match_n(cmp, compare)) {
                     if (consume) {
@@ -29,8 +29,8 @@ namespace futils {
             return false;
         }
 
-        template <bool empty_is_error = false, class Result, class T, class Func>
-        constexpr bool read_whilef(Result& result, Sequencer<T>& seq, Func&& f) {
+        template <bool empty_is_error = false, class Header, class T, class Func>
+        constexpr bool read_whilef(Header& result, Sequencer<T>& seq, Func&& f) {
             bool first = true;
             while (!seq.eos()) {
                 if (f(seq.current())) {
@@ -47,13 +47,13 @@ namespace futils {
             return true;
         }
 
-        template <class Result, class T>
-        constexpr bool read_all(Result& result, Sequencer<T>& seq) {
+        template <class Header, class T>
+        constexpr bool read_all(Header& result, Sequencer<T>& seq) {
             return read_whilef(result, seq, no_check());
         }
 
-        template <class Result, class T, class Func = decltype(no_check())>
-        constexpr bool read_n(Result& result, Sequencer<T>& seq, size_t n, Func&& validate = no_check()) {
+        template <class Header, class T, class Func = decltype(no_check())>
+        constexpr bool read_n(Header& result, Sequencer<T>& seq, size_t n, Func&& validate = no_check()) {
             if (seq.remain() < n) {
                 return false;
             }
@@ -67,8 +67,8 @@ namespace futils {
             return true;
         }
 
-        template <bool nozero = false, class Result, class T, class Cmp, class Compare = decltype(default_compare())>
-        constexpr bool read_while(Result& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare()) {
+        template <bool nozero = false, class Header, class T, class Cmp, class Compare = decltype(default_compare())>
+        constexpr bool read_while(Header& result, Sequencer<T>& seq, Cmp&& cmp, Compare&& compare = default_compare()) {
             bool first = true;
             while (!seq.eos()) {
                 if (auto n = seq.match_n(cmp, compare)) {
@@ -87,8 +87,8 @@ namespace futils {
             return true;
         }
 
-        template <class T, class Result, class Else, class Func>
-        constexpr bool append_if(Result& result, Else& els, Sequencer<T>& seq, Func&& func) {
+        template <class T, class Header, class Else, class Func>
+        constexpr bool append_if(Header& result, Else& els, Sequencer<T>& seq, Func&& func) {
             bool allmatch = true;
             while (!seq.eos()) {
                 if (func(seq.current())) {

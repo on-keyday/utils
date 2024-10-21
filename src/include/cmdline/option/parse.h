@@ -16,8 +16,8 @@ namespace futils {
     namespace cmdline {
         namespace option {
 
-            template <class Desc, class Result, class Arg>
-            auto parse_default_proc(Desc& desc, Result& result, Arg& arg) {
+            template <class Desc, class Header, class Arg>
+            auto parse_default_proc(Desc& desc, Header& result, Arg& arg) {
                 return [&](option::CmdParseState& state) {
                     auto set_err = [&](FlagType err) {
                         state.state = err;
@@ -104,9 +104,9 @@ namespace futils {
                 };
             }
 
-            template <class Desc, class Result, class Arg = decltype(helper::nop)>
+            template <class Desc, class Header, class Arg = decltype(helper::nop)>
             FlagType parse(int argc, char** argv,
-                           Desc& desc, Result& result, Arg& arg = helper::nop,
+                           Desc& desc, Header& result, Arg& arg = helper::nop,
                            ParseFlag flag = ParseFlag::default_mode, int start_index = 1) {
                 auto proc = parse_default_proc(desc, result, arg);
                 return do_parse(argc, argv, flag, start_index, proc);
@@ -130,5 +130,5 @@ namespace futils {
             }
 
         }  // namespace option
-    }      // namespace cmdline
+    }  // namespace cmdline
 }  // namespace futils

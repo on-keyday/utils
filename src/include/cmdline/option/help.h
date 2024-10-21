@@ -75,8 +75,8 @@ namespace futils {
                 };
             }
 
-            template <class Result, class OptVec>
-            void desc(Result& result, ParseFlag flag, OptVec& vec, const char* indent = "    ") {
+            template <class Header, class OptVec>
+            void desc(Header& result, ParseFlag flag, OptVec& vec, const char* indent = "    ") {
                 helper::CountPushBacker push;
                 size_t maxlen = 0;
                 auto tmp = opts_write(push);
@@ -91,7 +91,7 @@ namespace futils {
                     }
                     push.count = 0;
                 }
-                helper::CountPushBacker<Result&> cb{result};
+                helper::CountPushBacker<Header&> cb{result};
                 auto actual = opts_write(cb);
                 for (wrap::shared_ptr<Option>& opt : vec) {
                     if (any(opt->mode & OptMode::hidden)) {
@@ -108,12 +108,12 @@ namespace futils {
                     cb.count = 0;
                 }
             }
-            template <class Result, class OptVec>
-            Result desc(ParseFlag flag, OptVec& vec, const char* indent = "    ") {
-                Result result;
+            template <class Header, class OptVec>
+            Header desc(ParseFlag flag, OptVec& vec, const char* indent = "    ") {
+                Header result;
                 desc(result, flag, vec, indent);
                 return result;
             }
         }  // namespace option
-    }      // namespace cmdline
+    }  // namespace cmdline
 }  // namespace futils

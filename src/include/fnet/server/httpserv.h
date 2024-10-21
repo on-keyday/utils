@@ -11,7 +11,6 @@
 #include "servh.h"
 #include "client.h"
 #include "../http.h"
-// #include "../http2/http2.h"
 #include "state.h"
 #include "../tls/tls.h"
 
@@ -19,68 +18,73 @@ namespace futils {
     namespace fnet {
         namespace server {
             constexpr auto start_timing = "[hs]";
-            struct Requester {
-               private:
-                void* internal_;
-                fnet::flex_storage read_buf;
-                friend void*& internal(Requester& req);
 
-               public:
+            struct HTTPServ;
+
+            struct Requester;
+
+            // handles tcp based transport
+            // on quic based, another transport should be used
+            struct Transport {
+                byte async_read_buf[2048]{};
+                HTTPServ* internal_ = nullptr;
+                fnet::flex_storage read_buf;
+                fnet::flex_storage write_buf;
                 Client client;
                 tls::TLS tls;
-                HTTP http;
-                std::uintptr_t user_id;
-                bool data_added = false;
-                bool already_shutdown = false;
+                HTTPVersion version = HTTPVersion::unknown;
+                std::shared_ptr<void> version_specific;
 
-                view::wvec get_buffer() {
-                    read_buf.resize(2048);
-                    return read_buf;
+                std::shared_ptr<Requester> http1_requester() {
+                    if (version != HTTPVersion::http1) {
+                        return nullptr;
+                    }
+                    return std::static_pointer_cast<Requester>(version_specific);
                 }
 
-               private:
-                void send_tls_data(StateContext& as) {
+                std::shared_ptr<http2::FrameHandler> http2_frame_handler() {
+                    if (version != HTTPVersion::http2) {
+                        return nullptr;
+                    }
+                    return std::static_pointer_cast<http2::FrameHandler>(version_specific);
+                }
+
+                view::wvec get_buffer() {
+                    return async_read_buf;
+                }
+
+                void add_to_buffer(view::rvec d) {
+                    read_buf.append(d);
+                }
+
+                void write_tls_data(StateContext& as) {
                     while (true) {
                         byte buf[1024];
                         auto data = tls.receive_tls_data(buf);
                         if (!data) {
                             if (!tls::isTLSBlock(data.error())) {
                                 as.log(log_level::err, &client.addr, data.error());
-                                client.sock.shutdown();
+                                // cannot shutdown, because this is fatal
                             }
                             return;
                         }
-                        client.sock.write(data.value());
+                        write_buf.append(*data);
                     }
-                }
-
-               public:
-                void shutdown(StateContext& as) {
-                    if (already_shutdown) {
-                        return;
-                    }
-                    already_shutdown = true;
-                    if (tls) {
-                        tls.shutdown();
-                        send_tls_data(as);
-                    }
-                    client.sock.shutdown();
                 }
 
                 void add_data(view::rvec d, StateContext as) {
                     if (d.size() == 0) {
                         return;
                     }
-                    data_added = true;
                     if (tls) {
                         auto ok = tls.provide_tls_data(d);
                         if (!ok) {
                             if (!tls::isTLSBlock(ok.error())) {
                                 as.log(log_level::err, &client.addr, ok.error());
-                                shutdown(as);
+                                may_shutdown_tls(as);
                             }
                             else {
-                                send_tls_data(as);
+                                write_tls_data(as);
                             }
                             return;
                         }
@@ -90,118 +94,108 @@ namespace futils {
                             if (!res) {
                                 if (!tls::isTLSBlock(res.error())) {
                                     as.log(log_level::err, &client.addr, res.error());
-                                    shutdown(as);
+                                    may_shutdown_tls(as);
                                 }
                                 else {
-                                    send_tls_data(as);
+                                    write_tls_data(as);
                                 }
                                 return;
                             }
-                            http.add_input(res.value());
+                            add_to_buffer(res.value());
                         }
                     }
                     else {
-                        http.add_input(d);
+                        add_to_buffer(d);
                     }
                 }
 
-                void flush(StateContext& as) {
+                void may_shutdown_tls(StateContext& as) {
                     if (tls) {
-                        auto ok = tls.write(http.get_output());
+                        tls.shutdown();
+                        write_tls_data(as);
+                    }
+                }
+
+                void flush(StateContext& as, view::rvec d) {
+                    if (d.size() == 0) {
+                        return;
+                    }
+                    if (tls) {
+                        auto ok = tls.write(d);
                         if (!ok) {
                             if (!tls::isTLSBlock(ok.error())) {
                                 as.log(log_level::err, &client.addr, ok.error());
-                                shutdown(as);
                             }
                             else {
-                                send_tls_data(as);
+                                write_tls_data(as);
                             }
                             return;
                         }
-                        send_tls_data(as);
+                        write_tls_data(as);
                     }
                     else {
-                        client.sock.write(http.get_output());
+                        write_buf.append(d);
                     }
                 }
+            };
 
-                bool respond(auto&& status, auto&& header, view::rvec body = {}) {
+            struct Requester {
+               private:
+                // friend std::weak_ptr<Transport>& transport(Requester& req);
+                friend bool& response_sent(Requester& req);
+                std::shared_ptr<void> user_data;
+                // std::weak_ptr<Transport> transport;
+                bool response_sent = false;
+
+               public:
+                HTTP http;
+                fnet::NetAddrPort addr;
+
+                template <class T>
+                std::shared_ptr<T> get_or_set_user_data(auto&& create) {
+                    auto setter = [&](auto&& to_set) {
+                        user_data = std::forward<decltype(to_set)>(to_set);
+                    };
+                    return create(std::static_pointer_cast<T>(user_data), setter);
+                }
+
+               public:
+                error::Error respond(auto&& status, auto&& header, view::rvec body = {}) {
+                    if (response_sent) {
+                        return error::Error("http response already sent", error::Category::app);
+                    }
                     number::Array<char, 40, true> buffer{};
                     number::to_string(buffer, body.size());
                     header.emplace("Content-Length", buffer.c_str());
-                    return http.write_response(status, header, body);
-                }
-
-                bool respond_flush(StateContext& as, auto status, auto&& header, view::rvec body = {}) {
-                    if (!respond(status, header, body)) {
-                        return false;
+                    // handle keep-alive or close
+                    if (auto h1 = http.http1()) {
+                        if (h1->read_ctx.on_no_body_semantics() && h1->read_ctx.is_keep_alive()) {
+                            header.emplace("Connection", "keep-alive");
+                        }
+                        else {
+                            header.emplace("Connection", "close");
+                        }
                     }
-                    flush(as);
-                    return true;
+                    if (auto err = http.write_response(status, header, body)) {
+                        return err;
+                    }
+                    response_sent = true;
+                    return {};
                 }
             };
 
             struct HTTPServ {
                 tls::TLSConfig tls_config;
-                void (*next)(void*, Requester req, StateContext s);
+                // http2 is used even if cleartext
+                bool prefer_http2 = false;
+                std::uint32_t normal_port = 0;
+                std::uint32_t secure_port = 0;
+                void (*next)(void*, std::shared_ptr<Requester>&& req, StateContext s);
                 void* c;
             };
             fnetserv_dll_export(void) http_handler(void* ctx, Client&& cl, StateContext s);
 
-            enum class BodyState {
-                complete,
-                best_effort,
-                error,
-            };
-
-            template <class T>
-            using body_callback_fn = void (*)(Requester&& req, T* hdr, http::body::HTTPBodyInfo info, flex_storage&& body, BodyState s, StateContext c);
-
-            fnetserv_dll_export(void) read_body(Requester&& req, void* hdr, http::body::HTTPBodyInfo info, StateContext s, body_callback_fn<void> cb);
-
-            template <class T>
-                requires(!std::is_void_v<T>)
-            void read_body(Requester&& req, T* hdr, http::body::HTTPBodyInfo info, StateContext s, body_callback_fn<std::type_identity_t<T>> cb) {
-                read_body(std::move(req), hdr, info, std::move(s), (body_callback_fn<void>)cb);
-            }
-
-            fnetserv_dll_export(void) handle_keep_alive(Requester&& cl, StateContext s);
-
-            template <class TmpString>
-            bool read_header_and_check_keep_alive(HTTP& http, auto&& method, auto&& path, auto&& header, bool& keep_alive, http::body::HTTPBodyInfo* body_info = nullptr) {
-                number::Array<char, 20, true> version;
-                keep_alive = false;
-                bool close = false;
-                if (!http.read_request<TmpString>(
-                        method, path, [&](auto&& key, auto&& value) {
-                            if (strutil::equal(key, "Connection", strutil::ignore_case())) {
-                                if (strutil::contains(value, "close", strutil::ignore_case())) {
-                                    close = true;
-                                }
-                                if (strutil::contains(value, "keep-alive", strutil::ignore_case())) {
-                                    keep_alive = true;
-                                }
-                            }
-                            return futils::http::header::apply_call_or_emplace(header, std::move(key), std::move(value));
-                        },
-                        body_info, false, version)) {
-                    return false;  // no keep alive
-                }
-                if (close) {  // Connection: close
-                    keep_alive = false;
-                    return true;
-                }
-                if (keep_alive) {  // Connection: keep-alive
-                    return true;
-                }
-                if (strutil::equal(version, "HTTP/1.0")) {  // HTTP/1.0 explicitly close
-                    keep_alive = false;
-                    return true;
-                }
-                keep_alive = true;  // HTTP/1.1 implicitly keep-alive
-                return true;
-            }
-
+            fnetserv_dll_export(void) http3_setup(quic::server::ServerConfig<quic::use::smartptr::DefaultTypeConfig>& c);
         }  // namespace server
-    }      // namespace fnet
+    }  // namespace fnet
 }  // namespace futils

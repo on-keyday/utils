@@ -51,7 +51,7 @@ namespace futils {
 
         using FrameHeaderArea = byte[16];
 
-        view::wvec get_header(FrameHeaderArea& area, Type type, std::uint64_t length) {
+        inline view::wvec get_header(FrameHeaderArea& area, Type type, std::uint64_t length) {
             frame::FrameHeader head;
             head.type = std::uint64_t(type);
             head.length = length;

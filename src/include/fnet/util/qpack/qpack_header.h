@@ -112,13 +112,13 @@ x-frame-options$deny$sameorigin
                         ofs++;
                     };
                     for (auto i = 0; i < 99;) {
-                        auto curi = i;
-                        read(l.offset[curi].head_offset);
+                        auto cur_i = i;
+                        read(l.offset[cur_i].head_offset);
                         if (!has_value) {
                             i++;
                         }
                         while (has_value) {
-                            l.offset[i].head_offset = l.offset[curi].head_offset;
+                            l.offset[i].head_offset = l.offset[cur_i].head_offset;
                             read(l.offset[i].value_offset);
                             i++;
                         }
@@ -148,6 +148,22 @@ x-frame-options$deny$sameorigin
             constexpr auto predefined_header_count = 99;
             template <class C = byte>
             constexpr auto predefined_headers = internal::gen_tables<C>();
+
+            constexpr auto max_static_header_value_len = [] {
+                size_t hdr_size = 0;
+                size_t val_size = 0;
+                for (auto i = 0; i < predefined_header_count; i++) {
+                    auto hdr_len = futils::strlen(predefined_headers<byte>.table[i].first);
+                    auto val_len = futils::strlen(predefined_headers<byte>.table[i].second);
+                    if (hdr_len > hdr_size) {
+                        hdr_size = hdr_len;
+                    }
+                    if (val_len > val_size) {
+                        val_size = val_len;
+                    }
+                }
+                return std::pair{hdr_size, val_size};
+            }();
 
             namespace internal {
                 template <size_t row, size_t col, class C>
@@ -188,21 +204,73 @@ x-frame-options$deny$sameorigin
                 // 41,7
                 // 46,5 <
                 constexpr auto frow = 48;
-                constexpr auto field_hash_index(view::rvec head, view::rvec value) {
-                    std::uint64_t val = 0;
-                    view::hash(head, &val);
-                    view::hash(value, &val);
-                    return val % frow;
+
+                template <class T>
+                concept to_rvec = requires(T t) {
+                    { view::rvec(t) } -> std::convertible_to<view::rvec>;
+                };
+
+                template <class T>
+                concept has_iter = requires(T t) {
+                    { t.begin() };
+                    { t.end() };
+                    { std::declval<decltype(t.begin())>() != std::declval<decltype(t.end())>() };
+                    { *t.begin() } -> std::convertible_to<byte>;
+                    { std::declval<decltype(t.begin())>()++ };
+                };
+
+                template <class T>
+                concept index_array_like = requires(T t) {
+                    { t[1] } -> std::convertible_to<size_t>;
+                    { t.size() } -> std::convertible_to<size_t>;
+                };
+
+                template <size_t scan_limit>
+                constexpr view::rvec scan_for_hash(auto&& x, byte buf[scan_limit + 1]) {
+                    if constexpr (to_rvec<decltype(x)>) {
+                        return view::rvec(x);
+                    }
+                    else if constexpr (has_iter<decltype(x)>) {
+                        auto it = x.begin();
+                        auto end = x.end();
+                        size_t i = 0;
+                        for (; i < scan_limit + 1 && it != end; i++, it++) {
+                            buf[i] = *it;
+                        }
+                        return view::rvec(buf, i);
+                    }
+                    else if constexpr (index_array_like<decltype(x)>) {
+                        size_t i = 0;
+                        for (; i < scan_limit + 1 && i < x.size(); i++) {
+                            buf[i] = x[i];
+                        }
+                        return view::rvec(buf, i);
+                    }
+                    else {
+                        return view::rvec(x);
+                    }
+                }
+
+                constexpr auto field_hash_index(auto&& head, auto&& value) {
+                    std::uint64_t h = 0;
+                    byte buf[max_static_header_value_len.second * 2 + 2]{};
+                    auto hdr = scan_for_hash<max_static_header_value_len.first>(head, buf);
+                    auto val_ = scan_for_hash<max_static_header_value_len.second>(value, buf + hdr.size());
+                    view::hash(hdr, &h);
+                    view::hash(val_, &h);
+                    return h % frow;
                 }
                 constexpr auto field_hash_table = gen_hash_table<frow, 5, byte>([](std::pair<const byte*, const byte*> ptr, size_t i) {
                     return std::pair{field_hash_index(view::rvec(ptr.first), view::rvec(ptr.second)), false};
                 });
 
                 constexpr auto hrow = 38;
-                constexpr auto header_hash_index(view::rvec head) {
-                    std::uint64_t val = 0;
-                    view::hash(head, &val);
-                    return val % hrow;
+                constexpr auto header_hash_index(auto&& head) {
+                    std::uint64_t h = 0;
+                    byte buf[max_static_header_value_len.first + 1]{};
+                    auto hdr = scan_for_hash<max_static_header_value_len.first>(head, buf);
+                    view::hash(hdr, &h);
+                    return h % hrow;
                 }
                 constexpr auto header_hash_table = gen_hash_table<hrow, 4, byte>([](std::pair<const byte*, const byte*> ptr, size_t i) {
                     if (i != 0 && ptr.first == predefined_headers<byte>.table[i - 1].first) {
@@ -211,6 +279,6 @@ x-frame-options$deny$sameorigin
                     return std::pair{int(header_hash_index(view::rvec(ptr.first))), false};
                 });
             }  // namespace internal
-        }      // namespace header
-    }          // namespace qpack
+        }  // namespace header
+    }  // namespace qpack
 }  // namespace futils

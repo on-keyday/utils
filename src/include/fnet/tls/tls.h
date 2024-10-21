@@ -109,6 +109,8 @@ namespace futils {
                 expected<Session> get_session();
 
                 bool in_handshake();
+
+                expected<view::rvec> get_tls_version();
             };
 
             void get_error_strings(int (*cb)(const char*, size_t, void*), void* user);
@@ -153,6 +155,8 @@ namespace futils {
             fnet_dll_export(bool) is_open_ssl();
             fnet_dll_export(bool) is_boring_ssl();
 
+            fnet_dll_export(view::rvec) get_alert_desc(futils::byte alert_code);
+
         }  // namespace tls
-    }      // namespace fnet
+    }  // namespace fnet
 }  // namespace futils

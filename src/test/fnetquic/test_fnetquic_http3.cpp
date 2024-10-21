@@ -180,7 +180,7 @@ int main() {
     conf.set_cacert_file(cert.data());
     futils::fnet::quic::log::ConnLogger logger{.callbacks = &cbs};
     auto ctx = make_quic(
-        std::move(conf), [](auto&&) {});
+        std::move(conf), [](auto&&...) {});
     assert(ctx);
     auto res = futils::fnet::connect("www.google.com", "443", futils::fnet::sockattr_udp(), false);
     assert(res);

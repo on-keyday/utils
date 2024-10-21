@@ -150,7 +150,7 @@ namespace futils {
                 copy(from);
             }
 
-            constexpr NetAddr(NetAddr&& from) {
+            constexpr NetAddr(NetAddr&& from) noexcept {
                 move(std::move(from));
             }
 
@@ -163,7 +163,7 @@ namespace futils {
                 return *this;
             }
 
-            constexpr NetAddr& operator=(NetAddr&& from) {
+            constexpr NetAddr& operator=(NetAddr&& from) noexcept {
                 if (this == &from) {
                     return *this;
                 }

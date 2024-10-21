@@ -533,5 +533,18 @@ namespace futils {
             }
             return lazy::ssl::SSL_in_init_(c->ssl);
         }
+
+        expected<view::rvec> TLS::get_tls_version() {
+            CHECK_TLS(c)
+            const char* ver = lazy::ssl::SSL_get_version_(c->ssl);
+            if (!ver) {
+                return unexpect(error::Error("SSL_get_version returned null", error::Category::lib, error::fnet_tls_error));
+            }
+            return view::rvec(ver, futils::strlen(ver));
+        }
+
+        fnet_dll_export(view::rvec) get_alert_desc(futils::byte alert_code) {
+            return view::rvec(lazy::ssl::SSL_alert_desc_string_long_(alert_code));
+        }
     }  // namespace fnet::tls
 }  // namespace futils

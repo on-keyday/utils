@@ -16,6 +16,8 @@
 #include <algorithm>
 #include "hpack_encode.h"
 #include "hpack_header.h"
+#include <fnet/http1/callback.h>
+#include "hpack_internal.h"
 
 namespace futils {
     namespace hpack {
@@ -192,7 +194,7 @@ namespace futils {
                     return err;
                 }
                 if (adddymap) {
-                    table.push_front({key, value});
+                    table.push_front(std::make_pair(internal::convert_string<String>(key), internal::convert_string<String>(value)));
                     on_modify_entry(key, value, true);
                     if (!update_table(table_size_limit, table, on_modify_entry)) {
                         return HpackError::internal;
@@ -203,15 +205,17 @@ namespace futils {
         }
 
         template <class String, class Table, class OnModify = OnModifyTable>
-        constexpr HpkErr encode(String& dst, Table& table, auto&& header, std::uint32_t table_size_limit, bool adddymap = false, OnModify&& on_modify_entry = OnModify{}) {
+        constexpr HpkErr encode(String& dst, Table& table, auto&& header, std::uint32_t table_size_limit, bool add_dyn_map_default = false, OnModify&& on_modify_entry = OnModify{}) {
             binary::writer w(binary::resizable_buffer_writer<String>(), std::addressof(dst));
-            for (auto& kv : header) {
-                auto err = encode_field<String>(w, table, get<0>(kv), get<1>(kv), table_size_limit, adddymap, on_modify_entry);
+            HpackError err = HpackError::none;
+            fnet::http1::apply_call_or_iter(header, [&](auto&& key, auto&& value, bool add_dyn_map = false) {
+                err = encode_field<String>(w, table, key, value, table_size_limit, add_dyn_map || add_dyn_map_default, on_modify_entry);
                 if (err != HpackError::none) {
-                    return err;
+                    return fnet::http1::header::HeaderError::validation_error;
                 }
-            }
-            return HpackError::none;
+                return fnet::http1::header::HeaderError::none;
+            });
+            return err;
         }
 
         template <class String, class Table, class Header, class T, class OnModify = OnModifyTable>
@@ -268,13 +272,13 @@ namespace futils {
                         if (!get<1>(predefined_header[index])[0]) {
                             return HpackError::not_exists;
                         }
-                        header(get<0>(predefined_header[index]), get<1>(predefined_header[index]));
+                        fnet::http1::apply_call_or_emplace(header, get<0>(predefined_header[index]), get<1>(predefined_header[index]));
                     }
                     else {
                         if (table.size() <= index - predefined_header_size) {
                             return HpackError::not_exists;
                         }
-                        header(get<0>(table[index - predefined_header_size]), get<1>(table[index - predefined_header_size]));
+                        fnet::http1::apply_call_or_emplace(header, get<0>(table[index - predefined_header_size]), get<1>(table[index - predefined_header_size]));
                     }
                     return HpackError::none;
                 }
@@ -293,9 +297,9 @@ namespace futils {
                     if (err != HpackError::none) {
                         return err;
                     }
-                    table.push_front({key, value});
+                    table.push_front(std::make_pair(key, value));
                     on_modify_entry(std::as_const(key), std::as_const(value), true);
-                    header(key, value);
+                    fnet::http1::apply_call_or_emplace(header, std::move(key), std::move(value));
                     if (!update_table()) {
                         return HpackError::table_update;
                     }
@@ -317,7 +321,7 @@ namespace futils {
                     if (err != HpackError::none) {
                         return err;
                     }
-                    header(key, value);
+                    fnet::http1::apply_call_or_emplace(header, std::move(key), std::move(value));
                     return HpackError::none;
                 }
                 case Field::dyn_table_update: {
@@ -338,13 +342,6 @@ namespace futils {
             }
         }
 
-        template <class Header>
-        constexpr auto emplacer(Header& h) {
-            return [&](auto&& key, auto&& value) {
-                h.emplace(std::forward<decltype(key)>(key), std::forward<decltype(value)>(value));
-            };
-        }
-
         template <class String, class Table, class Header, class OnModify = OnModifyTable>
         constexpr HpkErr decode(auto&& src, Table& table, Header&& header, std::uint32_t& table_size_limit, std::uint32_t max_table_size, OnModify&& on_modify = OnModify{}) {
             binary::reader r{src};
@@ -361,7 +358,7 @@ namespace futils {
 
     namespace net::hpack {
 
-        using namespace futils::hpack;  // for backwoard compatibility
+        using namespace futils::hpack;  // for backward compatibility
 
     }  // namespace net::hpack
 

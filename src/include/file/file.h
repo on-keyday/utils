@@ -203,7 +203,7 @@ namespace futils::file {
         bits_flag_alias_method(flags, 13, no_access_time);
         bits_flag_alias_method(flags, 14, dsync);
         bits_flag_alias_method_with_enum(flags, 15, io, IOMode);
-        bits_flag_alias_method(flags, 15, share_delete);
+        bits_flag_alias_method(flags, 16, share_delete);
 
         constexpr Flag() noexcept = default;
 
@@ -289,6 +289,8 @@ namespace futils::file {
     constexpr auto O_READ_DEFAULT = Flag(O_READ | O_SHARE_READ | O_SHARE_WRITE | O_CLOSE_ON_EXEC);
     constexpr auto O_WRITE_DEFAULT = Flag(O_WRITE | O_SHARE_WRITE | O_SHARE_READ | O_CLOSE_ON_EXEC);
 
+    constexpr auto O_CREATE_DEFAULT = Flag(O_WRITE_DEFAULT | O_CREAT | O_TRUNC);
+
     futils_DLL_EXPORT void STDCALL format_os_error(helper::IPushBacker<> pb, std::int64_t code);
     enum class ErrorCode {
         already_open,
@@ -307,6 +309,13 @@ namespace futils::file {
             number::to_string(pb, err_code);
             strutil::appends(pb, ": ");
             format_os_error(pb, err_code);
+        }
+
+        template <class S>
+        S error() const {
+            S s;
+            error(s);
+            return s;
         }
 
         auto code() const {

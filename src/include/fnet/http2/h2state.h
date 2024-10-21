@@ -17,6 +17,7 @@
 #include "stream_id.h"
 #include "../std/hash_map.h"
 #include <wrap/light/enum.h>
+#include "../http1/state.h"
 
 namespace futils {
     namespace fnet::http2::stream {
@@ -162,12 +163,13 @@ namespace futils {
         struct StreamCommonState {
             // stream id
             ID id = invalid_id;
-            // stream state machine
-            State state = State::idle;
             // error code
             std::uint32_t code = 0;
+            // stream state machine
+            State state = State::idle;
             // no need handling exclude PRIORITY
             bool perfect_closed = false;
+            http1::HTTPState recv_state = http1::HTTPState::init;
 
             constexpr StreamCommonState(ID id)
                 : id(id) {}
@@ -423,22 +425,47 @@ namespace futils {
             }
         };
 
+        enum class ContinuousState : byte {
+            none,
+            on_header,
+            on_push_promise,
+        };
+
         struct StreamDirState {
+           private:
             // flow control window
             FlowControlWindow window;
             // previous processed frame type
             frame::Type preproced_type = frame::Type::settings;
             // previous processed is
             // - Type::header without Flag.end_headers
+            // - Type::push_promise without Flag.end_headers
             // - Type::contiuous without Flag.end_headers
-            bool on_continuous = false;
+            ContinuousState on_continuous = ContinuousState::none;
 
+           public:
             constexpr StreamDirState() {
                 window.set_new_window(0, 65535);
             }
 
+            constexpr ContinuousState continuous_state() const {
+                return on_continuous;
+            }
+
             constexpr bool can_data(std::uint32_t data_size) const {
                 return window.avail_size() >= data_size;
+            }
+
+            constexpr size_t window_available_size() const {
+                return window.avail_size();
+            }
+
+            constexpr bool window_exceeded(std::uint32_t n) const {
+                return window.exceeded(n);
+            }
+
+            constexpr void set_new_window(std::uint32_t old_initial_window, std::uint32_t new_initial_window) {
+                window.set_new_window(old_initial_window, new_initial_window);
             }
 
             // RFC9113 6.9. WINDOW_UPDATE says:
@@ -461,18 +488,18 @@ namespace futils {
             }
 
             constexpr Error on_frame(const frame::Frame& f, StreamDirState& opposite) {
-                if (on_continuous) {
+                if (on_continuous != ContinuousState::none) {
                     if (f.type != frame::Type::continuation) {
                         return Error{H2Error::protocol};
                     }
                     if (f.flag & frame::Flag::end_headers) {
-                        on_continuous = false;
+                        on_continuous = ContinuousState::none;
                     }
                 }
                 else if (f.type == frame::Type::header ||
                          f.type == frame::Type::push_promise) {
                     if (!(f.flag & frame::Flag::end_headers)) {
-                        on_continuous = true;
+                        on_continuous = f.type == frame::Type::header ? ContinuousState::on_header : ContinuousState::on_push_promise;
                     }
                 }
                 else if (f.type == frame::Type::data) {
@@ -492,7 +519,7 @@ namespace futils {
                             // a WINDOW_UPDATE frame with a flow-control window
                             // increment of 0 as a stream error (Section 5.4.2) of
                             // type PROTOCOL_ERROR
-                            return Error{H2Error::protocol, true};
+                            return Error{H2Error::protocol, true, "WINDOW not updated"};
                         }
                         return Error{H2Error::flow_control, true, "WINDOW update exceed flow control limit"};
                     }
@@ -516,14 +543,26 @@ namespace futils {
            private:
             // common stream state
             StreamCommonState com;
-            // recv window(recv data,send window_update)
-            StreamDirState recv;
-            // send window(send data,recv window_update)
-            StreamDirState send;
+            // peer settings (recv data,send window_update)
+            StreamDirState peer;
+            // local settings (send data,recv window_update)
+            StreamDirState local;
 
            public:
             constexpr StreamState(ID id)
                 : com(id) {}
+
+            constexpr ContinuousState recv_continuous_state() const {
+                return local.continuous_state();
+            }
+
+            constexpr void set_recv_state(http1::HTTPState state) {
+                com.recv_state = state;
+            }
+
+            constexpr http1::HTTPState recv_state() const {
+                return com.recv_state;
+            }
 
             constexpr ID id() const {
                 return com.id;
@@ -534,7 +573,7 @@ namespace futils {
             }
 
             constexpr size_t sendable_size() const {
-                return send.window.avail_size();
+                return peer.window_available_size();
             }
 
             constexpr void maybe_close_by_higher_creation(ID max_server, ID max_client) {
@@ -555,7 +594,7 @@ namespace futils {
                 if (auto err = com.on_recv(f)) {
                     return err;
                 }
-                if (auto err = recv.on_frame(f, send)) {
+                if (auto err = local.on_frame(f, peer)) {
                     return err;
                 }
                 return no_error;
@@ -567,7 +606,7 @@ namespace futils {
                 if (auto err = com.on_send(f)) {
                     return err;
                 }
-                if (auto err = send.on_frame(f, recv)) {
+                if (auto err = peer.on_frame(f, local)) {
                     return err;
                 }
                 return no_error;
@@ -581,7 +620,7 @@ namespace futils {
                         "stream routing is incorrect. library bug!!",
                     };
                 }
-                if (send.on_continuous) {
+                if (peer.continuous_state() != ContinuousState::none) {
                     if (f.type != frame::Type::continuation) {
                         return Error{H2Error::protocol, false, "expect CONTINUATION"};
                     }
@@ -591,32 +630,40 @@ namespace futils {
                     return err;
                 }
                 if (f.type == frame::Type::data) {
-                    if (!send.can_data(static_cast<const frame::DataFrame&>(f).data_len())) {
+                    if (!peer.can_data(static_cast<const frame::DataFrame&>(f).data_len())) {
                         return Error{H2Error::flow_control, true, "cannot send DATA frame by stream flow control limit"};
                     }
                 }
                 if (f.type == frame::Type::window_update) {
-                    if (recv.window.exceeded(static_cast<const frame::WindowUpdateFrame&>(f).data_len())) {
+                    if (peer.window_exceeded(static_cast<const frame::WindowUpdateFrame&>(f).data_len())) {
                         return Error{H2Error::flow_control, true, "cannot send WINDOW_UPDATE frame"};
                     }
                 }
                 return no_error;
+            }
+
+            constexpr void set_new_local_window(std::uint32_t old_initial_window, std::uint32_t new_initial_window) {
+                local.set_new_window(old_initial_window, new_initial_window);
+            }
+
+            constexpr void set_new_peer_window(std::uint32_t old_initial_window, std::uint32_t new_initial_window) {
+                peer.set_new_window(old_initial_window, new_initial_window);
             }
         };
 
         struct ConnDirState {
             // previous read_frame/send_frame called id
             ID preproced_id = invalid_id;
-            // previous read_frame/send_frame called type
-            frame::Type preproced_type = frame::Type::invalid;
             // previous read_frame/send_frame called id excluding id 0
             ID preproced_stream_id = invalid_id;
-            // previous read_frame/send_frame called type excluding id 0
-            frame::Type preproced_stream_type = frame::Type::invalid;
             // predefine settings
             setting::PredefinedSettings settings;
             // flow control window
             FlowControlWindow window;
+            // previous read_frame/send_frame called type excluding id 0
+            frame::Type preproced_stream_type = frame::Type::invalid;
+            // previous read_frame/send_frame called type
+            frame::Type preproced_type = frame::Type::invalid;
 
             bool on_continuation = false;
 
@@ -632,7 +679,7 @@ namespace futils {
                 return window.update(increment);
             }
 
-            constexpr Error on_settings(const frame::SettingsFrame& s) {
+            constexpr Error on_settings(const frame::SettingsFrame& s, auto&& on_initial_window_update) {
                 if (s.flag & frame::Flag::ack) {
                     return no_error;  // ignore
                 }
@@ -656,7 +703,10 @@ namespace futils {
                             err = Error{H2Error::flow_control, false, "settings initial_window_size exceeds 2^31-1"};
                             return false;
                         }
+                        auto old_initial = settings.initial_window_size;
                         settings.initial_window_size = value;
+                        window.set_new_window(old_initial, value);
+                        on_initial_window_update(old_initial, value);  // for streams flow window update
                     }
                     else if (k(setting::SettingKey::max_frame_size) == key) {
                         settings.max_frame_size = value;
@@ -672,9 +722,9 @@ namespace futils {
                 return err;
             }
 
-            constexpr Error on_frame(const frame::Frame& f, ConnDirState& opposite) {
+            constexpr Error on_frame(const frame::Frame& f, ConnDirState& opposite, auto&& on_initial_window_updated) {
                 if (f.len > settings.max_frame_size) {
-                    return Error{H2Error::frame_size};
+                    return Error{H2Error::frame_size, false, "frame size exceeded max_frame_size"};
                 }
                 if (on_continuation) {
                     if (f.type != frame::Type::continuation) {
@@ -714,7 +764,7 @@ namespace futils {
                     }
                 }
                 else if (f.type == frame::Type::settings) {
-                    return opposite.on_settings(static_cast<const frame::SettingsFrame&>(f));
+                    return opposite.on_settings(static_cast<const frame::SettingsFrame&>(f), on_initial_window_updated);
                 }
                 else if (f.type == frame::Type::header || f.type == frame::Type::push_promise) {
                     if (!(f.flag & frame::Flag::end_headers)) {
@@ -728,8 +778,8 @@ namespace futils {
         struct CloseState {
             // error code by GOAWAY
             std::uint32_t code = 0;
-            bool closed = false;
             ID processed_id = 0;
+            bool closed = false;
 
             void on_goaway(const frame::GoAwayFrame& g) {
                 code = g.code;
@@ -747,31 +797,45 @@ namespace futils {
             ID max_closed_server_id = invalid_id;
 
             ID max_processed = invalid_id;
+            ID issue_id = invalid_id;
 
             // recv
-            ConnDirState recv;
+            ConnDirState peer;
             // send preproced_id/local settings
-            ConnDirState send;
+            ConnDirState local;
             // is server mode
-            bool is_server = false;
+            bool is_server_ = false;
 
            public:
             constexpr ConnState(bool server)
-                : is_server(server) {}
+                : is_server_(server) {}
+
+            constexpr bool is_server() const noexcept {
+                return is_server_;
+            }
+
+            constexpr bool is_closed() const noexcept {
+                return close.closed;
+            }
 
             void on_recv_processed(ID id) {
             }
 
-            constexpr setting::PredefinedSettings send_settings() const {
-                return send.settings;
+            constexpr setting::PredefinedSettings local_settings() const {
+                return local.settings;
             }
 
-            constexpr setting::PredefinedSettings recv_settings() const {
-                return recv.settings;
+            constexpr setting::PredefinedSettings peer_settings() const {
+                return peer.settings;
             }
 
-            constexpr Error on_recv_frame(const frame::Frame& f) {
-                if (auto err = recv.on_frame(f, send)) {
+            constexpr Error on_recv_frame(const frame::Frame& f, auto&& on_initial_window_updated) {
+                if (f.type == frame::Type::push_promise) {
+                    if (!local.settings.enable_push) {
+                        return Error{H2Error::protocol, false, "push disabled"};
+                    }
+                }
+                if (auto err = local.on_frame(f, peer, on_initial_window_updated)) {
                     return err;
                 }
                 if (f.type == frame::Type::goaway) {
@@ -780,13 +844,13 @@ namespace futils {
                 return no_error;
             }
 
-            constexpr Error on_send_frame(const frame::Frame& f) {
+            constexpr Error on_send_frame(const frame::Frame& f, auto&& on_initial_window_updated) {
                 if (f.type == frame::Type::push_promise) {
-                    if (!send.settings.enable_push) {
+                    if (!peer.settings.enable_push) {
                         return Error{H2Error::protocol, false, "push disabled"};
                     }
                 }
-                if (auto err = send.on_frame(f, recv)) {
+                if (auto err = peer.on_frame(f, local, on_initial_window_updated)) {
                     return err;
                 }
                 if (f.type == frame::Type::goaway) {
@@ -832,7 +896,8 @@ namespace futils {
                     return Error{H2Error::internal, false, "invalid stream id. library bug!!"};
                 }
                 maybe_closed_by_higher_creation(s);
-                if (auto err = on_recv_frame(f)) {
+                // at here, SETTINGS frame must not arrive
+                if (auto err = on_recv_frame(f, [](auto&&...) {})) {
                     return err;
                 }
                 if (auto err = s.on_recv_frame(f)) {
@@ -850,7 +915,8 @@ namespace futils {
                     return Error{H2Error::internal, false, "invalid stream id. library bug!!"};
                 }
                 maybe_closed_by_higher_creation(s);
-                if (auto err = on_send_frame(f)) {
+                // at here, SETTINGS frame must not arrive
+                if (auto err = on_send_frame(f, [](auto&&...) {})) {
                     return err;
                 }
                 if (auto err = s.on_send_frame(f)) {
@@ -860,6 +926,19 @@ namespace futils {
                 return no_error;
             }
 
+            constexpr ID new_stream() {
+                if (!issue_id.valid()) {
+                    issue_id = is_server_ ? server_first : client_first;
+                    return issue_id;
+                }
+                auto next = issue_id.next();
+                if (!next.valid()) {
+                    return invalid_id;
+                }
+                issue_id = next;
+                return issue_id;
+            }
+
             constexpr Error can_send_stream_frame(const frame::Frame& f, const StreamState& s) {
                 if (f.id != s.id()) {
                     return Error{H2Error::internal, false, "stream routing is incorrect. library bug!!"};
@@ -867,24 +946,24 @@ namespace futils {
                 if (f.id.is_conn() || !f.id.valid()) {
                     return Error{H2Error::internal, false, "invalid stream id. library bug!!"};
                 }
-                if (send.settings.max_frame_size < frame::frame_len(f)) {
-                    return Error{H2Error::frame_size};
+                if (peer.settings.max_frame_size < frame::frame_len(f)) {
+                    return Error{H2Error::frame_size, false, "frame size exceeded max_frame_size"};
                 }
-                if (send.on_continuation) {
+                if (peer.on_continuation) {
                     if (f.type != frame::Type::continuation) {
                         return Error{H2Error::protocol, false, "expect CONTINUATION"};
                     }
-                    if (f.id != send.preproced_stream_id) {
+                    if (f.id != peer.preproced_stream_id) {
                         return Error{H2Error::protocol, false, "expect same id sent before"};
                     }
                 }
                 if (f.type == frame::Type::data) {
-                    if (!send.can_data(static_cast<const frame::DataFrame&>(f).data_len())) {
+                    if (!peer.can_data(static_cast<const frame::DataFrame&>(f).data_len())) {
                         return Error{H2Error::flow_control, false, "cannot send DATA frame by connection flow limit"};
                     }
                 }
                 if (f.type == frame::Type::push_promise) {
-                    if (!send.settings.enable_push) {
+                    if (!peer.settings.enable_push) {
                         return Error{H2Error::protocol, false, "push disabled"};
                     }
                 }
@@ -901,6 +980,8 @@ namespace futils {
         }
 
         namespace test {
+            constexpr auto sizeof_conn_state = sizeof(ConnState);
+            constexpr auto sizeof_stream_state = sizeof(StreamState);
 
             struct States {
                 ConnState conn;
@@ -1008,7 +1089,7 @@ namespace futils {
 
             template <size_t err_step = 0>
             constexpr void apply_conn_frames(const frame::Frame& f, States& sender, States& receiver) {
-                if (auto err = sender.conn.on_send_frame(f)) {
+                if (auto err = sender.conn.on_send_frame(f, [&](auto&&...) {})) {
                     if (err_step == 1) {
                         return;
                     }
@@ -1017,7 +1098,7 @@ namespace futils {
                 if (err_step == 1) {
                     on_err("expect error at step 1 but no error");
                 }
-                if (auto err = receiver.conn.on_recv_frame(f)) {
+                if (auto err = receiver.conn.on_recv_frame(f, [&](auto&&...) {})) {
                     if (err_step == 2) {
                         return;
                     }

@@ -112,6 +112,11 @@ namespace futils {
             }
         };
 
+        struct ContextTraceCallback {
+            void* ctx;
+            void (*on_transport_parameter_read)(void* ctx);
+        };
+
         // Context is QUIC connection context suite
         // this class handles single connection both client and server
         // this class has no interest in about ip address and port
@@ -187,7 +192,7 @@ namespace futils {
             }
 
             // apply_transport_param applies transport parameter from peer to local settings
-            bool apply_transport_param(packet::PacketSummary summary) {
+            bool apply_transport_param(packet::PacketSummary summary, ContextTraceCallback& trace) {
                 if (status.transport_parameter_read()) {
                     return true;
                 }
@@ -259,6 +264,9 @@ namespace futils {
                 }
                 status.on_transport_parameter_read();
                 logger.debug("apply transport parameter");
+                if (trace.on_transport_parameter_read) {
+                    trace.on_transport_parameter_read(trace.ctx);
+                }
                 return true;
             }
 
@@ -874,7 +882,7 @@ namespace futils {
                 return true;
             }
 
-            bool handle_frame(const packet::PacketSummary& summary, const frame::Frame& frame) {
+            bool handle_frame(const packet::PacketSummary& summary, const frame::Frame& frame, ContextTraceCallback& trace) {
                 if (frame.type.type() == FrameType::PADDING ||
                     frame.type.type() == FrameType::PING) {
                     return true;
@@ -904,7 +912,7 @@ namespace futils {
                     }
                     if (crypto.handshake_complete()) {
                         status.on_handshake_complete();
-                        if (!apply_transport_param(summary)) {
+                        if (!apply_transport_param(summary, trace)) {
                             return false;
                         }
                     }
@@ -1052,7 +1060,7 @@ namespace futils {
                 return true;
             }
 
-            bool handle_single_packet(packet::PacketSummary summary, view::rvec payload, path::PathID path_id) {
+            bool handle_single_packet(packet::PacketSummary summary, view::rvec payload, path::PathID path_id, ContextTraceCallback& trace) {
                 auto pn_space = status::from_packet_type(summary.type);
                 if (summary.type == PacketType::OneRTT) {
                     summary.version = version;
@@ -1086,7 +1094,7 @@ namespace futils {
                             return false;
                         }
                         pstatus.add_frame(f.type.type_detail());
-                        if (!handle_frame(summary, f)) {
+                        if (!handle_frame(summary, f, trace)) {
                             return false;
                         }
                         return true;
@@ -1478,7 +1486,7 @@ namespace futils {
 
             // thread unsafe call
             // returns (should_send)
-            bool parse_udp_payload(view::wvec data, path::PathID path = path::original_path) {
+            bool parse_udp_payload(view::wvec data, path::PathID path = path::original_path, ContextTraceCallback trace = {}) {
                 if (!closer.sent_packet().null()) {
                     closer.on_recv_after_close_sent();
                     return true;  // ignore
@@ -1493,7 +1501,7 @@ namespace futils {
                         logger.drop_packet(sum.type, pn, error::Error("duplicated packet", error::Category::lib, error::fnet_quic_packet_error), raw_packet, true);
                         return true;  // ignore
                     }
-                    return handle_single_packet(sum, packet.payload, path);
+                    return handle_single_packet(sum, packet.payload, path, trace);
                 };
                 auto check_connID_cb = [&](auto&& packet, view::rvec raw_packet) {
                     packet::PacketSummary sum = packet::summarize(packet, packetnum::infinity);

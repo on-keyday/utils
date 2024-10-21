@@ -23,7 +23,7 @@
 #endif
 #include <thread/channel.h>
 #include <fnet/quic/stream/impl/recv_stream.h>
-#include <fnet/http.h>
+#include <fnet/http1/http1.h>
 #include <fstream>
 #include <file/gzip/gzip.h>
 #include <testutil/timer.h>
@@ -96,7 +96,7 @@ void thread(QCTX ctx, RecvChan c, int i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         c >> runi;
     }
-    futils::fnet::HTTP http;
+    futils::fnet::http1::HTTP1 http;
     while (true) {
         runi.s->update_recv_limit([](FlowLimiter limit, std::uint64_t) {
             if (limit.avail_size() < 10000) {
@@ -126,14 +126,13 @@ void thread(QCTX ctx, RecvChan c, int i) {
     // decref.execute();
 
     assert(res.result == futils::fnet::quic::IOResult::ok);
-    futils::http::header::StatusCode code;
+    futils::fnet::http1::header::StatusCode code;
     std::unordered_multimap<std::string, std::string> resp;
-    futils::fnet::HTTPBodyInfo info;
-    http.read_response<std::string>(code, resp, &info);
+    http.read_response(code, futils::fnet::http1::default_header_callback<std::string>(resp));
     std::string text;
     bool inval = false;
-    auto v = http.read_body(text, info, 0, 0);
-    assert(v == futils::http::body::BodyReadResult::full);
+    auto v = http.read_body(text);
+    assert(v.body_error == futils::fnet::http1::body::BodyReadResult::full);
     http.write_response(code, resp);
     futils::wrap::cout_wrap() << http.get_output();
 

@@ -43,7 +43,7 @@ namespace futils {
             };
             err.err_code = get_error_code();
             if (cant_load) {
-                err.alt_err = error::Error("cannot decide OpenSSL/BoringSSL. maybe diffrent type library?", error::Category::lib, error::fnet_tls_lib_type_error);
+                err.alt_err = error::Error("cannot decide OpenSSL/BoringSSL. maybe different type library?", error::Category::lib, error::fnet_tls_lib_type_error);
                 return err;
             }
             if (err.err_code == 0) {
@@ -101,6 +101,9 @@ namespace futils {
         }
 
         void LibError::error(helper::IPushBacker<> pb) const {
+            if (method) {
+                strutil::appends(pb, "method=\"", method, "\" ");
+            }
             if (ssl_code != 0) {
                 strutil::append(pb, "ssl_error_code=");
                 number::to_string(pb, ssl_code);
@@ -134,10 +137,12 @@ namespace futils {
 
         struct SSLContextHolder {
             ssl_import::SSL_CTX* ctx = nullptr;
-            void (*alpn_callback)(ALPNSelector& sel, void*) = nullptr;
+            bool (*alpn_callback)(ALPNSelector& sel, void*) = nullptr;
             void* alpn_callback_arg = nullptr;
             bool (*session_callback)(Session&& sess, void*) = nullptr;
             void* sess_callback_arg = nullptr;
+            void (*keylog_callback)(view::rvec line, void*) = nullptr;
+            void* keylog_callback_arg = nullptr;
         };
 
         fnet_dll_implement(expected<TLSConfig>) configure_with_error() {
@@ -284,19 +289,25 @@ namespace futils {
             return {};
         }
 
-        expected<void> TLSConfig::set_alpn_select_callback(const ALPNCallback* cb) {
-            if (!cb) {
-                return unexpect(error::Error("invalid argument", error::Category::lib, error::fnet_tls_usage_error));
+        expected<void> TLSConfig::set_alpn_select_callback(bool (*select)(ALPNSelector& sel, void* arg), void* arg) {
+            if (!select) {
+                return unexpect(error::Error("ALPN select callback is nullptr", error::Category::lib, error::fnet_tls_usage_error));
             }
             CHECK_CTX(c)
+            auto holder = static_cast<SSLContextHolder*>(lazy::ssl::SSL_CTX_get_ex_data_(c, ssl_import::ssl_appdata_index));
+            assert(c == holder->ctx);
+            holder->alpn_callback = select;
+            holder->alpn_callback_arg = arg;
             lazy::ssl::SSL_CTX_set_alpn_select_cb_(
                 c, [](ssl_import::SSL* ssl, const uint8_t** out, uint8_t* out_len, const uint8_t* in, unsigned int in_len, void* arg) {
+                    auto ctx = lazy::ssl::SSL_get_SSL_CTX_(ssl);
+                    auto holder = static_cast<SSLContextHolder*>(lazy::ssl::SSL_CTX_get_ex_data_(ctx, ssl_import::ssl_appdata_index));
+                    assert(ctx == holder->ctx);
                     ALPNSelector sel{in, in_len, out, out_len};
-                    auto cb = static_cast<const ALPNCallback*>(arg);
-                    if (!cb) {
+                    if (!holder->alpn_callback) {
                         return ssl_import::SSL_TLSEXT_ERR_NOACK_;
                     }
-                    if (cb->select(sel, cb->arg)) {
+                    if (holder->alpn_callback(sel, holder->alpn_callback_arg)) {
                         if (*out) {
                             return ssl_import::SSL_TLSEXT_ERR_OK_;
                         }
@@ -306,7 +317,27 @@ namespace futils {
                         return ssl_import::SSL_TLSEXT_ERR_ALERT_FATAL_;
                     }
                 },
-                const_cast<ALPNCallback*>(cb));
+                nullptr);
+            return {};
+        }
+
+        expected<void> TLSConfig::set_key_log_callback(void (*global_log)(view::rvec line, void* v), void* v) {
+            if (!global_log) {
+                return unexpect(error::Error("key log callback is nullptr", error::Category::lib, error::fnet_tls_usage_error));
+            }
+            CHECK_CTX(c)
+            auto holder = static_cast<SSLContextHolder*>(lazy::ssl::SSL_CTX_get_ex_data_(c, ssl_import::ssl_appdata_index));
+            holder->keylog_callback = global_log;
+            holder->keylog_callback_arg = v;
+            lazy::ssl::SSL_CTX_set_keylog_callback_(c, [](const ssl_import::SSL* ssl, const char* line) {
+                auto ctx = lazy::ssl::SSL_get_SSL_CTX_(ssl);
+                auto holder = static_cast<SSLContextHolder*>(lazy::ssl::SSL_CTX_get_ex_data_(ctx, ssl_import::ssl_appdata_index));
+                assert(ctx == holder->ctx);
+                if (!holder->keylog_callback) {
+                    return;
+                }
+                holder->keylog_callback(line, holder->keylog_callback_arg);
+            });
             return {};
         }
 

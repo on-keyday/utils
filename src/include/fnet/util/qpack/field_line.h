@@ -12,7 +12,7 @@
 namespace futils {
     namespace qpack::fields {
         constexpr std::uint64_t max_entries(std::uint64_t max_capacity) {
-            // floor(max_capacity / 5)
+            // floor(max_capacity / 32)
             return max_capacity >> 5;
         }
 
@@ -266,7 +266,7 @@ namespace futils {
         // + field.set_header(string)
         // + field.set_forward_mobe(bool as_literal)
         template <class TypeConfig, class C, class Field>
-        constexpr QpackError parse_field_line(FieldDecodeContext<TypeConfig>& ctx, SectionPrefix& prefix, binary::basic_reader<C>& r, Field& field) {
+        constexpr QpackError parse_field_line(FieldDecodeContext<TypeConfig>& ctx, SectionPrefix& prefix, binary::basic_reader<C>& r, Field& field, bool& dynamic_table_used) {
             if (r.empty()) {
                 return QpackError::input_length;
             }
@@ -294,6 +294,7 @@ namespace futils {
                     if (!only_name) {
                         field.set_value(h->second);
                     }
+                    dynamic_table_used = true;
                 }
                 return QpackError::none;
             };

@@ -14,6 +14,7 @@
 #include "../../strutil/append.h"
 #include "stream_id.h"
 #include <binary/writer.h>
+#include <fnet/util/hpack/hpack_error.h>
 
 namespace futils {
     namespace fnet::http2 {
@@ -88,6 +89,8 @@ namespace futils {
             H2Error code = H2Error::none;
             bool stream = false;
             const char* debug = nullptr;
+            hpack::HpackError hpack_error = hpack::HpackError::none;
+            bool is_resumable = false;
 
             constexpr operator bool() const {
                 return code != H2Error::none;
@@ -95,8 +98,14 @@ namespace futils {
 
             constexpr void error(auto&& pb) const {
                 strutil::appends(pb, "http2: ", stream ? "stream error: " : "connection error: ", error_msg(code));
+                if (hpack_error != hpack::HpackError::none) {
+                    strutil::appends(pb, " hpack error: ", hpack::to_string(hpack_error));
+                }
                 if (debug) {
                     strutil::appends(pb, " debug=", debug);
+                }
+                if (is_resumable) {
+                    strutil::append(pb, " resumable");
                 }
             }
         };
@@ -341,12 +350,14 @@ namespace futils {
                     else {
                         padding = 0;
                     }
+                    auto priority_len = 0;
                     if (flag & Flag::priority) {
                         if (!priority.parse(sub)) {
                             return Error{H2Error::frame_size};
                         }
+                        priority_len = 5;
                     }
-                    if (!sub.read(data, len - padding) ||
+                    if (!sub.read(data, len - padding - priority_len) ||
                         !sub.read(pad, padding) ||
                         !sub.empty()) {
                         return Error{H2Error::internal};
@@ -689,42 +700,6 @@ namespace futils {
             template <class F>
             constexpr auto frame_typeof = []() { return F{}.type; }();
 
-            /*
-            struct ErrCode {
-                // library error code
-                int err = 0;
-                // http2 error code
-                H2Error h2err = H2Error::none;
-                // stream level error
-                bool strm = false;
-                // debug data
-                const char* debug = nullptr;
-            };
-
-
-            using H2Callback = bool (*)(void* user, frame::Frame* frame, ErrCode err);
-            // parse_frame parses http2 frames
-            // this function parses frames and detects errors if exists
-            // this function would not detect error related with Stream State
-            // cb would be called when a frame is parsed or frame error occuerd
-            // cb would not be called when text length is not enough
-            // if succeeded returns true otherwise returns false
-            // and error information is set on err
-            fnet_dll_export(bool) parse_frame(const char* text, size_t size, size_t& red, ErrCode& err, H2Callback cb, void* c);
-            // render_frame renders a http2 frame
-            // this function renders frames and detects errors if exists
-            // this function would not detect error related with Stream State
-            // if auto_correct is true this function corrects frame as it can (both text and frame)
-            // As a point of caution, auto_correct drops padding if format is invalid.
-            // if succeeded returns true otherwise returns false
-            // and error information is set on err
-            fnet_dll_export(bool) render_frame(char* text, size_t& size, size_t cap, ErrCode& err, frame::Frame* frame, bool auto_correct);
-            // pass_frame pass a http2 frame
-            // this function reads frame header and skips bytes of length
-            // this fucntion provide any checks
-            // if skip succeedes returns true otherwise returns false
-            fnet_dll_export(bool) pass_frame(const char* text, size_t size, size_t& red);*/
-
             constexpr Error parse_frame(binary::reader& r, size_t limit, auto&& cb) {
                 if (r.remain().size() < 9) {
                     return no_error;  // no buffer
@@ -733,7 +708,7 @@ namespace futils {
                 std::uint32_t len = 0;
                 binary::read_uint24(peek, len);
                 if (9 + len > limit) {
-                    return Error{H2Error::frame_size};
+                    return Error{H2Error::frame_size, false, "frame size exceeded limit"};
                 }
                 if (r.remain().size() < 9 + len) {
                     return no_error;  // no buffer
@@ -825,5 +800,5 @@ namespace futils {
 #undef F
             }
         }  // namespace frame
-    }      // namespace fnet::http2
+    }  // namespace fnet::http2
 }  // namespace futils

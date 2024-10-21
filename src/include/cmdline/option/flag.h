@@ -66,8 +66,8 @@ namespace futils {
 
             DEFINE_ENUM_FLAGOP(ParseFlag)
 
-            template <class Result>
-            void get_flag_state(Result& result, ParseFlag flag) {
+            template <class Header>
+            void get_flag_state(Header& result, ParseFlag flag) {
                 bool added = false;
                 auto add = [&](auto c) {
                     if (added) {
@@ -121,9 +121,9 @@ namespace futils {
 #undef ADD
             }
 
-            template <class Result>
-            Result get_flag_state(ParseFlag flag) {
-                Result result;
+            template <class Header>
+            Header get_flag_state(ParseFlag flag) {
+                Header result;
                 get_flag_state(result, flag);
                 return result;
             }
@@ -369,5 +369,5 @@ namespace futils {
             };
 
         }  // namespace option
-    }      // namespace cmdline
+    }  // namespace cmdline
 }  // namespace futils

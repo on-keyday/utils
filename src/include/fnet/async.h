@@ -36,6 +36,10 @@ namespace futils::fnet {
        public:
         constexpr Canceler() = default;
 
+        constexpr operator bool() const noexcept {
+            return b != nullptr;
+        }
+
         constexpr Canceler(Canceler&& c)
             : cancel_code(c.cancel_code), w(c.w), b(std::exchange(c.b, nullptr)) {}
 

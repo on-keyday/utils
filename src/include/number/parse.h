@@ -138,8 +138,8 @@ namespace futils {
             static constexpr bool allow_zero_prefixed = true;
         };
 
-        template <class Result, class T, class Config = internal::ReadConfig>
-        constexpr NumErr read_number(Result& result, Sequencer<T>& seq, int radix = 10, bool* is_float = nullptr, Config&& config = Config{}) {
+        template <class Header, class T, class Config = internal::ReadConfig>
+        constexpr NumErr read_number(Header& result, Sequencer<T>& seq, int radix = 10, bool* is_float = nullptr, Config&& config = Config{}) {
             if (!acceptable_radix(radix)) {
                 return NumError::invalid;
             }

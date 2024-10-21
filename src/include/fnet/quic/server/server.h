@@ -118,7 +118,6 @@ namespace futils {
             Ctx ctx;
             bool closed = false;
             bool discard = false;
-            bool transport_parameter_notified = false;
             Lock l;
 
             // returns (payload,idle)
@@ -138,16 +137,20 @@ namespace futils {
                 if (discard) {
                     return false;
                 }
-                ctx.parse_udp_payload(payload, id);
+                ctx.parse_udp_payload(
+                    payload, id,
+                    {
+                        .ctx = this,
+                        .on_transport_parameter_read = [](void* ctx) {
+                            auto obj = static_cast<Opened*>(ctx);
+                            if (auto mux = obj->ctx.get_multiplexer_ptr().lock()) {
+                                auto ptr = std::static_pointer_cast<HandlerMap<TConfig>>(mux);
+                                auto obj_ptr = std::static_pointer_cast<Opened<TConfig>>(obj->ctx.get_outer_self_ptr().lock());
+                                ptr->on_transport_parameter_read(std::shared_ptr<context::Context<TConfig>>(obj_ptr, &obj_ptr->ctx));
+                            }
+                        },
+                    });
                 next_deadline = ctx.get_earliest_deadline();
-                if (!transport_parameter_notified && ctx.transport_parameter_read()) {
-                    transport_parameter_notified = true;
-                    if (auto mux = ctx.get_multiplexer_ptr().lock()) {
-                        auto ptr = std::static_pointer_cast<HandlerMap<TConfig>>(mux);
-                        auto obj_ptr = std::static_pointer_cast<Opened<TConfig>>(ctx.get_outer_self_ptr().lock());
-                        ptr->on_transport_parameter_read(std::shared_ptr<context::Context<TConfig>>(obj_ptr, &obj_ptr->ctx));
-                    }
-                }
                 return true;
             }
 
@@ -258,6 +261,7 @@ namespace futils {
             }
 
             void remove(HandlerPtr& rem) {
+                const auto locked = helper::lock(l);
                 handlers.remove_if([&](auto&& v) {
                     return v == rem;
                 });

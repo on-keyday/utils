@@ -81,10 +81,12 @@ namespace futils {
 
             DEFINE_ENUM_FLAGOP(VerifyMode)
 
+            /*
             struct ALPNCallback {
                 bool (*select)(ALPNSelector& selector, void*) = nullptr;
                 void* arg = nullptr;
             };
+            */
 
             // TLSConfig is wrapper class of SSL_CTX
             struct fnet_class_export TLSConfig {
@@ -122,7 +124,9 @@ namespace futils {
                 // otherwise if returns true then alert warning
                 // if callback returns false then alert fatal error
                 // manage ALPNCallback yourself while connections alive
-                expected<void> set_alpn_select_callback(const ALPNCallback* cb);
+                expected<void> set_alpn_select_callback(bool (*select)(ALPNSelector& selector, void* arg), void* arg);
+
+                expected<void> set_key_log_callback(void (*global_log)(view::rvec line, void* arg), void* arg);
 
                 expected<void> set_session_callback(bool (*cb)(Session&& sess, void* arg), void* arg);
 
@@ -138,5 +142,5 @@ namespace futils {
                 return configure_with_error().value_or(TLSConfig{});
             }
         }  // namespace tls
-    }      // namespace fnet
+    }  // namespace fnet
 }  // namespace futils

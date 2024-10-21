@@ -192,6 +192,17 @@ namespace futils {
                 }
             }
 
+            template <internal::ArrayReadableBuffer<C> T>
+            constexpr bool write(T&& t) {
+                stream_write(t.size());
+                auto to_write = w.substr(index, t.size());
+                for (size_t i = 0; i < to_write.size(); i++) {
+                    to_write[i] = t[i];
+                }
+                index += to_write.size();
+                return to_write.size() == t.size();
+            }
+
             constexpr basic_writer& push_back(C add) {
                 stream_write(1);
                 auto sub = w.substr(index);
@@ -300,6 +311,15 @@ namespace futils {
             size_t offset = 0;
 
            public:
+            constexpr T& get_buffer() noexcept {
+                return buffer;
+            }
+
+            constexpr T take_buffer() noexcept {
+                offset = 0;
+                return std::move(buffer);
+            }
+
             constexpr size_t size() const noexcept {
                 return buffer.size();
             }

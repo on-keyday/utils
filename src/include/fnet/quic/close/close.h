@@ -14,6 +14,7 @@
 #include <atomic>
 #include "../path/path.h"
 #include <binary/flags.h>
+#include "../../tls/tls.h"
 
 namespace futils {
     namespace fnet::quic::close {
@@ -200,11 +201,19 @@ namespace futils {
                 frame::ConnectionCloseFrame new_close;
                 binary::reader r{w.written()};
                 new_close.parse(r);
+                bool is_app = new_close.type.type_detail() == FrameType::CONNECTION_CLOSE_APP;
+                error::Error base_err;
+                if (!is_app && is_CRYPTO_ERROR(TransportError(new_close.error_code.value))) {
+                    if (auto desc = tls::get_alert_desc(new_close.error_code.value & 0xff); desc.size()) {
+                        base_err = futils::error::StrError<view::rvec>{.str = desc};
+                    }
+                }
                 conn_err = QUICError{
                     .msg = new_close.reason_phrase.as_char(),
                     .transport_error = TransportError(new_close.error_code.value),
                     .frame_type = FrameType(new_close.frame_type.value),
-                    .is_app = new_close.type.type_detail() == FrameType::CONNECTION_CLOSE_APP,
+                    .base = std::move(base_err),
+                    .is_app = is_app,
                     .by_peer = true,
                 };
                 return true;

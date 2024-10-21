@@ -145,4 +145,10 @@ namespace futils::binary::internal {
         }
     }
 
+    template <class T, class C>
+    concept ArrayReadableBuffer = (!view::internal::is_const_data<T,C>) && requires(T t) {
+        { t[0] } -> std::convertible_to<C>;
+        { t.size() } -> std::convertible_to<size_t>;
+    };
+
 }  // namespace futils::binary::internal

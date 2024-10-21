@@ -8,7 +8,7 @@
 // websocket_open - websocket opening protocol
 #pragma once
 #include "websocket.h"
-#include "../http.h"
+#include "../http1.h"
 #include "../util/sha1.h"
 #include "../util/base64.h"
 #include <number/array.h>
@@ -35,7 +35,7 @@ namespace futils {
             using ClientKey = number::Array<char, 26 + futils::strlen(websocket_magic_guid), true>;
             using SHAHash = number::Array<char, 20>;
 
-            Error open(HTTP& http, auto&& path, auto&& header, auto& compare_sec_key) {
+            Error open(HTTP1& http, auto&& path, auto&& header, auto& compare_sec_key) {
                 std::random_device dev;
                 std::uniform_int_distribution uf(0, 0xff);
                 byte data[16]{};
@@ -65,27 +65,29 @@ namespace futils {
             }
 
             template <class TmpString = flex_storage>
-            Error accept(HTTP& http, auto&& path, auto&& header, auto&& pass_sec_key, size_t* red = nullptr) {
+            Error accept(HTTP1& http, auto&& path, auto&& header, auto&& pass_sec_key, size_t* red = nullptr) {
                 number::Array<char, 4, true> meth;
                 HTTPBodyInfo body;
                 ClientKey fixed;
                 bool version = false;
                 bool upgrade = false;
                 bool connection = false;
-                auto res = http.read_request<TmpString>(meth, path, header, &body, true, helper::nop, [&](auto&& key, auto&& value) {
-                    if (strutil::equal(key, "Sec-WebSocket-Key", strutil::ignore_case())) {
-                        strutil::append(fixed, value);
-                    }
-                    else if (strutil::equal(key, "Sec-Websocket-Version", strutil::ignore_case())) {
-                        version = true;  // not check value
-                    }
-                    else if (strutil::equal(key, "Connection", strutil::ignore_case())) {
-                        connection = helper::contains(value, "Upgrade", strutil::ignore_case());
-                    }
-                    else if (strutil::equal(key, "Upgrade", strutil::ignore_case())) {
-                        upgrade = helper::contains(value, "websocket", strutil::ignore_case());
-                    }
-                });
+                auto res = http.read_request(
+                    meth, path, header, &body, true, helper::nop,
+                    http1::default_header_callback<TmpString>([&](auto&& key, auto&& value) {
+                        if (strutil::equal(key, "Sec-WebSocket-Key", strutil::ignore_case())) {
+                            strutil::append(fixed, value);
+                        }
+                        else if (strutil::equal(key, "Sec-Websocket-Version", strutil::ignore_case())) {
+                            version = true;  // not check value
+                        }
+                        else if (strutil::equal(key, "Connection", strutil::ignore_case())) {
+                            connection = helper::contains(value, "Upgrade", strutil::ignore_case());
+                        }
+                        else if (strutil::equal(key, "Upgrade", strutil::ignore_case())) {
+                            upgrade = helper::contains(value, "websocket", strutil::ignore_case());
+                        }
+                    }));
                 if (res == 0) {
                     return error_http;
                 }
@@ -118,7 +120,7 @@ namespace futils {
                 return error_none;
             }
 
-            Error switch_protocol(HTTP& http, auto&& header, auto&& pass_sec_key) {
+            Error switch_protocol(HTTP1& http, auto&& header, auto&& pass_sec_key) {
                 header.emplace("Upgrade", "websocket");
                 header.emplace("Connection", "Upgrade");
                 header.emplace("Sec-WebSocket-Accept", pass_sec_key);
@@ -129,16 +131,13 @@ namespace futils {
             }
 
             template <class TmpString = flex_storage>
-            Error verify(HTTP& http, auto&& header, auto&& compare_sec_key, size_t* red = nullptr) {
-                number::Array<char, 4, true> meth;
-                HTTPBodyInfo body;
-                ClientKey fixed{};
+            Error verify(HTTP1& http, auto&& header, auto&& compare_sec_key, size_t* red = nullptr) {
                 bool accept = false;
                 bool upgrade = false;
                 bool connection = false;
-                http::header::StatusCode code;
-                auto res = http.read_response<TmpString>(
-                    code, [&](auto&& key, auto&& value) {
+                http1::header::StatusCode code;
+                auto res = http.read_response(
+                    code, http1::default_header_callback<TmpString>([&](auto&& key, auto&& value) {
                         if (strutil::equal(key, "Sec-WebSocket-Accept", strutil::ignore_case())) {
                             accept = strutil::equal(value, compare_sec_key);
                         }
@@ -148,9 +147,8 @@ namespace futils {
                         else if (strutil::equal(key, "Upgrade", strutil::ignore_case())) {
                             upgrade = strutil::contains(value, "websocket", strutil::ignore_case());
                         }
-                        http::header::apply_call_or_emplace(header, key, value);
-                    },
-                    &body, true);
+                        http1::header::apply_call_or_emplace(header, key, value);
+                    }));
                 if (res == 0) {
                     return error_http;
                 }

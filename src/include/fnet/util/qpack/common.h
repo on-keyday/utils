@@ -21,7 +21,7 @@ namespace futils {
         };
 
         namespace internal {
-            QpackError convert_hpack_error(hpack::HpackError err) {
+            inline QpackError convert_hpack_error(hpack::HpackError err) {
                 switch (err) {
                     case hpack::HpackError::input_length:
                         return QpackError::input_length;

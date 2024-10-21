@@ -13,6 +13,8 @@
 #include <platform/detect.h>
 #ifdef FUTILS_PLATFORM_WINDOWS
 #include <Windows.h>
+#else
+#include <string.h>
 #endif
 namespace futils {
     namespace fnet::error {
@@ -123,6 +125,114 @@ namespace futils {
                 });
             });
 #else
+
+            struct StrHolder {
+               private:
+                const char *buf;
+                size_t size;
+                bool allocated;
+
+               public:
+                StrHolder(const char *buf, size_t size, bool allocated)
+                    : buf(buf), size(size), allocated(allocated) {}
+
+                ~StrHolder() {
+                    if (allocated) {
+                        free_normal(const_cast<char *>(buf), DNET_DEBUG_MEMORY_LOCINFO(true, size, 1));
+                    }
+                }
+
+                const char *c_str() const {
+                    return buf;
+                }
+
+                StrHolder(StrHolder &&other)
+                    : buf(std::exchange(other.buf, nullptr)),
+                      size(std::exchange(other.size, 0)),
+                      allocated(std::exchange(other.allocated, false)) {}
+            };
+
+            template <class R, class... Arg>
+            StrHolder strerror_wrap(R (*strerr)(Arg...), int n) noexcept {
+                size_t size = 1024;
+                auto buf = static_cast<char *>(alloc_normal(size, 1, DNET_DEBUG_MEMORY_LOCINFO(true, size, 1)));
+                if (!buf) {
+                    return StrHolder("<malloc for strerror failed>", 0, false);
+                }
+                if constexpr (std::is_convertible_v<R, int>) {
+                    // XSI compatible
+                    for (;;) {
+                        auto r = strerr(n, buf, size);
+                        if (r == -1 && errno == ERANGE) {
+                            size *= 2;
+                            auto new_buf = static_cast<char *>(realloc_normal(buf, size, 1, DNET_DEBUG_MEMORY_LOCINFO(true, size, 1)));
+                            if (!new_buf) {
+                                free_normal(buf, DNET_DEBUG_MEMORY_LOCINFO(true, size, 1));
+                                return StrHolder("<realloc for strerror failed>", 0, false);
+                            }
+                            buf = new_buf;
+                            continue;
+                        }
+                        else if (r == -1) {
+                            free_normal(buf, DNET_DEBUG_MEMORY_LOCINFO(true, size, 1));
+                            if (errno == EINVAL) {
+                                return StrHolder("invalid error number", 0, false);
+                            }
+                            return StrHolder("<strerror failed>", 0, false);
+                        }
+                        else {
+                            return StrHolder(buf, size, true);
+                        }
+                    }
+                }
+                else {
+                    // GNU compatible
+                    for (;;) {
+                        errno = 0;
+                        auto r = strerr(n, buf, size);
+                        if (r != buf) {
+                            free_normal(buf, DNET_DEBUG_MEMORY_LOCINFO(true, size, 1));
+                            return StrHolder(r, 0, false);
+                        }
+                        else if (errno == 0) {
+                            return StrHolder(buf, size, true);
+                        }
+                        else if (errno == ERANGE) {
+                            size *= 2;
+                            auto new_buf = static_cast<char *>(realloc_normal(buf, size, 1, DNET_DEBUG_MEMORY_LOCINFO(true, size, 1)));
+                            if (!new_buf) {
+                                // at GNU, string error is omitted but appear with null terminated
+                                // so use omited error message
+                                return StrHolder(buf, size, true);
+                            }
+                            buf = new_buf;
+                            continue;
+                        }
+                        else {
+                            auto err = errno;
+                            free_normal(buf, DNET_DEBUG_MEMORY_LOCINFO(true, size, 1));
+                            if (err == EINVAL) {
+                                return StrHolder("invalid error number", 0, false);
+                            }
+                            return StrHolder("<strerror failed>", 0, false);
+                        }
+                    }
+                }
+            }
+
+            StrHolder all_strerror(int n) {
+                return strerror_wrap(strerror_r, n);
+            }
+
+            static auto d = helper::init([]() {
+                register_categspec_nummsg(Category::os, NumErrMode::use_custom, [](helper::IPushBacker<> pn, std::uint64_t code) {
+                    auto res = all_strerror(code);
+                    strutil::append(pn, "code=");
+                    number::to_string(pn, code);
+                    strutil::append(pn, " ");
+                    strutil::append(pn, res.c_str());
+                });
+            });
 #endif
 
         }  // namespace internal

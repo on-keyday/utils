@@ -63,36 +63,70 @@ namespace futils::fnet {
         std::atomic_uint64_t current;
 
        public:
+        /**
+         * Attempts to acquire the lock.
+         *
+         * When executing try_lock:
+         * - If the state is 'canceling': Another thread is performing a cancel operation. Nothing can be done.
+         * - If the state is 'locked': Another thread is waiting. Nothing can be done.
+         * - If the state is 'unlocked': The lock is acquired. However, there is a potential race condition between
+         *   transitioning from 'locked' to '++current' and another thread transitioning to 'canceling'.
+         *   To avoid this race, 'current' is incremented after unlocking.
+         */
         expected<std::uint64_t> try_lock() {
             LockState expect = LockState::unlocked;
-            if (!l.compare_exchange_strong(expect, LockState::locked)) {
+            if (!l.compare_exchange_strong(expect, LockState::locked, std::memory_order::acquire)) {
                 return unexpect("cannot get lock", error::Category::lib, error::fnet_async_error);
             }
             auto code = ++current;
             return code;
         }
 
-        expected<void> interrupt(std::uint64_t value, auto&& cancel) {
+        /**
+         * Attempts to interrupt an ongoing operation.
+         *
+         * When executing interrupt:
+         * - If the state is 'canceling': Another thread is performing a cancel operation. Nothing can be done.
+         * - If the state is 'locked': The state changes to 'canceling'.
+         *   - Checks for consistency between 'code' and 'current'. If they do not match, the operation is rejected.
+         *   - If they match, the cancel processing is executed.
+         *   - On Windows, uses CancelIoEx; there is a potential race condition, but consistency is checked via current and code.
+         *   - On Linux, the callback function is obtained atomically. A potential race condition exists,
+         *     but it is also checked using current and code.
+         *     There might be a competition between obtaining the callback and epoll_event,
+         *     so atomic exchange is employed to ensure only one can acquire it.
+         */
+        expected<void> interrupt(std::uint64_t code, auto&& cancel) {
             LockState expect = LockState::locked;
-            if (!l.compare_exchange_strong(expect, LockState::canceling)) {
+            if (!l.compare_exchange_strong(expect, LockState::canceling, std::memory_order::acquire)) {
                 return unexpect("cannot get lock", error::Category::lib, error::fnet_async_error);
             }
-            if (current != value) {
+            auto d = helper::defer([&] {
+                l.store(LockState::locked, std::memory_order::release);
+            });
+            if (current != code) {
                 return unexpect("operation already done", error::Category::lib, error::fnet_async_error);
             }
             current++;
-            auto d = helper::defer([&] {
-                l.store(LockState::locked);
-            });
             return cancel();
         }
 
+        /**
+         * Releases the lock.
+         *
+         * When executing unlock:
+         * - If the state is 'locked': Performs the unlock operation. A potential race condition exists
+         *   with the next lock attempt. Following the one-socket-one-call rule can help mitigate this issue.
+         * - If the state is 'unlocked': An invalid operation occurs.
+         * - If the state is 'canceling': Wait until the cancel operation completes (it may fail, but still needs to wait).
+         */
         expected<void> unlock() {
             LockState expect = LockState::locked;
-            while (!l.compare_exchange_weak(expect, LockState::unlocked)) {
+            while (!l.compare_exchange_weak(expect, LockState::unlocked, std::memory_order::release)) {
                 if (expect == LockState::unlocked) {
                     return unexpect("unlocking non-locked lock", error::Category::lib, error::fnet_async_error);
                 }
+                expect = LockState::locked;  // don't forget to reset expect
             }
             current++;
             return {};
@@ -105,7 +139,8 @@ namespace futils::fnet {
     struct NotifyCallback {
         void (*notify)() = nullptr;
         void* user = nullptr;
-        void (*call)(NotifyCallback*, IOTableHeader* base, NotifyResult&&) = nullptr;
+        using call_t = void (*)(void (*notify)(), void* user, IOTableHeader*, NotifyResult&&);
+        std::atomic<call_t> call;
 
         void set_notify(void* u, auto f, auto c) {
             user = u;

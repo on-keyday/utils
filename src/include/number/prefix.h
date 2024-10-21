@@ -43,8 +43,8 @@ namespace futils {
             return 0;
         }
 
-        template <class T, class Result, class Config = internal::ReadConfig>
-        constexpr NumErr read_prefixed_number(Sequencer<T>& seq, Result& result, int* prefix = nullptr, bool* is_float = nullptr, Config config = {}) {
+        template <class T, class Header, class Config = internal::ReadConfig>
+        constexpr NumErr read_prefixed_number(Sequencer<T>& seq, Header& result, int* prefix = nullptr, bool* is_float = nullptr, Config config = {}) {
             int radix = 10;
             if (auto v = has_prefix(seq)) {
                 radix = v;

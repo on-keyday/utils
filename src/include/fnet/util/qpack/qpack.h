@@ -10,7 +10,7 @@
 #include "decoder.h"
 #include "field_line.h"
 #include <wrap/light/enum.h>
-#include "../http/header.h"
+#include <fnet/http1/header.h>
 
 namespace futils {
     namespace qpack {
@@ -468,13 +468,17 @@ namespace futils {
                     return QpackError::head_of_blocking;
                 }
                 DecodeField<String> field;
+                bool dynamic_table_used = false;
                 while (!r.empty()) {
-                    if (auto err = fields::parse_field_line(dec, prefix, r, field);
+                    if (auto err = fields::parse_field_line(dec, prefix, r, field, dynamic_table_used);
                         err != QpackError::none) {
                         return err;
                     }
                     read(field);
                     field = {};
+                }
+                if (!dynamic_table_used) {
+                    return QpackError::none;
                 }
                 return dec_send_stream.stream([&](auto& dec_stream) {
                     return decoder::render_instruction(dec, dec_stream, decoder::Instruction::section_ack, id);
@@ -484,7 +488,7 @@ namespace futils {
 
         auto http3_field_validate_wrapper(auto& field) {
             return [&](auto&& h, auto&& v, FieldPolicy policy = FieldPolicy::prior_static) {
-                if (!http::header::http2_validator(true, true)(h, v)) {
+                if (!fnet::http1::header::http2_validator(true, true)(h, v)) {
                     return false;
                 }
                 return field(h, v, policy);
@@ -493,7 +497,7 @@ namespace futils {
 
         auto http3_entry_validate_wrapper(auto& entry) {
             return [&](auto&& h, auto&& v) {
-                if (!http::header::http2_validator(true, true)(h, v)) {
+                if (!fnet::http1::header::http2_validator(true, true)(h, v)) {
                     return false;
                 }
                 return entry(h, v);

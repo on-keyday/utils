@@ -11,6 +11,7 @@
 #include <fnet/quic/hash_fn.h>
 #include <strutil/equal.h>
 #include "error.h"
+#include <fnet/util/hpack/hpack_internal.h>
 
 namespace futils {
     namespace qpack {
@@ -143,8 +144,8 @@ namespace futils {
                         return no_ref;
                     }
                     enc_table.push_back(std::pair<String, String>{
-                        std::forward<decltype(head)>(head),
-                        std::forward<decltype(value)>(value),
+                        hpack::internal::convert_string<String>(head),
+                        hpack::internal::convert_string<String>(value),
                     });
                     track.usage += add;
                     track.isdr.insert(1);
@@ -269,9 +270,9 @@ namespace futils {
                     while (track.usage > track.capacity) {
                         assert(dec_que.size());
                         auto& field = dec_que.front();
-                        auto fu = calc_field_usage(get<0>(field), get<1>(field));
-                        assert(track.usage >= fu);
-                        track.usage -= fu;
+                        auto field_usage = calc_field_usage(get<0>(field), get<1>(field));
+                        assert(track.usage >= field_usage);
+                        track.usage -= field_usage;
                         dec_que.pop_front();
                         track.isdr.drop(1);
                     }
@@ -363,6 +364,7 @@ namespace futils {
 
             constexpr Reference find_static_ref(auto&& head, auto&& value) {
                 Reference ref;
+
                 auto& tb = header::internal::field_hash_table.table[header::internal::field_hash_index(head, value)];
                 for (auto& e : tb) {
                     if (e == 0) {

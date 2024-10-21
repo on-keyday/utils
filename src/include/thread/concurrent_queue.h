@@ -31,7 +31,7 @@ namespace futils::thread {
         std::atomic<QueueNode<T>*> tail;
         using rebound_alloc = typename std::allocator_traits<A>::template rebind_alloc<QueueNode<T>>;
         rebound_alloc allocator;
-        using traits = std::allocator_traits<A>::template rebind_traits<QueueNode<T>>;
+        using traits = typename std::allocator_traits<A>::template rebind_traits<QueueNode<T>>;
 
        public:
         MultiProduceSingleConsumeQueue() {
@@ -82,7 +82,7 @@ namespace futils::thread {
         std::atomic<QueueNode<T>*> tail;
         using rebound_alloc = typename std::allocator_traits<A>::template rebind_alloc<QueueNode<T>>;
         rebound_alloc allocator;
-        using traits = std::allocator_traits<A>::template rebind_traits<QueueNode<T>>;
+        using traits = typename std::allocator_traits<A>::template rebind_traits<QueueNode<T>>;
 
        public:
         SingleProduceMultiConsumeQueue() {

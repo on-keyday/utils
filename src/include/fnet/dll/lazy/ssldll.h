@@ -67,6 +67,10 @@ namespace futils {
             LAZY(SSL_ctrl)
 
             LAZY(SSL_in_init)
+            LAZY(SSL_get_version)
+
+            LAZY(SSL_alert_desc_string_long)
+            LAZY(SSL_CTX_set_keylog_callback)
 
             namespace ossl {
                 LAZY_BIND(libssl, ssl_import::bc::open_ssl::ssl::SSL_CTX_set_alpn_protos, SSL_CTX_set_alpn_protos)
@@ -84,7 +88,7 @@ namespace futils {
                     LAZY_BIND(libssl, ssl_import::ls::boring_ssl::ssl::SSL_set_tlsext_host_name, SSL_set_tlsext_host_name)
                     LAZY_BIND(libssl, ssl_import::ls::boring_ssl::ssl::SSL_error_description, SSL_error_description)
                 }  // namespace sp
-            }      // namespace bssl
+            }  // namespace bssl
 
             // early data support
             LAZY(SSL_set_quic_early_data_context)
@@ -175,7 +179,7 @@ namespace futils {
                     LAZY(EVP_AEAD_CTX_seal_scatter)
                     LAZY(EVP_AEAD_CTX_open_gather)
                 }  // namespace sp
-            }      // namespace bssl
+            }  // namespace bssl
 #undef LAZY
         }  // namespace crypto
 

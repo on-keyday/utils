@@ -60,6 +60,7 @@ namespace futils {
                 auto ctx = use_default_context<DefaultTypeConfig>(std::move(conf), logger);
                 auto h = ctx->get_streams()->get_conn_handler();
                 using AcceptT = std::decay_t<decltype(accept_callback)>;
+                h->set_auto_increase(true, true, true);
                 auto cb = std::allocate_shared<AcceptT>(glheap_allocator<AcceptT>(), std::move(accept_callback));
                 h->set_arg(std::move(cb));
                 h->set_open_bidi([](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
@@ -68,12 +69,12 @@ namespace futils {
                 h->set_accept_bidi([](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
                     auto cb = static_cast<AcceptT*>(arg.get());
                     stream::impl::set_stream_reader(stream->receiver, auto_update);
-                    (*cb)(stream);
+                    (*cb)(stream, stream::StreamType::bidi);
                 });
                 h->set_accept_uni([](std::shared_ptr<void>& arg, std::shared_ptr<RecvStream> stream) {
                     auto cb = static_cast<AcceptT*>(arg.get());
                     stream::impl::set_stream_reader(*stream, auto_update);
-                    (*cb)(stream);
+                    (*cb)(stream, stream::StreamType::uni);
                 });
                 return ctx;
             }

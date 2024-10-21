@@ -22,7 +22,7 @@ namespace futils {
             return true;
         }
 
-        Config use_default_config(tls::TLSConfig&& tls, log::ConnLogger log = {}) {
+        inline Config use_default_config(tls::TLSConfig&& tls, log::ConnLogger log = {}) {
             Config config;
             config.tls_config = std::move(tls);
             config.connid_parameters.random = futils::fnet::quic::connid::Random{

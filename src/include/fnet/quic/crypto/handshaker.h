@@ -304,12 +304,20 @@ namespace futils {
                         return error::Error("invalid packet type for crypto frame", error::Category::lib, error::fnet_quic_implementation_bug);
                 }
                 if (err && (flags & flag_alert)) {
+                    auto desc = tls::get_alert_desc(alert_code);
+                    error::Error base_err = std::move(err);
+                    if (desc.size()) {
+                        base_err = error::ErrList{
+                            .err = std::move(base_err),
+                            .before = futils::error::StrError<view::rvec>{.str = desc},
+                        };
+                    }
                     err = QUICError{
                         .msg = "error occurred while cryptographic handshake",
                         .transport_error = to_CRYPTO_ERROR(alert_code),
                         .packet_type = type,
                         .frame_type = FrameType::CRYPTO,
-                        .base = std::move(err),
+                        .base = std::move(base_err),
                     };
                 }
                 return err;

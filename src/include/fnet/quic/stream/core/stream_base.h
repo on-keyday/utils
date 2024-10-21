@@ -61,10 +61,10 @@ namespace futils {
         };
 
         // returns (result,blocked_limit_if_blocked)
-        // faireness_limit is limit usage for other stream usage
+        // fairness_limit is limit usage for other stream usage
         template <class TConfig>
         constexpr std::pair<IOResult, std::uint64_t> send_impl(
-            frame::fwriter& w, ConnectionBase<TConfig>& conn, StreamID id, std::uint64_t faireness_limit,
+            frame::fwriter& w, ConnectionBase<TConfig>& conn, StreamID id, std::uint64_t fairness_limit,
             SendUniStreamState& state, StreamWriteData& data, auto&& save_fragment) {
             if (!state.can_send()) {
                 return {IOResult::not_in_io_state, 0};  // cannot sendable on this state
@@ -81,7 +81,7 @@ namespace futils {
             }
 
             // adjust payload size for fairness among streams
-            const auto adjust_data_size = remain_data_size < faireness_limit ? remain_data_size : faireness_limit;
+            const auto adjust_data_size = remain_data_size < fairness_limit ? remain_data_size : fairness_limit;
 
             const auto stream_flow_limit = state.sendable_size();
             // decide stream payload size temporary
@@ -185,8 +185,8 @@ namespace futils {
             }
 
             template <class ConnLock>
-            constexpr std::pair<IOResult, std::uint64_t> send_stream(ConnectionBase<ConnLock>& conn, frame::fwriter& w, std::uint64_t faireness_limit, auto&& save_fragment) {
-                return send_impl(w, conn, id, faireness_limit, state, data, save_fragment);
+            constexpr std::pair<IOResult, std::uint64_t> send_stream(ConnectionBase<ConnLock>& conn, frame::fwriter& w, std::uint64_t fairness_limit, auto&& save_fragment) {
+                return send_impl(w, conn, id, fairness_limit, state, data, save_fragment);
             }
 
             // return false is no error

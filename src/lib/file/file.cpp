@@ -77,26 +77,14 @@ namespace futils::file {
         else {
             create = OPEN_EXISTING;
         }
-        std::uint32_t attr = FILE_ATTRIBUTE_NORMAL;
-        if (!mode.perm().owner_write()) {
-            attr = FILE_ATTRIBUTE_READONLY;
-        }
         SECURITY_ATTRIBUTES sec{}, *psec = nullptr;
         if (!flag.close_on_exec()) {
             sec.nLength = sizeof(sec);
             sec.bInheritHandle = true;
             psec = &sec;
         }
-        if (flag.non_block()) {
-            attr |= FILE_FLAG_OVERLAPPED;
-        }
-        if (flag.direct()) {
-            attr |= FILE_FLAG_NO_BUFFERING;
-        }
-        if (flag.sync()) {
-            attr |= FILE_FLAG_WRITE_THROUGH;
-        }
 
+        std::uint32_t attr = FILE_ATTRIBUTE_NORMAL;
         if (!mode.perm().owner_write()) {
             attr = FILE_ATTRIBUTE_READONLY;
             if (mode == CREATE_ALWAYS) {
@@ -106,6 +94,15 @@ namespace futils::file {
                 }
                 return File{reinterpret_cast<std::uintptr_t>(h)};
             }
+        }
+        if (flag.non_block()) {
+            attr |= FILE_FLAG_OVERLAPPED;
+        }
+        if (flag.direct()) {
+            attr |= FILE_FLAG_NO_BUFFERING;
+        }
+        if (flag.sync()) {
+            attr |= FILE_FLAG_WRITE_THROUGH;
         }
         if (create == OPEN_EXISTING && access == GENERIC_READ) {
             attr |= FILE_FLAG_BACKUP_SEMANTICS;
@@ -140,7 +137,7 @@ namespace futils::file {
             case ErrorCode::broken_pipe:
                 return ERROR_BROKEN_PIPE;
             case ErrorCode::interrupted:
-                return -1; // no
+                return -1;  // no
             default:
                 return -1;
         }

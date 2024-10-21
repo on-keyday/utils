@@ -48,8 +48,8 @@ namespace futils {
                 return true;
             }
 
-            template <class Result>
-            constexpr bool encode_int(Result& result, const size_t bias, const size_t delta) {
+            template <class Header>
+            constexpr bool encode_int(Header& result, const size_t bias, const size_t delta) {
                 size_t i, k, q, t;
 
                 i = 0;

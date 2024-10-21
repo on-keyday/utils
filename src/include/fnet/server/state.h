@@ -16,6 +16,8 @@
 #include <cstdint>
 #include "../../thread/channel.h"
 #include <memory>
+#include <fnet/quic/server/server.h>
+#include <fnet/quic/quic.h>
 
 namespace futils {
     namespace fnet {
@@ -31,20 +33,28 @@ namespace futils {
                 std::atomic_uint32_t current_handler_thread;
                 // current acceptor thread
                 std::atomic_uint32_t current_acceptor_thread;
-                // current waiting IOCP/epoll call count
+                // current waiting IOCP/epoll read call count
                 std::atomic_uint32_t waiting_async_read;
+                // current waiting IOCP/epoll write call count
+                std::atomic_uint32_t waiting_async_write;
                 // current enqueued count
                 std::atomic_uint32_t current_enqueued;
-                // total IOCP/epoll call count
-                std::atomic_uint64_t total_async_invocation;
-                // max concurrent IOCP/epoll call count
-                std::atomic_uint32_t max_concurrent_async_invocation;
+                // total IOCP/epoll read call count
+                std::atomic_uint64_t total_async_read_invocation;
+                // total IOCP/epoll write call count
+                std::atomic_uint64_t total_async_write_invocation;
+                // max concurrent IOCP/epoll read call count (estimated)
+                std::atomic_uint32_t max_concurrent_async_read_invocation;
+                // max concurrent IOCP/epoll write call count (estimated)
+                std::atomic_uint32_t max_concurrent_async_write_invocation;
                 // total accept called
                 std::atomic_uint64_t total_accepted;
                 // total accept failure
                 std::atomic_uint64_t total_failed_accept;
-                // total IOCP/epoll call failure
-                std::atomic_uint64_t total_failed_async;
+                // total IOCP/epoll read call failure
+                std::atomic_uint64_t total_failed_read_async;
+                // total IOCP/epoll write call failure
+                std::atomic_uint64_t total_failed_write_async;
                 // total queued user defined operation
                 std::atomic_uint64_t total_queued;
                 // total launched thread count
@@ -108,8 +118,18 @@ namespace futils {
 
             using ServerEntry = void (*)(void*, Client&&, StateContext);
 
+            struct State;
+
+            struct QUICServerState {
+                std::weak_ptr<State> state;
+                fnet::quic::server::ServerConfig<fnet::quic::use::smartptr::DefaultTypeConfig> original_config;
+                std::weak_ptr<fnet::quic::server::HandlerMap<fnet::quic::use::smartptr::DefaultTypeConfig>> handler;
+            };
+
             struct fnetserv_class_export State : std::enable_shared_from_this<State> {
                 using log_t = void (*)(log_level, NetAddrPort* addr, error::Error& err);
+                using quic_handler = fnet::quic::server::HandlerMap<fnet::quic::use::smartptr::DefaultTypeConfig>;
+                using quic_server_config = fnet::quic::server::ServerConfig<fnet::quic::use::smartptr::DefaultTypeConfig>;
 
                private:
                 Counter count;
@@ -124,6 +144,11 @@ namespace futils {
                 void check_and_start();
                 static void handler_thread(std::shared_ptr<State> state);
                 static void accept_thread(Socket, std::shared_ptr<State> state);
+
+                static void quic_send_thread(std::shared_ptr<State> state, fnet::Socket s, std::shared_ptr<quic_handler> handler);
+                static void quic_recv_handler(std::shared_ptr<State> state, fnet::Socket s, std::shared_ptr<quic_handler> handler);
+                static void quic_send_scheduler(std::shared_ptr<State> state, std::shared_ptr<quic_handler> handler);
+                static void quic_recv_scheduler(std::shared_ptr<State> state, std::shared_ptr<quic_handler> handler);
                 friend struct StateContext;
 
                public:
@@ -139,6 +164,11 @@ namespace futils {
                     count.max_handler_thread = 12;
                 }
 
+                // for http3 handler
+                void* get_ctx() const {
+                    return ctx;
+                }
+
                 void set_log(log_t ev) {
                     log_evt = ev;
                 }
@@ -147,6 +177,13 @@ namespace futils {
                 // accept_thread launches handler_thread on demand
                 // and invokes user defined handlers
                 void add_accept_thread(Socket&& listener);
+
+                // add_quic_thread launches new quic_send_thread, quic_send_scheduler, quic_recv_scheduler and start quic_recv_handler
+                // some fields of serv_conf will be modified
+                // serv_conf.app_ctx will be set to QUICServerState with this pointer and original_config
+                void add_quic_thread(Socket&& listener, std::shared_ptr<quic_handler> handler,
+                                     fnet::quic::context::Config&& conf,
+                                     quic_server_config serv_conf);
 
                 const Counter& state() const {
                     return count;
@@ -177,13 +214,39 @@ namespace futils {
                 // serve serves request with listener
                 // this function is not return until notify() is called
                 // cb(user) is called on each loop
-                bool serve(Socket& listener, bool (*cb)(void*), void* user);
+                bool serve(expected<std::pair<Socket, NetAddrPort>> (*listener)(void*), void* listener_p, bool (*cb)(void*), void* user);
 
                 // this function is easy wrapper of original serve function
                 bool serve(Socket& listener, auto&& fn) {
                     auto ptr = std::addressof(fn);
                     return serve(
-                        listener, [](void* p) -> bool {
+                        [](void* p) {
+                            auto s = (Socket*)p;
+                            return s->accept_select(0, 1000);
+                        },
+                        &listener,
+                        [](void* p) -> bool {
+                            auto& call = (*decltype(ptr)(p));
+                            if constexpr (std::is_same_v<decltype(call()), void>) {
+                                call();
+                                return true;
+                            }
+                            else {
+                                return bool(call());
+                            }
+                        },
+                        ptr);
+                }
+
+                // this function is easy wrapper of original serve function
+                bool serve(auto&& listener, auto&& fn) {
+                    auto ptr = std::addressof(fn);
+                    return serve(
+                        [](void* p) {
+                            return (*decltype(std::addressof(listener))(p))();
+                        },
+                        std::addressof(listener),
+                        [](void* p) -> bool {
                             auto& call = (*decltype(ptr)(p));
                             if constexpr (std::is_same_v<decltype(call()), void>) {
                                 call();
@@ -203,7 +266,7 @@ namespace futils {
                 }
 
                private:
-                auto async_callback(auto&& fn, auto&& context) {
+                auto async_read_callback(auto&& fn, auto&& context) {
                     return async_notify_then(
                         std::forward<decltype(context)>(context),
                         // HACK(on-keyday): in this case, this pointer is valid via th of runner function
@@ -236,23 +299,63 @@ namespace futils {
 
                 // fn is void(Socket&& sock,auto&& context,StateContext&&)
                 // context.get_buffer() returns view::wvec for reading buffer
-                // context.add_data(view::rvec) appends application data
+                // context.add_data(view::rvec,StateContext) appends application data
                 bool read_async(Socket& sock, auto fn, auto&& context) {
                     // use explicit clone
                     // context may contains sock self, and then read_async moves sock into heap and
                     // finally fails to call read_async
                     // so use cloned sock
                     auto s = sock.clone();
-                    auto result = s.read_async_deferred(async_callback(std::forward<decltype(fn)>(fn), std::forward<decltype(context)>(context)));
+                    auto result = s.read_async_deferred(async_read_callback(std::forward<decltype(fn)>(fn), std::forward<decltype(context)>(context)));
                     if (!result) {
-                        count.total_failed_async++;
+                        count.total_failed_read_async++;
                         auto addr = s.get_remote_addr();
                         log(log_level::warn, addr.value_ptr(), result.error());
                         return false;
                     }
-                    count.total_async_invocation++;
+                    count.total_async_read_invocation++;
                     auto concur = ++count.waiting_async_read - 1;
-                    count.max_concurrent_async_invocation.compare_exchange_strong(concur, concur + 1);
+                    count.max_concurrent_async_read_invocation.compare_exchange_strong(concur, concur + 1);
+                    return true;
+                }
+
+                auto async_write_callback(auto&& fn, auto&& context) {
+                    return async_notify_then(
+                        std::forward<decltype(context)>(context),
+                        // HACK(on-keyday): in this case, this pointer is valid via th of runner function
+                        // so use this pointer instead of shared_from_this()
+                        [this](DeferredCallback&& n) { this->enqueue_callback(std::move(n)); },
+                        [th = shared_from_this(), fn](Socket&& s, auto&& context, NotifyResult&& w) mutable {
+                            th->count.waiting_async_write--;
+                            auto result = w.write_unwrap(context.get_buffer(), [&](view::rvec buf) {
+                                return s.write(buf);
+                            });
+                            if (!result) {
+                                if (th->log_evt) {
+                                    auto addr = s.get_remote_addr();
+                                    th->log_evt(log_level::warn, addr.value_ptr(), result.error());
+                                }
+                            }
+                            view::rvec remain;
+                            if (result) {
+                                remain = *result;
+                            }
+                            fn(std::move(s), std::move(context), remain, {th}, (bool)result.error_ptr());
+                        });
+                }
+
+                bool write_async(Socket& sock, auto&& fn, auto&& context) {
+                    auto s = sock.clone();
+                    auto result = s.write_async_deferred(async_write_callback(std::forward<decltype(fn)>(fn), std::forward<decltype(context)>(context)));
+                    if (!result) {
+                        count.total_failed_write_async++;
+                        auto addr = s.get_remote_addr();
+                        log(log_level::warn, addr.value_ptr(), result.error());
+                        return false;
+                    }
+                    count.total_async_write_invocation++;
+                    auto concur = ++count.waiting_async_write - 1;
+                    count.max_concurrent_async_write_invocation.compare_exchange_strong(concur, concur + 1);
                     return true;
                 }
 
@@ -267,6 +370,7 @@ namespace futils {
                private:
                 std::shared_ptr<State> s;
                 friend struct State;
+                friend struct MakeStateContext;  // for http3 handler
                 StateContext(const std::shared_ptr<State>& s)
                     : s(s) {}
 
@@ -276,10 +380,16 @@ namespace futils {
                                          std::forward<decltype(context)>(context));
                 }
 
+                bool write_async(Socket& sock, auto&& context, auto fn) {
+                    return s->write_async(sock, std::forward<decltype(fn)>(fn),
+                                          std::forward<decltype(context)>(context));
+                }
+
                 void log(log_level level, NetAddrPort* addr, auto&& err) {
                     auto l = s->log_evt;
                     if (l) {
-                        l(level, addr, err);
+                        auto err2 = error::Error(std::forward<decltype(err)>(err));
+                        l(level, addr, err2);
                     }
                 }
 
@@ -331,5 +441,5 @@ namespace futils {
             }
 
         }  // namespace server
-    }      // namespace fnet
+    }  // namespace fnet
 }  // namespace futils

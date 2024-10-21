@@ -18,9 +18,9 @@ int main() {
         wave[i].real = std::sin(2 * pi * i / N) + std::cos(2 * pi * i / N / 4) + std::sin(i * 2 * pi / N / 8);
         wave[i].imag = 0;
     }
-    futils::math::fft::complex_vec sin_wave_vec(wave, N);
-    futils::math::fft::complex_vec dft_vec(dft, N);
-    futils::math::fft::complex_vec idft_vec(idft, N);
+    futils::math::fft::complex_vec sin_wave_vec{wave, N};
+    futils::math::fft::complex_vec dft_vec{dft, N};
+    futils::math::fft::complex_vec idft_vec{idft, N};
     futils::math::fft::dft(dft_vec, sin_wave_vec);
     futils::math::fft::idft(idft_vec, dft_vec);
     futils::wrap::cout_wrap() << "index,sin_wave(scaled),dft,idft(scaled)\n";
