@@ -64,19 +64,19 @@ namespace futils {
         }
 
         template <class Out>
-        constexpr void cursor_abs(Out&& buf, size_t n, size_t m) {
+        constexpr void cursor_abs(Out&& buf, size_t x, size_t y) {
             buf.push_back(escape_sequence_mark);
             buf.push_back('[');
-            number::to_string(buf, n);
+            number::to_string(buf, y);
             buf.push_back(';');
-            number::to_string(buf, m);
+            number::to_string(buf, x);
             buf.push_back('H');
         }
 
         template <class Out = max_sequence_buffer>
-        constexpr Out cursor_abs(size_t n, size_t m) {
+        constexpr Out cursor_abs(size_t x, size_t y) {
             Out o;
-            cursor_abs(o, n, m);
+            cursor_abs(o, x, y);
             return o;
         }
 
@@ -126,7 +126,7 @@ namespace futils {
         }
 
         template <class Out = max_sequence_buffer>
-        constexpr Out console_scroll(EraseTarget t, EraseMode s) {
+        constexpr Out erase(EraseTarget t, EraseMode s) {
             Out o;
             erase(o, t, s);
             return o;
@@ -351,6 +351,47 @@ namespace futils {
             Out o;
             cursor_blink(o, b);
             return o;
+        }
+
+        template <class Out>
+        constexpr void window_size(Out&& buf, size_t x, size_t y) {
+            buf.push_back(escape_sequence_mark);
+            buf.push_back('[');
+            buf.push_back('8');
+            buf.push_back(';');
+            number::to_string(buf, y);
+            buf.push_back(';');
+            number::to_string(buf, x);
+            buf.push_back('t');
+        }
+
+        template <class Out = max_sequence_buffer>
+        constexpr Out window_size(size_t x, size_t y) {
+            Out o;
+            window_size(o, x, y);
+            return o;
+        }
+
+        template <class Out>
+        constexpr void window_title(Out&& buf, const char* title) {
+            buf.push_back(escape_sequence_mark);
+            buf.push_back(']');
+            buf.push_back('0');
+            buf.push_back(';');
+            for (size_t i = 0; title[i]; i++) {
+                buf.push_back(title[i]);
+            }
+            buf.push_back(escape_sequence_mark);
+            buf.push_back('\\');
+        }
+
+        template <class Out>
+        constexpr void window_width(Out&& buf, bool expanded) {
+            buf.push_back(escape_sequence_mark);
+            buf.push_back('[');
+            buf.push_back('?');
+            buf.push_back('3');
+            buf.push_back(expanded ? 'h' : 'l');
         }
 
     }  // namespace console::escape

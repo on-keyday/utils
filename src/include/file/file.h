@@ -503,6 +503,20 @@ namespace futils::file {
             return open(buffer.c_str(), flag, mode);
         }
 
+        template <class T>
+            requires internal::has_c_str_for_path<T>
+        static file_result<File> create(T&& filename, Flag flag = O_CREATE_DEFAULT, Mode mode = rw_perm) {
+            return open(static_cast<const wrap::path_char*>(filename.c_str()), flag, mode);
+        }
+
+        template <class Buffer = wrap::path_string, class T>
+            requires(!internal::has_c_str_for_path<T>)
+        static file_result<File> create(T&& filename, Flag flag = O_CREATE_DEFAULT, Mode mode = rw_perm) {
+            Buffer buffer;
+            utf::convert<0, sizeof(wrap::path_char)>(filename, buffer);
+            return open(buffer.c_str(), flag, mode);
+        }
+
         file_result<void> close();
 
         ~File() {

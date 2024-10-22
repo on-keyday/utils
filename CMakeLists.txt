@@ -131,6 +131,7 @@ add_executable(io_stream "src/test/binary/test_io_stream.cpp")
 add_executable(hexfilter "src/test/number/test_hexfilter.cpp")
 add_executable(arbnum "src/test/binary/test_arbnum.cpp")
 add_executable(jit_coroutine "src/test/jit/test_jit_coroutine.cpp")
+add_executable(console_window "src/test/console/test_window.cpp")
 
 # tests(fnet)
 add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")
@@ -204,6 +205,8 @@ add_executable(oslbgen "src/tool/oslbgen/main.cpp"
 add_executable(ping "src/tool/ping/main.cpp")
 
 add_executable(enumgen "src/tool/enumgen/main.cpp")
+
+add_executable(hwrpg "src/tool/hwrpg/main.cpp")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
@@ -367,6 +370,7 @@ target_link_libraries(derive2 futils)
 target_link_libraries(fft futils)
 target_link_libraries(hpack futils)
 target_link_libraries(jit_coroutine futils)
+target_link_libraries(console_window futils)
 
 # test(libfnet)
 target_link_libraries(fnet_socket fnet)
@@ -413,6 +417,7 @@ target_link_libraries(oslbgen futils)
 target_link_libraries(langc futils)
 target_link_libraries(ping futils fnet coro)
 target_link_libraries(enumgen futils)
+target_link_libraries(hwrpg futils)
 
 
 if(LLVM_FOUND)

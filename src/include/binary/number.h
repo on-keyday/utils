@@ -65,6 +65,11 @@ namespace futils {
         template <class T, class C>
         constexpr bool write_num(basic_writer<C>& w, T val, bool be = true) {
             if (!w.prepare_stream(sizeof(T))) {
+                if (w.is_direct_stream()) {
+                    byte data[sizeof(T)];
+                    write_into(data, val, be);
+                    return w.write(view::rvec(data, sizeof(T)));
+                }
                 return false;
             }
             auto rem = w.remain();
@@ -76,14 +81,21 @@ namespace futils {
         template <class... T, class C>
         constexpr bool write_num_bulk(basic_writer<C>& w, bool be, T... val) {
             constexpr auto size = (... + sizeof(val));
-            auto rem = w.remain();
-            if (rem.size() < size) {
-                return false;
-            }
             auto bulk = [&](auto& v, view::wvec& data) {
                 binary::write_into(data, v, be);
                 data = view::wvec(data.data() + sizeof(v), data.size() - sizeof(v));
             };
+            auto rem = w.remain();
+            if (rem.size() < size) {
+                if (w.is_direct_stream()) {
+                    byte data[size];
+                    auto d = view::wvec(data, size);
+                    (..., bulk(val, d));
+                    return w.write(data);
+                }
+                return false;
+            }
+
             (..., bulk(val, rem));
             w.offset(size);
             return true;
@@ -96,6 +108,13 @@ namespace futils {
             }
             auto rem = w.remain();
             if (rem.size() < 3) {
+                if (w.is_direct_stream()) {
+                    byte data[3];
+                    data[1] = (val >> 8) & 0xff;
+                    data[be ? 0 : 2] = (val >> 16) & 0xff;
+                    data[be ? 2 : 0] = val & 0xff;
+                    return w.write(view::rvec(data, 3));
+                }
                 return false;
             }
             rem[1] = (val >> 8) & 0xff;
@@ -216,5 +235,5 @@ namespace futils {
             static_assert(check_uint24());
             static_assert(check_bulk());
         }  // namespace test
-    }      // namespace binary
+    }  // namespace binary
 }  // namespace futils

@@ -1,0 +1,9 @@
+{
+  "version": "1.0.0",
+  "phases": [
+    {
+      "name": "prologue",
+      "script": "./script/prologue.hwtxt"
+    }
+  ]
+}

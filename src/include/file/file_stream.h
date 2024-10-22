@@ -106,9 +106,9 @@ namespace futils::file {
             auto d = helper::defer([&] { self->lock.unlock(); });
             auto res = self->file.write_file_all(to_commit);
             d.execute();
-            if(!res){
+            if (!res) {
                 self->error = res.error();
-                self->eof=true;
+                self->eof = true;
                 return;
             }
             size_t total_written = buf.size() - to_commit.size();
@@ -119,6 +119,28 @@ namespace futils::file {
             c.direct_drop(total_written);
             self->buffer.resize(c.buffer().size());
             c.replace_buffer(self->buffer);
+        }
+
+        static bool direct_write(void* ctx, view::basic_rvec<byte> w, size_t count) {
+            auto self = static_cast<FileStream*>(ctx);
+            self->lock.lock();
+            auto d = helper::defer([&] { self->lock.unlock(); });
+            for (size_t i = 0; i < count; i++) {
+                auto res = self->file.write_file_all(w);
+                if (!res) {
+                    self->error = res.error();
+                    self->eof = true;
+                    return false;
+                }
+            }
+            d.execute();
+            return true;
+        }
+
+        static void direct_buffer(void* ctx, view::basic_wvec<byte>& w, size_t expected) {
+            auto self = static_cast<FileStream*>(ctx);
+            self->buffer.resize(expected);
+            w = view::basic_wvec<byte>(self->buffer);
         }
 
         static void finalize(void* ctx, binary::CommitContract<byte> c) {
@@ -148,6 +170,15 @@ namespace futils::file {
             .destroy = finalize,
         };
 
+        static constexpr binary::WriteStreamHandler<byte> direct_write_handler = {
+            .full = [](void* self, size_t) {
+                auto fs = static_cast<FileStream*>(self);
+                return fs->eof;
+            },
+            .direct_write = direct_write,
+            .direct_buffer = direct_buffer,
+        };
+
        public:
         static auto get_read_handler() {
             return &read_handler;
@@ -155,6 +186,10 @@ namespace futils::file {
 
         static auto get_write_handler() {
             return &write_handler;
+        }
+
+        static auto get_direct_write_handler() {
+            return &direct_write_handler;
         }
     };
 }  // namespace futils::file

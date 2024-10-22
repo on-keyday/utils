@@ -24,6 +24,9 @@ namespace futils {
             bool (*full)(void* ctx, size_t index) = nullptr;
             void (*init)(void* ctx, view::basic_wvec<C>& w) = nullptr;
             void (*write)(void* ctx, WriteContract<C>) = nullptr;
+            // this is optional. when use this, buffer will not be used
+            void (*direct_buffer)(void* ctx, view::basic_wvec<C>& w, size_t expected) = nullptr;
+            bool (*direct_write)(void* ctx, view::basic_rvec<C> w, size_t count) = nullptr;
             void (*commit)(void* ctx, CommitContract<C>) = nullptr;
             // maybe null
             void (*destroy)(void* ctx, CommitContract<C>) = nullptr;
@@ -59,6 +62,56 @@ namespace futils {
                         handler->write(ctx, WriteContract<C>{w, index, n});
                     }
                 }
+            }
+
+            constexpr std::pair<bool, bool> direct_write(view::basic_rvec<C> t) {
+                if (handler && handler->direct_write) {
+                    return {true, handler->direct_write(ctx, t, 1)};
+                }
+                return {false, false};
+            }
+
+            constexpr std::pair<bool, bool> direct_write(C data, size_t n) {
+                if (handler && handler->direct_write) {
+                    if (handler->direct_buffer) {
+                        view::basic_wvec<C> tmpbuf;
+                        handler->direct_buffer(ctx, tmpbuf, n);
+                        if (tmpbuf.size() == n) {
+                            for (size_t i = 0; i < n; i++) {
+                                tmpbuf[i] = data;
+                            }
+                            return {true, handler->direct_write(ctx, tmpbuf, n)};
+                        }
+                    }
+                    view::basic_wvec<C> t{&data, 1};
+                    return {true, handler->direct_write(ctx, t, n)};
+                }
+                return {false, false};
+            }
+
+            template <internal::ArrayReadableBuffer<C> T>
+            constexpr std::pair<bool, bool> direct_write(T&& t) {
+                if (handler && handler->direct_write) {
+                    if (handler->direct_buffer) {
+                        view::basic_wvec<C> tmpbuf;
+                        handler->direct_buffer(ctx, tmpbuf, t.size());
+                        if (tmpbuf.size() == t.size()) {
+                            for (size_t i = 0; i < t.size(); i++) {
+                                tmpbuf[i] = t[i];
+                            }
+                            return {true, handler->direct_write(ctx, tmpbuf, t.size())};
+                        }
+                    }
+                    for (size_t i = 0; i < t.size(); i++) {
+                        C data = t[i];
+                        view::basic_wvec<C> tt{&data, 1};
+                        if (!handler->direct_write(ctx, tt, 1)) {
+                            return {true, false};
+                        }
+                    }
+                    return {true, true};
+                }
+                return {false, false};
             }
 
             constexpr void offset_internal(size_t add) {
@@ -170,6 +223,12 @@ namespace futils {
 
             constexpr bool write(C data, size_t n) {
                 stream_write(n);
+                if (auto [called, ok] = direct_write(data, n); called) {
+                    if (ok) {
+                        offset_internal(n);
+                    }
+                    return ok;
+                }
                 auto rem = w.substr(index, n);
                 for (auto& d : rem) {
                     d = data;
@@ -180,6 +239,12 @@ namespace futils {
 
             constexpr bool write(view::basic_rvec<C> t) {
                 stream_write(t.size());
+                if (auto [called, ok] = direct_write(t); called) {
+                    if (ok) {
+                        offset_internal(t.size());
+                    }
+                    return ok;
+                }
                 constexpr auto copy_ = view::make_copy_fn<C>();
                 auto res = copy_(w.substr(index), t);
                 if (res < 0) {
@@ -195,6 +260,12 @@ namespace futils {
             template <internal::ArrayReadableBuffer<C> T>
             constexpr bool write(T&& t) {
                 stream_write(t.size());
+                if (auto [called, ok] = direct_write(t); called) {
+                    if (ok) {
+                        offset_internal(t.size());
+                    }
+                    return ok;
+                }
                 auto to_write = w.substr(index, t.size());
                 for (size_t i = 0; i < to_write.size(); i++) {
                     to_write[i] = t[i];
@@ -205,6 +276,12 @@ namespace futils {
 
             constexpr basic_writer& push_back(C add) {
                 stream_write(1);
+                if (auto [called, ok] = direct_write(add, 1); called) {
+                    if (ok) {
+                        offset_internal(1);
+                    }
+                    return *this;
+                }
                 auto sub = w.substr(index);
                 if (sub.empty()) {
                     return *this;
@@ -260,8 +337,14 @@ namespace futils {
                 return remain().size() >= n;
             }
 
+            // is_stream returns true if the write stream is active
             constexpr bool is_stream() const {
                 return handler != nullptr;
+            }
+
+            // is_direct_stream returns true if the write stream is direct
+            constexpr bool is_direct_stream() const {
+                return handler && handler->direct_write;
             }
         };
 
