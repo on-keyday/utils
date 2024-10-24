@@ -1,0 +1,62 @@
+#$input - ユーザー入力
+#$result - コマンド実行結果がokかどうか(特殊変数などへの代入操作時などに設定)
+#$save_data - セーブデータオブジェクト(特殊変数)
+
+func prologue
+
+speed 100
+wait 100
+
+new_prompt はるか昔、海の真ん中にぽつんと浮かぶ島がありました。
+
+new_prompt その名も ハローアイランド。
+
+new_prompt この島に住む人々はみな、口癖のようにこう言います。
+
+speed 50
+add_text  
+> 「Hello World!」
+
+
+prompt
+
+speed 100
+add_text  
+> それは、太陽が昇る朝にも、雨が降る夜にも、いつだって挨拶代わりの言葉でした。
+
+prompt
+
+new_prompt 島の人々は笑顔に包まれ、世界がどんなに広くとも、
+> この小さな島が彼らのすべてでした。
+
+new_prompt そんなハローアイランドに、一人の少年が住んでいました。
+
+while true
+
+  new_prompt ! 主人公の名前を入力してください
+
+  $player_name = $input
+
+  $save_data.players[0].name = $player_name
+
+  if $result
+    break
+  end
+
+end
+
+
+new_prompt 少年の名は$player_name
+
+new_prompt 幼いころから自然と遊ぶことが好きで、特に島の大きな木の下で過ごす時間を何より大切にしていました。
+
+new_prompt しかし、$player_nameは心の奥で感じていたのです。
+new_prompt 「この島の外には、もっと広い世界があるのだろうか？」
+new_prompt 誰もが笑顔で「Hello World!」と挨拶する日々の中で、$player_nameの心は何か大きなものを求め始めていました。
+
+$save_data.location = "ハローアイランド"
+
+end
+
+$prologue()
+phase prologue2

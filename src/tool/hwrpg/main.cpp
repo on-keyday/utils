@@ -15,105 +15,60 @@
 #include "save_data.h"
 #include <file/file_stream.h>
 #include <filesystem>
+#include "game.h"
+#include <signal.h>
+
 struct Flags : futils::cmdline::templ::HelpOption {
     futils::wrap::path_string save_data_dir;
     bool make_embed_file = false;
+    bool verify_embed_file = false;
+    bool make_embed_before_start = false;
+    std::string embed_file_location;
+    std::string embed_index_location;
+    std::string embed_dir_location;
     void bind(futils::cmdline::option::Context& ctx) {
         bind_help(ctx);
-        ctx.VarString(&save_data_dir, "s,save-data-dir", "save data directory", "DIR", futils::cmdline::option::CustomFlag::required);
+        ctx.VarString(&save_data_dir, "s,save-data-dir", "save data directory", "DIR");
         ctx.VarBool(&make_embed_file, "e,embed", "make embed file (development only)");
+        ctx.VarBool(&verify_embed_file, "v,verify", "verify embed file (development only)");
+        ctx.VarBool(&make_embed_before_start, "m,make-embed", "make embed file before start (development only)");
+        ctx.VarString(&embed_file_location, "embed-file", "embed file location", "FILE");
+        ctx.VarString(&embed_index_location, "embed-index", "embed index location", "FILE");
+        ctx.VarString(&embed_dir_location, "embed-dir", "embed directory location", "DIR");
     }
 };
 auto& cout = futils::wrap::cout_wrap();
 auto& cin = futils::wrap::cin_wrap();
-constexpr auto text_layout = futils::console::make_layout_data<80, 10>(2);
-constexpr auto center_layout = futils::console::make_layout_data<80, 10>(4);
-namespace ansiesc = futils::console::escape;
-namespace fs = std::filesystem;
-struct TextController {
-    futils::console::Window layout;
-    void write_text(futils::view::rvec data) {
-        std::string buffer;
-        futils::binary::writer w{futils::binary::resizable_buffer_writer<std::string>(), &buffer};
-        layout.draw(w, data);
-        cout << w.written();
-    }
-
-    void write_title(futils::view::rvec title) {
-        layout.reset_layout(center_layout);
-        write_text(title);
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-
-    void move_back() {
-        cout << ansiesc::cursor(ansiesc::CursorMove::up, layout.dy());
-    }
-
-    auto write_story(std::u32string_view text, size_t delay = 100, size_t after_wait = 1000) {
-        cout << ansiesc::cursor_visibility(ansiesc::CursorVisibility::hide);
-        move_back();
-        layout.reset_layout(text_layout);
-        write_text("");
-        if (delay == 0) {
-            move_back();
-            write_text(futils::utf::convert<std::string>(text));
-            std::this_thread::sleep_for(std::chrono::milliseconds(after_wait));
-            return;
-        }
-        std::string output;
-        std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-        for (size_t i = 0; i < text.size(); i++) {
-            move_back();
-            output = futils::utf::convert<std::string>(text.substr(0, i + 1));
-            write_text(output);
-            std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(after_wait));
-    };
-
-    auto show_cursor() {
-        cout << ansiesc::cursor_visibility(ansiesc::CursorVisibility::show);
-    }
-
-    auto write_prompt(std::u32string_view text, size_t delay = 100, size_t after_wait = 1000) {
-        write_story(text, delay, after_wait);
-        cout << ansiesc::erase(ansiesc::EraseTarget::line, ansiesc::EraseMode::back_of_cursor);
-        cout << ansiesc::cursor_visibility(ansiesc::CursorVisibility::show);
-        cout << "> ";
-        std::string answer;
-        cin >> answer;
-        while (!answer.empty() && (answer.back() == '\n' || answer.back() == '\r')) {
-            answer.pop_back();
-        }
-        cout << ansiesc::cursor_visibility(ansiesc::CursorVisibility::hide);
-        cout << ansiesc::cursor(ansiesc::CursorMove::up, 1);
-        return answer;
-    };
-};
+bool signaled = false;
 
 struct Menu {
-    UIState state = UIState::start;
-    SaveData save_data;
+    save::UIState state = save::UIState::start;
+    save::SaveData save_data;
+    futils::wrap::path_string save_data_path;
+
     void show_title(TextController& text) {
         std::string buf;
         ansiesc::window_title(buf, "Hello, World! - とある世界の物語");
         cout << buf;
+        text.clear_screen();
+        text.layout.reset_layout(center_layout);
         text.write_title("Hello, World! - とある世界の物語");
+        text.layout.reset_layout(text_layout);
     }
 
     void show_menu(TextController& text) {
         auto result = text.write_prompt(U"メニュー\n\n1. はじめる\n2. セーブデータを作る\n3. セーブデータを消す\n4. やめる", 0, 0);
         if (result == "1") {
-            state = UIState::save_data_select;
+            state = save::UIState::save_data_select;
         }
         else if (result == "2") {
-            state = UIState::create_save_data;
+            state = save::UIState::create_save_data;
         }
         else if (result == "3") {
-            state = UIState::delete_save_data;
+            state = save::UIState::delete_save_data;
         }
         else if (result == "4") {
-            state = UIState::ending;
+            state = save::UIState::ending;
         }
     }
 
@@ -124,29 +79,29 @@ struct Menu {
         }
         auto save_data_name = text.write_prompt(U"セーブデータ名を入力してください。(enterでキャンセル)", 0, 0);
         if (save_data_name == "") {
-            state = UIState::confrontation;
+            state = save::UIState::confrontation;
             return;
         }
         save_data_name += ".hwrpg";
         auto res = futils::file::File::create((save_data_dir / save_data_name).u8string());
         if (!res) {
             text.write_story(U"セーブデータの作成に失敗しました。", 1);
-            state = UIState::confrontation;
+            state = save::UIState::confrontation;
             return;
         }
         futils::file::FileStream<std::string> fs{*res};
         futils::binary::writer w{fs.get_write_handler(), &fs};
         save_data.version = 1;
-        save_data.phase = StoryPhase::prologue;
-        save_data.location = Location::hello_island;
+        save_data.phase.name = "start";
+        save_data.phase.len.value(5);
         if (auto err = save_data.encode(w)) {
             text.write_story(U"セーブデータの作成に失敗しました。", 0);
-            state = UIState::confrontation;
+            state = save::UIState::confrontation;
             return;
         }
         save_data_name = save_data_name.substr(0, save_data_name.size() - 6);
         text.write_story(U"セーブデータ「" + futils::utf::convert<std::u32string>(save_data_name) + U"」を作成しました。", 0);
-        state = UIState::confrontation;
+        state = save::UIState::confrontation;
     }
 
     void show_save_files(TextController& text, Flags& flags, bool delete_mode = false) {
@@ -154,7 +109,7 @@ struct Menu {
         fs::directory_entry entry{save_data_dir};
         if (!entry.exists()) {
             text.write_story(U"セーブデータが見つかりません。", 0);
-            state = UIState::confrontation;
+            state = save::UIState::confrontation;
             return;
         }
         std::vector<fs::path> save_files;
@@ -169,7 +124,7 @@ struct Menu {
         collect_save_files();
         if (save_files.empty()) {
             text.write_story(U"セーブデータが見つかりません。", 0);
-            state = UIState::confrontation;
+            state = save::UIState::confrontation;
             return;
         }
         constexpr auto prefix = U"セーブデータを選択してください。\n\n";
@@ -193,7 +148,7 @@ struct Menu {
         while (true) {
             auto x = text.write_prompt(prefix + select_3_file(), 0, 0);
             if (x == "c") {
-                state = UIState::confrontation;
+                state = save::UIState::confrontation;
                 return;
             }
             if (x == "p") {
@@ -224,7 +179,7 @@ struct Menu {
                             collect_save_files();
                             if (save_files.empty()) {
                                 text.write_story(U"セーブデータが見つかりません。", 0);
-                                state = UIState::confrontation;
+                                state = save::UIState::confrontation;
                                 return;
                             }
                         }
@@ -242,7 +197,8 @@ struct Menu {
                     text.write_story(U"セーブデータの読み込みに失敗しました。", 0);
                     continue;
                 }
-                state = UIState::game_start;
+                save_data_path = futils::utf::convert<futils::wrap::path_string>(file.u8string());
+                state = save::UIState::game_start;
                 return;
             }
         }
@@ -250,26 +206,26 @@ struct Menu {
 
     bool run(TextController& text, Flags& flags) {
         switch (state) {
-            case UIState::start:
+            case save::UIState::start:
                 show_title(text);
-                state = UIState::confrontation;
+                state = save::UIState::confrontation;
                 break;
-            case UIState::confrontation:
+            case save::UIState::confrontation:
                 show_menu(text);
                 break;
-            case UIState::create_save_data:
+            case save::UIState::create_save_data:
                 create_save_data(text, flags);
                 break;
-            case UIState::save_data_select:
+            case save::UIState::save_data_select:
                 show_save_files(text, flags);
                 break;
-            case UIState::delete_save_data:
+            case save::UIState::delete_save_data:
                 show_save_files(text, flags, true);
                 break;
-            case UIState::game_start:
+            case save::UIState::game_start:
                 text.write_story(U"ゲームを開始します....", 1);
                 return false;
-            case UIState::ending:
+            case save::UIState::ending:
                 text.write_story(U"バイバイ!", 1, 0);
                 return false;
             default:
@@ -280,102 +236,72 @@ struct Menu {
     }
 };
 
-void set_varint_len(Varint& v, std::uint64_t len) {
-    if (len <= 0x3F) {
-        v.prefix(0);
-        v.value(len);
+int Main(Flags& flags, futils::cmdline::option::Context& ctx) {
+    auto target_dir = "./src/tool/hwrpg/data/";
+    auto embed_file = "./src/tool/hwrpg/embed_file.dat";
+    auto embed_index = "./src/tool/hwrpg/embed_file.idx";
+    if (!flags.embed_file_location.empty()) {
+        embed_file = flags.embed_file_location.c_str();
     }
-    else if (len <= 0x3FFF) {
-        v.prefix(1);
-        v.value(len);
+    if (!flags.embed_index_location.empty()) {
+        embed_index = flags.embed_index_location.c_str();
     }
-    else if (len <= 0x3FFFFFFF) {
-        v.prefix(2);
-        v.value(len);
+    if (!flags.embed_dir_location.empty()) {
+        target_dir = flags.embed_dir_location.c_str();
     }
-    else {
-        v.prefix(3);
-        v.value(len);
+    if (flags.make_embed_file) {
+        return make_embed(target_dir, embed_file, embed_index);
     }
-}
-
-int make_embed() {
-    const auto target_dir = "./src/tool/hwrpg/data/";
-    const auto embed_file = "./src/tool/hwrpg/embed_file.dat";
-    const auto embed_index = "./src/tool/hwrpg/embed_file.idx";
-    auto embed_file_data = futils::file::File::create(embed_file);
-    if (!embed_file_data) {
-        cout << "failed to create " << embed_file << embed_file_data.error().error<std::string>() << "\n";
-        return 1;
+    if (flags.verify_embed_file) {
+        return verify_embed(embed_file, embed_index);
     }
-    auto embed_index_data = futils::file::File::create(embed_index);
-    if (!embed_index_data) {
-        cout << "failed to create " << embed_index << embed_index_data.error().error<std::string>() << "\n";
-        return 1;
-    }
-    futils::file::FileStream<std::string> efs{*embed_file_data}, ifs{*embed_index_data};
-    futils::binary::writer ew{efs.get_direct_write_handler(), &efs}, iw{ifs.get_direct_write_handler(), &ifs};
-    auto root_path = fs::path{target_dir};
-    auto entries = fs::recursive_directory_iterator{root_path};
-    std::uint64_t offset = 0;
-    std::uint64_t file_count = 0;
-    for (auto entry : entries) {
-        if (entry.is_regular_file()) {
-            auto path = entry.path();
-            auto data = futils::file::File::open(path.u8string(), futils::file::O_READ_DEFAULT);
-            if (!data) {
-                cout << "failed to open " << path.u8string() << data.error().error<std::string>() << "\n";
-                continue;
-            }
-            auto res = data->mmap(futils::file::r_perm);
-            if (!res) {
-                cout << "warning: failed to mmap " << path.u8string() << res.error().error<std::string>() << "\n";
-                continue;
-            }
-            auto read_view = res->read_view();
-            if (read_view.empty()) {
-                cout << "warning: failed to read " << path.u8string() << "\n";
-                continue;
-            }
-            auto relative_path = fs::relative(path, root_path);
-            auto u8path = relative_path.u8string();
-            EmbedFileIndex file;
-            set_varint_len(file.name.len, u8path.size());
-            file.name.name = futils::view::rvec{u8path};
-            set_varint_len(file.len, read_view.size());
-            set_varint_len(file.offset, offset);
-            offset += read_view.size();
-            if (auto err = file.encode(iw)) {
-                cout << "fatal: failed to encode " << path.u8string() << err.error<std::string>() << "\n";
-                return 1;
-            }
-            if (!ew.write(read_view)) {
-                cout << "fatal: failed to write " << path.u8string() << "\n";
-                return 1;
-            }
-            file_count++;
+    if (flags.make_embed_before_start) {
+        auto res = make_embed(target_dir, embed_file, embed_index);
+        if (res != 0) {
+            return res;
         }
     }
-    if (!futils::binary::write_num(iw, file_count, true)) {
-        cout << "fatal: failed to write file count\n";
+    if (flags.save_data_dir.empty()) {
+        cout << "save data directory is not specified\n";
         return 1;
-    }
-}
-
-int Main(Flags& flags, futils::cmdline::option::Context& ctx) {
-    if (flags.make_embed_file) {
     }
     TextController text{futils::console::Window::create(text_layout, 80, 10).value()};
     Menu menu;
     while (menu.run(text, flags)) {
         ;
     }
+    int res = 0;
+    if (menu.state == save::UIState::game_start) {
+        while (true) {
+            auto gr = run_game(text, menu.save_data, embed_file, embed_index, menu.save_data_path);
+            if (gr == GameEndRequest::reload) {
+                unload_embed();
+                auto tmp = make_embed(target_dir, embed_file, embed_index);
+                if (tmp != 0) {
+                    return tmp;  // cannot reload
+                }
+                text.clear_screen();
+                text.write_story(U"再読み込みします....", 1);
+                continue;
+            }
+            // gr is 1: exit, 2: failure, 3: interrupt, 4: reload
+            // so 1, 2, 3, 4 -> 0, 1, 2, 3
+            res = static_cast<int>(gr) - 1;
+            break;
+        }
+    }
     text.show_cursor();
-    return 0;
+    return res;
+}
+
+void notify_signal(int sig) {
+    signaled = true;
+    signal(sig, notify_signal);
 }
 
 int main(int argc, char** argv) {
     Flags flags;
+    signal(SIGINT, notify_signal);
     return futils::cmdline::templ::parse_or_err<std::string>(
         argc, argv, flags, [](auto&& str, bool err) { cout << str; },
         [](Flags& flags, futils::cmdline::option::Context& ctx) {

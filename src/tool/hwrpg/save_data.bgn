@@ -1,0 +1,55 @@
+
+
+common ::= config.import("common.bgn")
+
+config.cpp.namespace = "save"
+config.cpp.sys_include ="string"
+config.cpp.bytes_type = "std::string"
+
+enum UIState:
+    :u8
+    start
+    confrontation
+    save_data_select
+    create_save_data
+    delete_save_data
+    ending
+    game_start
+
+
+format StoryFlags:
+    reserved:u64
+
+enum ItemID:
+    :u8
+    none
+
+enum ActionID:
+    :u8
+    none
+
+format Item:
+    id :common.Varint
+
+format Action:
+    id :common.Varint
+
+format PlayerData:
+    name :common.Name
+    max_items :u8
+    max_actions :u8
+    item_len :u8
+    items :[item_len]Item
+    action_len :u8
+    actions :[action_len]Action
+
+
+
+format SaveData:
+    version :u8
+    phase: common.Name
+    location :common.Name
+    players_len :u8
+    players :[players_len]PlayerData
+
+

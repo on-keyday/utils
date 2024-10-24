@@ -66,6 +66,78 @@ namespace futils {
             }
         }  // namespace internal
 
+        struct SHA1 {
+           private:
+            std::uint32_t hash[5];
+            std::uint64_t total = 0;
+            std::uint8_t buffer[64] = {};
+            size_t buf_size = 0;
+
+           public:
+            constexpr SHA1() {
+                reset();
+            }
+
+            void clear_buffer() {
+                for (auto& b : buffer) {
+                    b = 0;
+                }
+                buf_size = 0;
+            }
+
+            void reset() {
+                hash[0] = 0x67452301;
+                hash[1] = 0xEFCDAB89;
+                hash[2] = 0x98BADCFE;
+                hash[3] = 0x10325476;
+                hash[4] = 0xC3D2E1F0;
+                total = 0;
+                clear_buffer();
+            }
+
+            template <class T>
+            constexpr void update(T&& t) {
+                auto seq = make_ref_seq(t);
+                while (!seq.eos()) {
+                    buffer[buf_size] = seq.current();
+                    buf_size++;
+                    if (buf_size == 64) {
+                        total += 64 * 8;
+                        internal::calc_sha1(hash, buffer);
+                        clear_buffer();
+                    }
+                    seq.consume();
+                }
+            }
+
+            template <class Out>
+            constexpr void finalize(Out&& out) {
+                auto flush_total = [&]() {
+                    binary::Buf<std::uint64_t> total_buf;
+                    total_buf.write_be(total);
+                    total_buf.into_array(buffer + buf_size, 56);
+                };
+                buffer[buf_size] = 0x80;
+                if (buf_size < 56) {
+                    flush_total();
+                    internal::calc_sha1(hash, buffer);
+                }
+                else {
+                    internal::calc_sha1(hash, buffer);
+                    clear_buffer();
+                    flush_total();
+                    internal::calc_sha1(hash, buffer);
+                }
+                for (auto h : hash) {
+                    binary::Buf<std::uint32_t> buf;
+                    buf.write_be(h);
+                    for (auto k = 0; k < 4; k++) {
+                        out.push_back(buf[k]);
+                    }
+                }
+            }
+        };
+
         template <class T, class Out>
         constexpr bool make_sha1(Sequencer<T>& seq, Out& out) {
             std::uint32_t hash[] = {0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0};

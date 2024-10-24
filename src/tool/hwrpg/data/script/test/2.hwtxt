@@ -1,0 +1,2 @@
+#循環参照テスト
+include script/test/2.hwtxt

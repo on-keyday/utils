@@ -1,0 +1,57 @@
+speed 1
+wait 1
+
+eval $text = "hyper text\n transfer\n"
+eval $text = $text * 2
+new_prompt $text
+
+eval $text = $builtin.to_string(1+1)
+new_prompt 1 + 1 = $text?
+
+if null == null 
+ eval $text = "null is null"
+end
+
+new_prompt $text
+
+if $text != null
+ eval $text = "text is not null"
+end
+
+new_prompt $text
+
+func empty_func
+end
+
+eval $text = $builtin.to_string(null) + $builtin.to_string($empty_func)
+
+new_prompt $text
+
+save
+
+if $result 
+new_prompt データはセーブされました
+else
+new_prompt データのセーブに失敗しました
+end
+
+if false
+else
+  new_prompt この場合はelseになるよ
+end
+
+if false
+ 
+elif $builtin.to_string(2) == "2"
+ new_prompt elifにヒットするよ
+ if true 
+    new_prompt ネストされてもちゃんと動くよ
+ elif false
+    new_prompt これは表示されないはずだよ
+ elif true
+    new_prompt これも表示されないはずだよ
+ end
+else
+new_prompt 嘘!elseにヒット???
+end
+

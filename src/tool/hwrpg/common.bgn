@@ -1,0 +1,11 @@
+format Name:
+    len: Varint
+    name: [len.value]u8
+
+format Varint:
+    prefix :u2
+    match prefix:
+        0 => value: u6
+        1 => value: u14
+        2 => value: u30
+        3 => value: u62

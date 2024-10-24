@@ -1,0 +1,26 @@
+
+eval $result = true
+prompt text
+> new line
+text text
+> new line
+new_text text
+> new line
+exit
+func func_name
+while $expr
+if $expr
+elif $expr
+else
+break
+continue
+speed 100
+wait 100
+delay_offset 100
+layout center
+phase debug
+end
+assert $expr
+return
+save
+reload_script

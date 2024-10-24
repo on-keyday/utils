@@ -1,0 +1,37 @@
+func interact
+    $actions = $args[0]
+    $prompt = $args[1]
+    
+    while true
+        speed 1
+        new_prompt $prompt
+    
+        $action = $builtin.parse_uint($input)
+
+        if $action == null || $action < 1 || $action > $actions.length 
+            $r = "1から"+$builtin.to_string($actions.length)+"までの数値を入力してください"
+            new_prompt $r
+            continue
+        end
+
+        speed 100
+        return $actions[$action-1]()
+    end
+end
+
+func parse_command
+    $prompt = $args[0]
+
+    while true
+        speed 1
+        new_prompt $prompt 
+
+        $action = $builtin.trim($input)
+
+        if $action == ""
+            continue
+        end
+
+        return $builtin.split($action," ",1)
+    end
+end

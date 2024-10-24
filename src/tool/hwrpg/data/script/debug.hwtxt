@@ -1,0 +1,92 @@
+
+include script/interact.hwtxt
+include script/save.hwtxt
+
+func run_test
+    include script/test/1.hwtxt
+    include script/test/3.hwtxt
+    include script/test/4.hwtxt
+end
+
+func debug_session
+    layout text
+    while true
+        wait 0
+        $cmd = $parse_command("Debug Session\nCommand?")
+
+        if $cmd.length < 1
+            continue
+        end
+
+        func invalid_argument
+            $msg = "Invalid argument for "+ $cmd[0] 
+            new_prompt $msg
+        end
+
+        if $cmd[0] == "help"
+            speed 0
+            new_prompt Command List
+                     > help - show help   player - change player name
+                     > save - save data   reload - reload embed files
+                     > test - run test    location - show/change location
+                     > exit - exit game   clear - reset screen
+                     > phase - show/change phase
+            speed 1
+        elif $cmd[0] == "reload"
+            reload_script
+        elif $cmd[0] == "clear"
+            clear_screen
+        elif $cmd[0] == "save"
+            $do_save()
+        elif $cmd[0] == "test"
+            $run_test()
+        elif $cmd[0] == "exit"
+            exit
+        elif $cmd[0] == "phase"
+            if $cmd.length == 1
+                $msg = "Current phase is " + $save_data.phase
+                new_prompt $msg
+                continue
+            end
+            if $cmd.length != 2
+                $invalid_argument()
+                continue
+            end
+            $save_data.phase = $cmd[1]
+            if $cmd[1] != "debug"
+               $msg = "Previous phase is same as " + $cmd[1]
+                new_prompt $msg
+                         > To avoid this, run `phase debug` first
+            end
+        elif $cmd[0] == "location"
+            if $cmd.length == 1
+                $msg = "Current location is " + $save_data.location
+                new_prompt $msg
+                continue
+            end
+            if $cmd.length != 2
+                $invalid_argument()
+                continue
+            end
+            $save_data.location = $cmd[1]
+        elif $cmd[0] == "player"
+            if $cmd.length != 2
+                $invalid_argument()
+                continue
+            end
+            $save_data.players[0].name = $cmd[1]
+            if $result
+                $player_name = $save_data.players[0].name
+                new_prompt Player name changed to $player_name
+            else
+                new_prompt Failed to change player name
+            end
+        else
+            $msg = "Unknown command: " + $cmd[0]
+            new_prompt $msg
+        end
+    end
+end
+
+$debug_session()
+

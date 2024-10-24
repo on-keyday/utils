@@ -1,0 +1,84 @@
+# 関数スコープテスト
+
+func scoped
+    $v = "1.このテキストが表示されるはず"
+    new_prompt $v
+end
+
+# グローバル変数を設定するがscoped内のローカル変数には影響しない
+$global.v = "3.グローバルなテキストだよ"
+
+$scoped()
+
+func nested
+    $v = "2.このテキストが表示されてほしい"
+
+    # この関数は$vローカル変数をキャプチャする
+    func nest
+        new_prompt $v
+    end
+
+    $nest()
+
+    # ローカル変数をグローバル変数の値に変更
+    $v = $global.v
+
+    $nest()
+
+    # グローバル変数を変更してもローカル変数は変わらない
+    $global.v = "4.ネストされた関数から来たんだ"
+
+    
+    $nest()
+
+end
+
+$nested()
+
+# 関数内部での$global.vの変更がグローバル変数に反映される
+$global_v = $global.v
+new_prompt $global_v
+
+
+func multi_nest
+    $x = "0.これの値はキャプチャされる"
+    
+    func nest_1
+        $v = "5.これが来たらいいな"
+        func nest_2
+           new_prompt $v
+        end
+
+        new_prompt $x
+
+        return $nest_2
+    end
+    
+    # $fは$nest_2を指し示し、さらに$nest_1内の$vをキャプチャしている
+    $f = $nest_1()
+
+    $f()
+
+    # ここで$vを定義してもすでにnest_1でのキャプチャが完了しているためnest_2内には影響しない
+    $v = "6.これは関係ないよ"
+
+    $f()
+
+    $x = "7.これは反映されるよ"
+
+    # ここで呼び出してもmulti_nestの$vの値は反映されない
+    # $xは7.これは反映されるよになる
+    $f = $nest_1()
+
+    # 5.これが来たらいいなになるはず
+    $f()
+
+    # これももちろん反映されない
+    $v = "6.真の6だよ"
+
+    # 5.これが来たらいいなになるはず
+    $f()
+
+end
+
+$multi_nest()

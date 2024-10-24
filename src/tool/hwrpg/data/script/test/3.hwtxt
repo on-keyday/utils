@@ -1,0 +1,15 @@
+#配列/オブジェクトテスト
+
+
+$obj = { key: "value", array : [0,1,2] }
+
+$text1 = $builtin.to_string($obj)
+
+new_prompt objの中身は$text1です
+
+$obj.array[$obj.array.length] = 3
+
+$text2 = $builtin.to_string($obj.array.length)
+
+new_prompt obj.array.lengthの値は$text2です
+

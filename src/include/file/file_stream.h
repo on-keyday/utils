@@ -175,8 +175,9 @@ namespace futils::file {
                 auto fs = static_cast<FileStream*>(self);
                 return fs->eof;
             },
-            .direct_write = direct_write,
             .direct_buffer = direct_buffer,
+            .direct_write = direct_write,
+
         };
 
        public:

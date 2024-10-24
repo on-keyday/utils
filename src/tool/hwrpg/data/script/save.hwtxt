@@ -1,0 +1,39 @@
+
+func define_save_functions
+func do_save_common
+  save
+  if $result
+    new_prompt セーブしました
+    return true
+  else
+    new_prompt $result.reason
+    return false
+  end
+end
+
+func do_save
+  $do_save_common()
+end
+
+func do_save_and_end
+  if $do_save_common()
+    exit
+  end
+end
+
+func do_end
+   exit
+end
+
+
+return [$do_save,$do_save_and_end,$do_end]
+
+end
+
+$define_save_functions = $define_save_functions()
+
+$do_save = $define_save_functions[0]
+$do_save_and_end = $define_save_functions[1]
+$do_end = $define_save_functions[2]
+
+$define_save_functions = null

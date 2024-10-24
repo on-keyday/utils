@@ -206,7 +206,11 @@ add_executable(ping "src/tool/ping/main.cpp")
 
 add_executable(enumgen "src/tool/enumgen/main.cpp")
 
-add_executable(hwrpg "src/tool/hwrpg/main.cpp")
+add_executable(hwrpg 
+"src/tool/hwrpg/main.cpp"
+"src/tool/hwrpg/embed.cpp"
+"src/tool/hwrpg/game.cpp"
+)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")

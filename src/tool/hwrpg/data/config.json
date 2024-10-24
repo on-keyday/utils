@@ -2,8 +2,24 @@
   "version": "1.0.0",
   "phases": [
     {
-      "name": "prologue",
-      "script": "./script/prologue.hwtxt"
+      "name": "start",
+      "script": "script/start.hwtxt"
+    },
+    {
+      "name": "prologue1",
+      "script": "script/prologue/prologue.hwtxt"
+    },
+    {
+      "name": "prologue2",
+      "script": "script/prologue/hello_island_1.hwtxt"
+    },
+    {
+      "name": "prologue3",
+      "script": "script/prologue/hello_island_2.hwtxt"
+    },
+    {
+      "name": "debug",
+      "script": "script/debug.hwtxt"
     }
   ]
 }

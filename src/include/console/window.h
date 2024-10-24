@@ -237,6 +237,9 @@ namespace futils::console {
                     j = last;
                     return true;
                 }
+                else if (minbuf[0] == '\r') {
+                    return w.write(' ', 1);
+                }
                 if (!w.write(minbuf)) {
                     return false;
                 }

@@ -14,3 +14,5 @@ CMakeCache.txt
 cmake_install.cmake
 memuse.log
 /built/
+embed_file.dat
+embed_file.idx

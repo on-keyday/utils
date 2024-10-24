@@ -1,0 +1,29 @@
+
+
+common ::= config.import("common.bgn")
+
+config.cpp.namespace = "embed"
+
+format EmbedFileIndex:
+    name: common.Name
+    len :common.Varint
+    offset :common.Varint
+
+format ConsistentData:
+    files_len :u64
+    offset :u64
+    hash :[32]u8
+
+format EmbedIndexFile:
+    magic: "HWIDX"
+    files :[..]EmbedFileIndex
+    consistent_data :ConsistentData
+    files.length == consistent_data.files_len
+
+format EmbedFS:
+    magic: "HWIDAT"
+    data :[..]u8
+    consistent_data :ConsistentData
+
+
+
