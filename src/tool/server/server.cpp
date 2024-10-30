@@ -225,8 +225,8 @@ int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
     s->set_max_and_active(std::thread::hardware_concurrency() - 1, 5);
     s->set_reduce_skip(10);
     futils::fnet::expected<std::pair<futils::fnet::Socket, futils::fnet::SockAddr>> server, secure_server;
-    if (flag.only_secure && !flag.ssl) {
-        cout << "only secure server without ssl is not allowed\n";
+    if (flag.only_secure && (!flag.ssl && !flag.quic)) {
+        cout << "only secure server without --ssl or --http3 is not allowed\n";
         return -1;
     }
     if (!flag.only_secure) {
