@@ -19,6 +19,21 @@ func interact
     end
 end
 
+func yesno
+    $prompt = $args[0]
+    while true 
+        speed 1
+        new_prompt $prompt(y/n)
+
+        speed 100
+        if $input == "y" || $input == "Y"
+            return true
+        elif $input == "n" || $input == "N"
+            return false
+        end
+    end
+end
+
 func parse_command
     $prompt = $args[0]
 

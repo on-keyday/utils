@@ -3,3 +3,6 @@ tool\json2cpp2 --use-error --enum-stringer -f ./ignore/sample.json | clip
 
 script\gen_sample C:/workspace/utils_backup/src/tool/hwrpg/embed.bgn
 tool\json2cpp2 --use-error --enum-stringer -f ./ignore/sample.json | clip
+
+script\gen_sample C:/workspace/utils_backup/src/tool/hwrpg/i8n.bgn
+tool\json2cpp2 --use-error --enum-stringer -f ./ignore/sample.json | clip

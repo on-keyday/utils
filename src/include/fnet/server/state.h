@@ -122,14 +122,14 @@ namespace futils {
 
             struct QUICServerState {
                 std::weak_ptr<State> state;
-                fnet::quic::server::ServerConfig<fnet::quic::use::smartptr::DefaultTypeConfig> original_config;
+                fnet::quic::server::MultiplexerConfig<fnet::quic::use::smartptr::DefaultTypeConfig> original_config;
                 std::weak_ptr<fnet::quic::server::HandlerMap<fnet::quic::use::smartptr::DefaultTypeConfig>> handler;
             };
 
             struct fnetserv_class_export State : std::enable_shared_from_this<State> {
                 using log_t = void (*)(log_level, NetAddrPort* addr, error::Error& err);
                 using quic_handler = fnet::quic::server::HandlerMap<fnet::quic::use::smartptr::DefaultTypeConfig>;
-                using quic_server_config = fnet::quic::server::ServerConfig<fnet::quic::use::smartptr::DefaultTypeConfig>;
+                using quic_server_config = fnet::quic::server::MultiplexerConfig<fnet::quic::use::smartptr::DefaultTypeConfig>;
 
                private:
                 Counter count;

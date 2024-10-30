@@ -1,0 +1,31 @@
+
+func load_http_library
+    $lib_path = $args[0]
+    $http = $builtin.load_foreign($lib_path)
+
+    if $http == null
+        return null
+    end
+
+    func start_request
+        return $builtin.call_foreign($lib,"http_start_request",$args)
+    end
+
+    return { request: $start_request }
+end
+
+$http = $load_http_library()
+
+func on_response
+    new_prompt レスポンスがキターーー
+end
+
+raw {
+  >    method: "GET"
+  >    url: "https://google.com"
+  > }
+
+$req = $builtin.eval($output)
+
+$http.request($req,$on_response)
+

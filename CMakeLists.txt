@@ -159,6 +159,9 @@ add_executable(fnetquic_h3_local "src/test/fnetquic/test_fnetquic_h3_local.cpp")
 #tests(low)
 add_executable(callstack "src/test/low/test_callstack.cpp")
 
+#tests(hwrpg foreign)
+add_library(hwrpg_foreign SHARED "src/tool/hwrpg/foreign/hwrpg_foreign.cpp")
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "tool")
 # tools
 
@@ -210,6 +213,7 @@ add_executable(hwrpg
 "src/tool/hwrpg/main.cpp"
 "src/tool/hwrpg/embed.cpp"
 "src/tool/hwrpg/game.cpp"
+"src/tool/hwrpg/foreign.cpp"
 )
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
@@ -422,6 +426,7 @@ target_link_libraries(langc futils)
 target_link_libraries(ping futils fnet coro)
 target_link_libraries(enumgen futils)
 target_link_libraries(hwrpg futils)
+target_link_libraries(hwrpg_foreign fnet)
 
 
 if(LLVM_FOUND)

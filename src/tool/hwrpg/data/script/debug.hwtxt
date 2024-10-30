@@ -6,6 +6,22 @@ func run_test
     include script/test/1.hwtxt
     include script/test/3.hwtxt
     include script/test/4.hwtxt
+    include script/test/5.hwtxt
+end
+
+func do_eval
+    $target = $builtin.to_string($args[0])
+    
+    $evaluated = $builtin.eval($target)
+    if !$result
+        $reason = $result.reason
+        new_prompt Target Expr: $target
+                 > $reason
+        return
+    end
+    $evaluated = $builtin.to_string($evaluated)
+    new_prompt Target Expr: $target
+             > Eval Result: $evaluated
 end
 
 func debug_session
@@ -25,13 +41,23 @@ func debug_session
 
         if $cmd[0] == "help"
             speed 0
-            new_prompt Command List
-                     > help - show help   player - change player name
-                     > save - save data   reload - reload embed files
-                     > test - run test    location - show/change location
-                     > exit - exit game   clear - reset screen
-                     > phase - show/change phase
+            new_prompt Command List(1/2)
+                     > help - show help           player - change player name
+                     > save - save data           reload - reload embed files
+                     > test - run test            location - show/change location
+                     > exit - exit game           clear - reset screen
+                     > phase - show/change phase  eval - eval expr
+            new_prompt Command List(2/2)
+                     > title - go to title
             speed 1
+        elif $cmd[0] == "eval"
+            if $cmd.length != 2
+                $invalid_argument()
+                continue
+            end
+            $do_eval($cmd[1])
+        elif $cmd[0] == "title"
+            go_title
         elif $cmd[0] == "reload"
             reload_script
         elif $cmd[0] == "clear"

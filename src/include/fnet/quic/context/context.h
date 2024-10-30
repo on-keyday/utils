@@ -1274,6 +1274,11 @@ namespace futils {
             }
 
             // thread unsafe call
+            bool is_server() const {
+                return status.is_server();
+            }
+
+            // thread unsafe call
             bool init(const Config& config, UserDefinedTypesConfig&& udconfig = {}) {
                 // reset internal parameters
                 reset_internal();
@@ -1567,6 +1572,15 @@ namespace futils {
                 ctx.active_path = path_verifier.get_writing_path();
                 logger.debug("expose close context: normal close");
                 return true;
+            }
+
+            // release streams, datagrams, app_ctx to avoid memory leak
+            // in some situation, recursive reference holding occurs between streams and context
+            // so we need to release them explicitly
+            void release_resource() {
+                streams.reset();
+                datagrams.reset();
+                app_ctx.reset();
             }
 
             // thread unsafe call

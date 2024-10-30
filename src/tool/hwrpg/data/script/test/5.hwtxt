@@ -1,0 +1,41 @@
+func this_may_fail
+    unknown command
+end
+
+$builtin.eval("$this_may_fail()")
+
+$reason = $result.reason
+
+new_prompt エラーだね
+         > $reason
+
+$lib = $builtin.load_foreign("test/libhwrpg_foreign.dll")
+
+if $lib == null
+    new_prompt ライブラリがロードできません。スキップします
+else
+    $c = "外部から呼ばれたか?"
+
+    func answer
+        new_prompt 外部からの呼び出しかな
+        $c = "外部から呼ばれたよ"
+    end
+
+    $r = $builtin.call_foreign($lib,"hwrpg_foreign_test",[$answer])
+
+    new_prompt $c
+
+    $to_eval = "$r = $builtin.call_foreign($lib,\"hwrpg_foreign_test\",[$this_may_fail])"
+
+    $builtin.eval($to_eval)
+
+    $reason = $result.reason
+
+    new_prompt エラーだよ
+             > $reason
+
+    $builtin.unload_foreign($lib)
+end
+
+
+

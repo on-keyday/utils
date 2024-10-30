@@ -82,3 +82,27 @@ func multi_nest
 end
 
 $multi_nest()
+
+func lambda
+    func add
+        # 引数は $args を通じて渡される
+        $x = $args[0]
+        $y = $args[1]
+        return $x + $y
+    end
+
+    func apply
+        # 関数は最初の引数
+        $func = $args[0]  
+        # 他の引数を取り出して渡す
+        return $func($args[1], $args[2])  
+    end
+
+    # 使用例
+    # $add 関数を適用
+    $r = $apply($add, 5, 3)  
+    # 結果は8
+    new_prompt 結果は$r  $apply
+end
+
+$lambda()

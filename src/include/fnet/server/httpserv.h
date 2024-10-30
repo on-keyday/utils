@@ -195,7 +195,7 @@ namespace futils {
             };
             fnetserv_dll_export(void) http_handler(void* ctx, Client&& cl, StateContext s);
 
-            fnetserv_dll_export(void) http3_setup(quic::server::ServerConfig<quic::use::smartptr::DefaultTypeConfig>& c);
+            fnetserv_dll_export(void) http3_server_setup(quic::server::MultiplexerConfig<quic::use::smartptr::DefaultTypeConfig>& c);
         }  // namespace server
     }  // namespace fnet
 }  // namespace futils

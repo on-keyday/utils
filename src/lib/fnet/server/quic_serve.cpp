@@ -8,7 +8,9 @@
 #include <fnet/server/servcpp.h>
 #include <fnet/server/state.h>
 #include <fnet/http3/http3.h>
+#include <fnet/http3/mux.h>
 #include <fnet/server/httpserv.h>
+#include <thread>
 
 namespace futils::fnet::server {
 
@@ -36,7 +38,7 @@ namespace futils::fnet::server {
                 s->original_config.init_send_stream(app, stream);
             }
         };
-        handler->set_config(std::move(conf), std::move(serv_conf));
+        handler->set_server_config(std::move(conf), std::move(serv_conf));
         auto sock = std::move(listener);
         auto state = shared_from_this();
         std::thread(quic_send_thread, state, sock.clone(), handler).detach();
@@ -52,7 +54,7 @@ namespace futils::fnet::server {
     void State::quic_send_thread(std::shared_ptr<State> state, fnet::Socket sock, std::shared_ptr<quic_handler> handler) {
         byte buf[65536];
         while (!state->state().end_flag.test()) {
-            auto [packet, addr, exist] = handler->create_packet(view::wvec(buf));
+            auto [packet, addr, exist] = handler->create_packet(view::wvec(buf), true);
             if (!exist) {
                 std::this_thread::yield();
                 continue;
@@ -109,17 +111,17 @@ namespace futils::fnet::server {
             break;
         }
     }
+
     void State::quic_send_scheduler(std::shared_ptr<State> state, std::shared_ptr<quic_handler> handler) {
         while (!state->state().end_flag.test()) {
             handler->schedule_send();
-            std::this_thread::yield();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
 
     void State::quic_recv_scheduler(std::shared_ptr<State> state, std::shared_ptr<quic_handler> handler) {
         while (!state->state().end_flag.test()) {
-            handler->schedule_recv();
-            std::this_thread::yield();
+            handler->schedule_recv(true);
         }
     }
 
@@ -131,36 +133,17 @@ namespace futils::fnet::server {
 
     constexpr auto make_state_context = MakeStateContext{};
 
-    fnetserv_dll_internal(void) http3_setup(quic::server::ServerConfig<quic::use::smartptr::DefaultTypeConfig>& c) {
-        using H3Conf = http3::TypeConfig<qpack::TypeConfig<flex_storage>, quic::use::smartptr::DefaultStreamTypeConfig>;
+    fnetserv_dll_internal(void) http3_server_setup(quic::server::MultiplexerConfig<quic::use::smartptr::DefaultTypeConfig>& c) {
+        using QpackConfig = qpack::TypeConfig<flex_storage>;
+        using H3Conf = http3::TypeConfig<QpackConfig, quic::use::smartptr::DefaultStreamTypeConfig>;
         using H3Conn = http3::stream::Connection<H3Conf>;
         using H3Stream = http3::stream::RequestStream<H3Conf>;
         struct InternalRequester {
             Requester req;
             H3Stream stream;
         };
-        c.on_transport_parameter_read = [](std::shared_ptr<void>& app, std::shared_ptr<futils::fnet::quic::use::smartptr::Context>&& ctx) {
-            auto conn = std::make_shared<H3Conn>();
-            ctx->set_application_context(conn);
-            auto streams = ctx->get_streams();
-            auto control = streams->open_uni();
-            auto qpack_encoder = streams->open_uni();
-            auto qpack_decoder = streams->open_uni();
-            conn->ctrl.send_control = control;
-            conn->send_decoder = qpack_decoder;
-            conn->send_encoder = qpack_encoder;
-            if (!conn->write_uni_stream_headers_and_settings([&](auto&& write_settings) {})) {
-                ctx->request_close(quic::AppError{
-                    std::uint64_t(http3::H3Error::H3_CLOSED_CRITICAL_STREAM),
-                    error::Error("cannot create unidirectional stream", error::Category::app),
-                });
-                return;
-            }
-        };
-        c.on_uni_stream_recv = [](std::shared_ptr<void>& app, std::shared_ptr<futils::fnet::quic::use::smartptr::Context>&& ctx, std::shared_ptr<quic::use::smartptr::RecvStream>&& stream) {
-            auto h3 = std::static_pointer_cast<H3Conn>(ctx->get_application_context());
-            h3->read_uni_stream(std::move(stream));
-        };
+        c.on_transport_parameter_read = http3::multiplexer_on_transport_parameter_read<QpackConfig, quic::use::smartptr::DefaultTypeConfig>;
+        c.on_uni_stream_recv = http3::multiplexer_recv_uni_stream<QpackConfig, quic::use::smartptr::DefaultTypeConfig>;
         c.on_bidi_stream_recv = [](std::shared_ptr<void>& app, std::shared_ptr<futils::fnet::quic::use::smartptr::Context>&& ctx, std::shared_ptr<quic::use::smartptr::BidiStream>&& stream) {
             auto h3 = std::static_pointer_cast<H3Conn>(ctx->get_application_context());
             auto q_state = std::static_pointer_cast<QUICServerState>(app);

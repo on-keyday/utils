@@ -15,6 +15,10 @@
 #include "unistream.h"
 
 namespace futils {
+    namespace fnet::quic::context {
+        template <class TConfig>
+        struct Context;
+    }
     namespace fnet::http3::stream {
         enum class SettingID {
             qpack_max_table_capacity = 0x01,
@@ -622,5 +626,6 @@ namespace futils {
                 return true;
             }
         };
-    }  // namespace fnet::http3::stream
+
+        }  // namespace fnet::http3::stream
 }  // namespace futils

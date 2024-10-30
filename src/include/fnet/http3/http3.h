@@ -62,13 +62,13 @@ namespace futils::fnet::http3 {
                             set_header(lower_key, std::forward<decltype(value)>(value));
                         });
                 });
-            if (err) {
-                return err;
+            if (err != H3Error::H3_NO_ERROR) {
+                return make_error(err);
             }
             if (body.size() > 0) {
                 err = handler->write(body, fin);
             }
-            return err;
+            return make_error(err);
         }
 
         template <class Status, class Header>

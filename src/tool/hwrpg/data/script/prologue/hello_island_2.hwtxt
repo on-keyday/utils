@@ -1,0 +1,5 @@
+
+$player_name = $save_data.players[0].name
+
+phase opening
+

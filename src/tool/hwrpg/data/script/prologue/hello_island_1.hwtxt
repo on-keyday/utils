@@ -11,52 +11,101 @@ new_prompt $location $player_nameの家
 
 layout text
 
+if $save_data.storage == null 
+    $save_data.storage = {}
+end
+if $save_data.storage.prologue2 == null 
+    $save_data.storage.prologue2 = { item: 0, item_name: "" }
+end
 
+$flags = $save_data.storage.prologue2
+
+func save_callback
+    $save_data.storage.prologue2 = $flags
+end
 
 func sleep
   new_prompt $player_nameは眠った...
   new_prompt 次の日...
 end
 
-
-
-
-
-
-
-
-
 func market
     new_prompt $player_nameは市場で買い物をした
     new_prompt 商人「 Hello World!」
              > $player_name「Hello World!」
+    $item = $flags.item_name
+    if $flags.item == 1        
+        new_prompt $player_nameは商人に$itemについて尋ねた
+        new_prompt 商人「うーん...見たことがないなぁ」
+        new_prompt 商人「山に住む長老に聞いてみればわかるかもしれないね」
+        new_prompt $player_nameは山に行ってみることにした
+        $flags.item = 2
+        return
+    elif $flags.item >= 2
+        new_prompt 商人「$itemについては山に住む長老に聞いてみればわかるかもしれないね」
+    end
     new_prompt $player_nameは買い物を楽しんだ
 end
 
 func mountain
     new_prompt $player_nameは山に登った
     new_prompt $player_name「Hello World!!!!!」
-    new_prompt 遠くからHello Worldとやまびこが聞こえてきた
+    if $flags.item < 2 
+        new_prompt 遠くからHello Worldとやまびこが聞こえてきた
+    elif $flags.item == 2
+        new_prompt ?「お主が$player_nameじゃな」
+                 > $player_name「!?」
+        new_prompt ?「ほっほっほっ、そんなに驚かなくても良い」
+        new_prompt ?「わしじゃよ、長老じゃ」
+        new_prompt 長老「さて何か話があるんじゃったかな?」
+        while !$yesno($flags.item_name+"を見せますか?")
+            new_prompt 長老「はて?聞こえなかったぞい。もう一度言ってくれんかね?」
+        end
+    end
 end
 
 func sea
-    new_prompt $player_nameは海に行きました。
-    new_prompt 海は穏やかで、美しい景色が広がっています。
+    new_prompt $player_nameは海に行った
+    new_prompt 海は穏やかで、美しい景色が広がっている
 
-    phase prologue3
+    new_prompt $player_name「いい天気だなぁ」
+    
+    if $flags.item == 0
+        new_prompt $player_name「おや?なにか浜辺に落ちているぞ」
+        if $yesno("! 拾いますか?")
+            new_prompt $player_nameは「謎の小びん」を拾った
+            $flags.item = 1
+            $flags.item_name = "謎の小びん"
+        else
+            new_prompt $player_nameは見なかったことにした
+        end
+    else
+        new_prompt $player_nameは海辺てくつろいだ
+    end
+
 end
 
 
 func walking
   $dest = [$market,$mountain,$sea]
-  $interact($dest,"! どこへ行く?\n 1. 市場\n 2. 山\n 3. 海")
+  raw ! どこへ行く?
+    >  1. 市場
+    >  2. 山
+    >  3. 海
+  $interact($dest,$output)
 end
 
 func main 
     $actions = [$sleep,$walking,$do_save,$do_save_and_end,$do_end]
 
     while true
-        $interact($actions,"! 何をする?\n 1. 寝る\n 2. 散歩\n 3. セーブして続ける\n 4. セーブしてゲームをやめる\n 5. セーブしないでゲームをやめる")
+        raw ! 何をする?
+          >  1. 寝る
+          >  2. 散歩
+          >  3. セーブして続ける
+          >  4. セーブしてゲームをやめる
+          >  5. セーブしないでゲームをやめる
+        $interact($actions,$output)
     end
 
 end

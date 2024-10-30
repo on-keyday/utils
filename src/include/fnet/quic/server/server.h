@@ -174,6 +174,7 @@ namespace futils {
                     auto obj_ptr = std::static_pointer_cast<Opened<TConfig>>(this->ctx.get_outer_self_ptr().lock());
                     ptr->close_connection(std::shared_ptr<context::Context<TConfig>>(obj_ptr, &obj_ptr->ctx));
                 }
+                ctx.release_resource();
                 next->next_deadline = c.close_timeout.get_deadline();
                 return next;
             }
@@ -197,7 +198,7 @@ namespace futils {
 
         template <class Lock>
         struct SenderQue {
-            slib::deque<HandlerPtr> sender_que;
+            thread::MultiProduceSingleConsumeQueue<HandlerPtr, glheap_allocator<HandlerPtr>> queue;
             slib::set<HandlerPtr> sender_set;
             slib::set<HandlerPtr> duplicated;
             Lock l;
@@ -218,19 +219,18 @@ namespace futils {
                     duplicated.emplace(h);
                     return;  // duplicated, nothing to do
                 }
-                sender_que.push_back(h);
+                queue.push(h);
                 sender_set.emplace(h);
             }
 
-            HandlerPtr deque() {
-                const auto d = lock();
-                if (sender_que.empty()) {
-                    return {};
+            HandlerPtr deque(bool block = false) {
+                auto handler = block ? queue.pop_wait() : queue.pop();
+                if (!handler) {
+                    return nullptr;
                 }
-                auto h = std::move(sender_que.front());
-                sender_que.pop_front();
-                duplicated.erase(h);
-                return h;
+                const auto d = lock();
+                duplicated.erase(*handler);
+                return *handler;
             }
 
             void erase(const HandlerPtr& h) {
@@ -242,7 +242,7 @@ namespace futils {
             void erase_and_enque_if_duplicated(const HandlerPtr& h) {
                 const auto d = lock();
                 if (duplicated.contains(h)) {
-                    sender_que.push_back(h);
+                    queue.push(h);
                     duplicated.erase(h);
                     return;
                 }
@@ -253,18 +253,16 @@ namespace futils {
         template <class Lock>
         struct HandlerList {
             Lock l;
-            slib::list<HandlerPtr> handlers;
+            slib::set<HandlerPtr> handlers;
 
             void add(HandlerPtr&& h) {
                 const auto locked = helper::lock(l);
-                handlers.push_back(std::move(h));
+                handlers.insert(std::move(h));
             }
 
             void remove(HandlerPtr& rem) {
                 const auto locked = helper::lock(l);
-                handlers.remove_if([&](auto&& v) {
-                    return v == rem;
-                });
+                handlers.erase(rem);
             }
 
             template <class L>
@@ -282,7 +280,7 @@ namespace futils {
         };
 
         template <class TConfig>
-        struct ServerConfig {
+        struct MultiplexerConfig {
             QUIC_ctx_type(StreamTypeConfig, TConfig, stream_type_config);
             using BidiStream = stream::impl::BidiStream<StreamTypeConfig>;
             using RecvUniStream = stream::impl::RecvUniStream<StreamTypeConfig>;
@@ -294,7 +292,7 @@ namespace futils {
             void (*init_send_stream)(std::shared_ptr<void>&, SendUniStream&) = nullptr;
             void (*accept_uni_stream)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<RecvUniStream>&&) = nullptr;
             void (*accept_bidi_stream)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&, std::shared_ptr<BidiStream>&&) = nullptr;
-            void (*accept_connection)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
+            void (*start_connection)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
             // when transport parameter read, user may send data to peer
             void (*on_transport_parameter_read)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
             void (*close_connection)(std::shared_ptr<void>&, std::shared_ptr<context::Context<TConfig>>&&) = nullptr;
@@ -314,7 +312,7 @@ namespace futils {
 
         template <class TConfig>
         struct HandlerMap : std::enable_shared_from_this<HandlerMap<TConfig>> {
-            std::uint64_t id = 0;
+            // std::uint64_t id = 0;
             using Lock = typename TConfig::context_lock;
 
            private:
@@ -334,7 +332,7 @@ namespace futils {
             SenderQue<Lock> send_que;
             path::ip::PathMapper paths;
             Lock path_lock;
-            thread::SingleProduceMultiConsumeQueue<RecvStreamNotify<TConfig>, glheap_allocator<RecvStreamNotify<TConfig>>> recv_notify;
+            thread::MultiProduceSingleConsumeQueue<RecvStreamNotify<TConfig>, glheap_allocator<RecvStreamNotify<TConfig>>> recv_notify;
 
            public:
             path::PathID get_path_id(const NetAddrPort& addr) {
@@ -372,7 +370,7 @@ namespace futils {
                 return config.version == ver;
             }
 
-            void setup_config() {
+            void setup_server_config() {
                 config.server = true;
                 config.connid_parameters.exporter.exporter = &this->exporter_fn;
                 config.connid_parameters.exporter.mux = this->weak_from_this();
@@ -385,55 +383,122 @@ namespace futils {
                 return copy;
             }
 
-            ServerConfig<TConfig> server_config;
+            MultiplexerConfig<TConfig> server_config;
+            MultiplexerConfig<TConfig> client_config;
 
-            void init_recv_stream(RecvUniStream& stream) {
-                if (server_config.init_recv_stream) {
-                    server_config.init_recv_stream(server_config.app_ctx, stream);
+            void init_recv_stream(RecvUniStream& stream, bool is_server) {
+                MultiplexerConfig<TConfig>& config = is_server ? server_config : client_config;
+                if (config.init_recv_stream) {
+                    config.init_recv_stream(config.app_ctx, stream);
                 }
             }
 
-            void init_send_stream(SendUniStream& stream) {
-                if (server_config.init_send_stream) {
-                    server_config.init_send_stream(server_config.app_ctx, stream);
+            void init_send_stream(SendUniStream& stream, bool is_server) {
+                MultiplexerConfig<TConfig>& config = is_server ? server_config : client_config;
+                if (config.init_send_stream) {
+                    config.init_send_stream(config.app_ctx, stream);
                 }
             }
 
             void accept_uni_stream(std::shared_ptr<context::Context<TConfig>>&& ctx, std::shared_ptr<RecvUniStream>&& stream) {
-                if (server_config.accept_uni_stream) {
-                    server_config.accept_uni_stream(server_config.app_ctx, std::move(ctx), std::move(stream));
+                MultiplexerConfig<TConfig>& config = ctx->is_server() ? server_config : client_config;
+                if (config.accept_uni_stream) {
+                    config.accept_uni_stream(config.app_ctx, std::move(ctx), std::move(stream));
                 }
             }
 
             void accept_bidi_stream(std::shared_ptr<context::Context<TConfig>>&& ctx, std::shared_ptr<BidiStream>&& stream) {
-                if (server_config.accept_bidi_stream) {
-                    server_config.accept_bidi_stream(server_config.app_ctx, std::move(ctx), std::move(stream));
+                MultiplexerConfig<TConfig>& config = ctx->is_server() ? server_config : client_config;
+                if (config.accept_bidi_stream) {
+                    config.accept_bidi_stream(config.app_ctx, std::move(ctx), std::move(stream));
                 }
             }
 
             void prepare_connection(const std::shared_ptr<context::Context<TConfig>>& ctx) {
-                if (server_config.prepare_connection) {
+                MultiplexerConfig<TConfig>& config = ctx->is_server() ? server_config : client_config;
+                if (config.prepare_connection) {
                     auto copy = ctx;
-                    server_config.prepare_connection(server_config.app_ctx, std::move(copy));
+                    config.prepare_connection(config.app_ctx, std::move(copy));
                 }
             }
 
-            void accept_connection(std::shared_ptr<context::Context<TConfig>>&& ctx) {
-                if (server_config.accept_connection) {
-                    server_config.accept_connection(server_config.app_ctx, std::move(ctx));
+            void start_connection(std::shared_ptr<context::Context<TConfig>>&& ctx) {
+                MultiplexerConfig<TConfig>& config = ctx->is_server() ? server_config : client_config;
+                if (config.start_connection) {
+                    config.start_connection(config.app_ctx, std::move(ctx));
                 }
             }
 
             void on_transport_parameter_read(std::shared_ptr<context::Context<TConfig>>&& ctx) {
-                if (server_config.on_transport_parameter_read) {
-                    server_config.on_transport_parameter_read(server_config.app_ctx, std::move(ctx));
+                MultiplexerConfig<TConfig>& config = ctx->is_server() ? server_config : client_config;
+                if (config.on_transport_parameter_read) {
+                    config.on_transport_parameter_read(config.app_ctx, std::move(ctx));
                 }
             }
 
             void close_connection(std::shared_ptr<context::Context<TConfig>>&& ctx) {
-                if (server_config.close_connection) {
-                    server_config.close_connection(server_config.app_ctx, std::move(ctx));
+                MultiplexerConfig<TConfig>& config = ctx->is_server() ? server_config : client_config;
+                if (config.close_connection) {
+                    config.close_connection(config.app_ctx, std::move(ctx));
                 }
+            }
+
+            void set_stream_multiplexer_settings(std::shared_ptr<context::Context<TConfig>>& rel) {
+                ConnHandler* handler = rel->get_streams()->get_conn_handler();
+                handler->set_arg(std::static_pointer_cast<void>(rel));
+                handler->set_open_bidi(+[](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
+                    auto ptr = std::static_pointer_cast<context::Context<TConfig>>(arg);
+                    auto multiplexer = std::static_pointer_cast<HandlerMap<TConfig>>(ptr->get_multiplexer_ptr().lock());
+                    multiplexer->init_recv_stream(stream->receiver, ptr->is_server());
+                    multiplexer->init_send_stream(stream->sender, ptr->is_server());
+                });
+                handler->set_accept_bidi(+[](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
+                    auto ptr = std::static_pointer_cast<context::Context<TConfig>>(arg);
+                    auto multiplexer = std::static_pointer_cast<HandlerMap<TConfig>>(ptr->get_multiplexer_ptr().lock());
+                    multiplexer->init_recv_stream(stream->receiver, ptr->is_server());
+                    multiplexer->init_send_stream(stream->sender, ptr->is_server());
+                    multiplexer->accept_bidi_stream(std::move(ptr), std::move(stream));
+                });
+                handler->set_open_uni(+[](std::shared_ptr<void>& arg, std::shared_ptr<SendUniStream> stream) {
+                    auto ptr = std::static_pointer_cast<context::Context<TConfig>>(arg);
+                    auto multiplexer = std::static_pointer_cast<HandlerMap<TConfig>>(ptr->get_multiplexer_ptr().lock());
+                    multiplexer->init_send_stream(*stream, ptr->is_server());
+                });
+                handler->set_accept_uni(+[](std::shared_ptr<void>& arg, std::shared_ptr<RecvUniStream> stream) {
+                    auto ptr = std::static_pointer_cast<context::Context<TConfig>>(arg);
+                    auto multiplexer = std::static_pointer_cast<HandlerMap<TConfig>>(ptr->get_multiplexer_ptr().lock());
+                    multiplexer->init_recv_stream(*stream, ptr->is_server());
+                    multiplexer->accept_uni_stream(std::move(ptr), std::move(stream));
+                });
+            }
+
+            // open client side
+            std::shared_ptr<Opened<TConfig>> open_internal(context::Config conf, const NetAddrPort& dest, const char* host) {
+                std::shared_ptr<Opened<TConfig>> opened = Opened<TConfig>::create();
+                Opened<TConfig>* ptr = opened.get();
+                auto path_id = get_path_id(dest);
+                conf.server = false;
+                conf.connid_parameters.exporter.exporter = &this->exporter_fn;
+                conf.connid_parameters.exporter.mux = this->weak_from_this();
+                conf.connid_parameters.exporter.obj = opened;
+                conf.path_parameters.original_path = path_id;
+                if (!ptr->ctx.init(conf)) {
+                    conf.logger.report_error(ptr->ctx.get_conn_error());
+                    return nullptr;
+                }
+                auto rel = std::shared_ptr<context::Context<TConfig>>(opened, &ptr->ctx);
+                set_stream_multiplexer_settings(rel);
+                this->prepare_connection(rel);
+                {
+                    const auto l = helper::lock(ptr->l);
+                    if (!ptr->ctx.connect_start(host)) {
+                        return nullptr;  // failed to connect
+                    }
+                    this->start_connection(std::move(rel));
+                }
+                send_que.enque(opened, false);
+                handlers.add(opened);
+                return opened;
             }
 
             void add_new_conn(view::rvec origDst, view::wvec d, path::PathID pid) {
@@ -444,40 +509,15 @@ namespace futils {
                     config.logger.report_error(ptr->ctx.get_conn_error());
                     return;  // failed to init
                 }
-                ConnHandler* handler = ptr->ctx.get_streams()->get_conn_handler();
                 auto rel = std::shared_ptr<context::Context<TConfig>>(opened, &ptr->ctx);
-                handler->set_arg(std::static_pointer_cast<void>(rel));
-                handler->set_open_bidi(+[](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
-                    auto ptr = std::static_pointer_cast<context::Context<TConfig>>(arg);
-                    auto multiplexer = std::static_pointer_cast<HandlerMap<TConfig>>(ptr->get_multiplexer_ptr().lock());
-                    multiplexer->init_recv_stream(stream->receiver);
-                    multiplexer->init_send_stream(stream->sender);
-                });
-                handler->set_accept_bidi(+[](std::shared_ptr<void>& arg, std::shared_ptr<BidiStream> stream) {
-                    auto ptr = std::static_pointer_cast<context::Context<TConfig>>(arg);
-                    auto multiplexer = std::static_pointer_cast<HandlerMap<TConfig>>(ptr->get_multiplexer_ptr().lock());
-                    multiplexer->init_recv_stream(stream->receiver);
-                    multiplexer->init_send_stream(stream->sender);
-                    multiplexer->accept_bidi_stream(std::move(ptr), std::move(stream));
-                });
-                handler->set_open_uni(+[](std::shared_ptr<void>& arg, std::shared_ptr<SendUniStream> stream) {
-                    auto ptr = std::static_pointer_cast<context::Context<TConfig>>(arg);
-                    auto multiplexer = std::static_pointer_cast<HandlerMap<TConfig>>(ptr->get_multiplexer_ptr().lock());
-                    multiplexer->init_send_stream(*stream);
-                });
-                handler->set_accept_uni(+[](std::shared_ptr<void>& arg, std::shared_ptr<RecvUniStream> stream) {
-                    auto ptr = std::static_pointer_cast<context::Context<TConfig>>(arg);
-                    auto multiplexer = std::static_pointer_cast<HandlerMap<TConfig>>(ptr->get_multiplexer_ptr().lock());
-                    multiplexer->init_recv_stream(*stream);
-                    multiplexer->accept_uni_stream(std::move(ptr), std::move(stream));
-                });
+                set_stream_multiplexer_settings(rel);
                 this->prepare_connection(rel);
                 {
                     const auto l = helper::lock(ptr->l);
                     if (!ptr->ctx.accept_start(origDst)) {
                         return;  // failed to accept
                     }
-                    this->accept_connection(std::move(rel));
+                    this->start_connection(std::move(rel));
                     ptr->ctx.parse_udp_payload(d, pid);
                 }
                 send_que.enque(opened, false);
@@ -513,11 +553,23 @@ namespace futils {
             }
 
            public:
-            void set_config(context::Config&& conf,
-                            ServerConfig<TConfig> server_config = {}) {
+            void set_server_config(context::Config&& conf,
+                                   MultiplexerConfig<TConfig> server_config = {}) {
                 config = std::move(conf);
                 this->server_config = std::move(server_config);
-                setup_config();
+                setup_server_config();
+            }
+
+            void set_client_config(MultiplexerConfig<TConfig> client_config) {
+                this->client_config = std::move(client_config);
+            }
+
+            std::shared_ptr<context::Context<TConfig>> open(const context::Config& conf, const NetAddrPort& dest, const char* host) {
+                auto opened = open_internal(conf, dest, host);
+                if (!opened) {
+                    return nullptr;
+                }
+                return std::shared_ptr<context::Context<TConfig>>(opened, &opened->ctx);
             }
 
             void parse_udp_payload(view::wvec d, const NetAddrPort& addr) {
@@ -585,7 +637,7 @@ namespace futils {
                 if (!stream) {
                     return;  // already removed stream
                 }
-                mux->recv_notify.push({std::move(ctx), id, std::move(stream)});
+                mux->recv_notify.push(RecvStreamNotify<TConfig>{std::move(ctx), id, std::move(stream)});
             }
 
             static void datagram_send_notify_callback(std::shared_ptr<void>&& conn_ctx) {
@@ -597,16 +649,16 @@ namespace futils {
             static void datagram_recv_notify_callback(std::shared_ptr<void>&& conn_ctx) {
                 auto ctx = std::static_pointer_cast<Opened<TConfig>>(std::move(conn_ctx));
                 auto mux = std::static_pointer_cast<HandlerMap<TConfig>>(ctx->ctx.get_multiplexer_ptr().lock());
-                mux->recv_notify.push({std::move(ctx), stream::invalid_id, nullptr});
+                mux->recv_notify.push(RecvStreamNotify<TConfig>{std::move(ctx), stream::invalid_id, nullptr});
             }
 
             void schedule_send() {
                 handlers.schedule(config.internal_parameters.clock, send_que);
             }
 
-            void schedule_recv() {
+            void schedule_recv(bool block = false) {
                 while (true) {
-                    std::optional<RecvStreamNotify<TConfig>> notify = recv_notify.pop();
+                    std::optional<RecvStreamNotify<TConfig>> notify = block ? recv_notify.pop_wait() : recv_notify.pop();
                     if (!notify) {
                         break;
                     }
@@ -633,9 +685,9 @@ namespace futils {
 
             // thread safe call
             // call by multiple thread not make error
-            std::tuple<view::rvec, NetAddrPort, bool> create_packet(context::maybe_resizable_buffer buffer) {
+            std::tuple<view::rvec, NetAddrPort, bool> create_packet(context::maybe_resizable_buffer buffer, bool block = false) {
                 while (true) {
-                    auto handler = send_que.deque();
+                    auto handler = send_que.deque(block);
                     if (!handler) {
                         return {{}, {}, false};
                     }

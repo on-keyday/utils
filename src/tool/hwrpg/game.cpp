@@ -29,17 +29,8 @@ static void set_varint_len(save::Varint& v, std::uint64_t len) {
 }
 
 std::optional<Value> EvalValue::eval(RuntimeState& s) {
-    auto str = string();
-    if (str) {
-        return *str;
-    }
-    auto n = number();
-    if (n) {
-        return *n;
-    }
-    auto b = boolean();
-    if (b) {
-        return *b;
+    if (auto g = get_value()) {
+        return *g;
     }
     auto a = assignable();
     if (a) {
@@ -55,40 +46,80 @@ std::optional<Value> EvalValue::eval(RuntimeState& s) {
     if (acc) {
         return expr::eval_access(s, *acc);
     }
-    auto arr = array();
-    if (arr) {
-        return Value(std::move(*arr));
-    }
-    auto obj = object();
-    if (obj) {
-        return Value(std::move(*obj));
-    }
-    if (auto f = func()) {
-        return *f;
-    }
+    // fail safe
     return Value();
 }
 namespace expr {
 
+    EvalState builtin_typeof(RuntimeState& s, Value& target) {
+        if (target.null()) {
+            s.stacks.eval.eval_stack.push_back(EvalValue(U"null"));
+            return EvalState::normal;
+        }
+        if (target.number()) {
+            s.stacks.eval.eval_stack.push_back(EvalValue(U"number"));
+            return EvalState::normal;
+        }
+        if (target.boolean()) {
+            s.stacks.eval.eval_stack.push_back(EvalValue(U"boolean"));
+            return EvalState::normal;
+        }
+        if (target.string()) {
+            s.stacks.eval.eval_stack.push_back(EvalValue(U"string"));
+            return EvalState::normal;
+        }
+        if (target.func()) {
+            s.stacks.eval.eval_stack.push_back(EvalValue(U"function"));
+            return EvalState::normal;
+        }
+        if (target.bytes()) {
+            s.stacks.eval.eval_stack.push_back(EvalValue(U"bytes"));
+            return EvalState::normal;
+        }
+        if (target.foreign()) {
+            s.stacks.eval.eval_stack.push_back(EvalValue(U"foreign"));
+            return EvalState::normal;
+        }
+        if (target.object()) {
+            s.stacks.eval.eval_stack.push_back(EvalValue(U"object"));
+            return EvalState::normal;
+        }
+        if (target.array()) {
+            s.stacks.eval.eval_stack.push_back(EvalValue(U"array"));
+            return EvalState::normal;
+        }
+        return s.eval_error(U"$builtin.typeof: 不正な型に対して呼び出しました");
+    }
+
     EvalState builtin_to_string(RuntimeState& s, Value& target) {
         if (auto str = target.string()) {
-            s.stacks.eval_stack.push_back(EvalValue(*str));
+            s.stacks.eval.eval_stack.push_back(EvalValue(*str));
             return EvalState::normal;
         }
         if (auto n = target.number()) {
-            s.stacks.eval_stack.push_back(EvalValue(futils::number::to_string<std::u32string>(*n)));
+            s.stacks.eval.eval_stack.push_back(EvalValue(futils::number::to_string<std::u32string>(*n)));
             return EvalState::normal;
         }
         if (auto b = target.boolean()) {
-            s.stacks.eval_stack.push_back(EvalValue(b->value ? U"true" : U"false"));
+            s.stacks.eval.eval_stack.push_back(EvalValue(b->value ? U"true" : U"false"));
             return EvalState::normal;
         }
         if (target.null()) {
-            s.stacks.eval_stack.push_back(EvalValue(U"<null>"));
+            s.stacks.eval.eval_stack.push_back(EvalValue(U"<null>"));
             return EvalState::normal;
         }
         if (auto f = target.func()) {
-            s.stacks.eval_stack.push_back(EvalValue(U"<function>"));
+            auto script_name = futils::utf::convert<std::u32string>(s.cmds[f->start].line_map.script_name);
+            auto line = futils::number::to_string<std::u32string>(s.cmds[f->start].line_map.line + 1);
+            s.stacks.eval.eval_stack.push_back(EvalValue(U"<function at " + script_name + U":" + line + U">"));
+            return EvalState::normal;
+        }
+        if (auto b = target.bytes()) {
+            s.stacks.eval.eval_stack.push_back(EvalValue(U"<bytes>"));
+            return EvalState::normal;
+        }
+        if (auto fr = target.foreign()) {
+            s.stacks.eval.eval_stack.push_back(EvalValue(U"<foreign object>"));
             return EvalState::normal;
         }
         if (auto o = target.object()) {
@@ -105,15 +136,15 @@ namespace expr {
                 if (state != EvalState::normal) {
                     return state;
                 }
-                auto str = s.stacks.eval_stack.back().string();
-                s.stacks.eval_stack.pop_back();
+                auto str = s.stacks.eval.eval_stack.back().string();
+                s.stacks.eval.eval_stack.pop_back();
                 if (!str) {
                     return s.eval_error(U"$builtin.to_string: オブジェクトの値を文字列に変換できません");
                 }
                 result += *str;
             }
             result += U"}";
-            s.stacks.eval_stack.push_back(EvalValue(result));
+            s.stacks.eval.eval_stack.push_back(EvalValue(result));
             return EvalState::normal;
         }
         if (auto arr = target.array()) {
@@ -128,15 +159,15 @@ namespace expr {
                 if (state != EvalState::normal) {
                     return state;
                 }
-                auto str = s.stacks.eval_stack.back().string();
-                s.stacks.eval_stack.pop_back();
+                auto str = s.stacks.eval.eval_stack.back().string();
+                s.stacks.eval.eval_stack.pop_back();
                 if (!str) {
                     return s.eval_error(U"$builtin.to_string: 配列の要素を文字列に変換できません");
                 }
                 result += *str;
             }
             result += U"]";
-            s.stacks.eval_stack.push_back(EvalValue(result));
+            s.stacks.eval.eval_stack.push_back(EvalValue(result));
             return EvalState::normal;
         }
         return s.eval_error(U"$builtin.to_string: 不正な型に対して呼び出しました");
@@ -146,14 +177,14 @@ namespace expr {
         if (auto str = target.string()) {
             std::int64_t n;
             if (!futils::number::parse_integer(*str, n)) {
-                s.stacks.eval_stack.push_back(EvalValue(nullptr));
+                s.stacks.eval.eval_stack.push_back(EvalValue(nullptr));
             }
             else {
                 if (only_unsigned && n < 0) {
-                    s.stacks.eval_stack.push_back(EvalValue(nullptr));
+                    s.stacks.eval.eval_stack.push_back(EvalValue(nullptr));
                 }
                 else {
-                    s.stacks.eval_stack.push_back(EvalValue(n));
+                    s.stacks.eval.eval_stack.push_back(EvalValue(n));
                 }
             }
             return EvalState::normal;
@@ -213,7 +244,7 @@ namespace expr {
                         while (!result.empty() && futils::strutil::is_space(result.back())) {
                             result.pop_back();
                         }
-                        s.stacks.eval_stack.push_back(EvalValue(result));
+                        s.stacks.eval.eval_stack.push_back(EvalValue(result));
                         return EvalState::normal;
                     }
                     return s.eval_error(U"$builtin.trim: 文字列以外に適用されました");
@@ -238,11 +269,169 @@ namespace expr {
                             for (auto& s : result) {
                                 arr.push_back(Value(s));
                             }
-                            s.stacks.eval_stack.push_back(EvalValue(arr));
+                            s.stacks.eval.eval_stack.push_back(EvalValue(arr));
                             return EvalState::normal;
                         }
                     }
                     return s.eval_error(U"$builtin.split: 文字列以外に適用されました");
+                }
+                if (*key == U"eval") {
+                    auto str = args[0].string();
+                    if (!str) {
+                        return s.eval_error(U"$builtin.eval: 文字列以外に適用されました");
+                    }
+                    auto eval_target = futils::utf::convert<std::string>(*str);
+                    // std::string using SSO that may cause dangling pointer via c_str()
+                    // so we need to copy it explicitly to heap
+                    auto place = new futils::byte[eval_target.size()];
+                    futils::view::swap_wvec eval_target_view(futils::view::wvec(place, eval_target.size()));
+                    futils::view::copy(eval_target_view.w, eval_target);
+                    auto copied_view = eval_target_view.w;
+                    s.builtin_eval_stack.push_back(BuiltinEvalExpr{
+                        std::move(eval_target_view),
+                        s.cmd_line,
+                        std::move(s.stacks.eval),
+                        s.call_stack.size(),
+                        s.foreign_callback_stack.size(),
+                    });
+                    s.cmds.push_back({{s.current_script_name, s.current_script_line}, {"$builtin.eval", copied_view}});
+                    s.cmd_line = s.cmds.size() - 2;  // should run s.cmds[s.cmd_line + 1] = s.cmds.back()
+                    return EvalState::jump;
+                }
+                if (*key == U"load_foreign") {
+                    if (args.size() != 1) {
+                        return s.eval_error(U"$builtin.load_foreign: 引数の数が正しくありません");
+                    }
+                    auto name = args[0].string();
+                    if (!name) {
+                        return s.eval_error(U"$builtin.load_foreign: 文字列以外が引数に指定されました");
+                    }
+                    auto obj = foreign::load_foreign(s, *name);
+                    if (!obj) {
+                        s.stacks.eval.eval_stack.push_back(EvalValue(nullptr));  // return null
+                        return EvalState::normal;
+                    }
+                    s.stacks.eval.eval_stack.push_back(EvalValue(Value(Foreign{
+                        .type = foreign::ForeignType::library_object,
+                        .data = obj,
+                    })));
+                    return EvalState::normal;
+                }
+                if (*key == U"unload_foreign") {
+                    if (args.size() != 1) {
+                        return s.eval_error(U"$builtin.unload_foreign: 引数の数が正しくありません");
+                    }
+                    auto obj = args[0].foreign();
+                    if (!obj) {
+                        return s.eval_error(U"$builtin.unload_foreign: foreignオブジェクト以外が引数に指定されました");
+                    }
+                    if (obj->type != foreign::ForeignType::library_object) {
+                        return s.eval_error(U"$builtin.unload_foreign: library object以外が引数に指定されました");
+                    }
+                    auto lib = std::static_pointer_cast<foreign::ForeignLibrary>(obj->data);
+                    if (!foreign::unload_foreign(s, lib)) {
+                        return s.eval_error(U"$builtin.unload_foreign: ライブラリは読み込まれていません");
+                    }
+                    s.stacks.eval.eval_stack.push_back(EvalValue(nullptr));  // return null
+                    return EvalState::normal;
+                }
+                if (*key == U"call_foreign") {
+                    if (args.size() != 3) {
+                        return s.eval_error(U"$builtin.call_foreign: 引数の数が正しくありません");
+                    }
+                    auto obj = args[0].foreign();
+                    if (!obj) {
+                        return s.eval_error(U"$builtin.call_foreign: foreignオブジェクト以外が引数に指定されました");
+                    }
+                    if (obj->type != foreign::ForeignType::library_object) {
+                        return s.eval_error(U"$builtin.call_foreign: library object以外が引数に指定されました");
+                    }
+                    auto lib = std::static_pointer_cast<foreign::ForeignLibrary>(obj->data);
+                    auto func_name = args[1].string();
+                    if (!func_name) {
+                        return s.eval_error(U"$builtin.call_foreign: 関数名が文字列で指定されていません");
+                    }
+                    auto args_ = args[2].array();
+                    if (!args_) {
+                        return s.eval_error(U"$builtin.call_foreign: 引数が配列で指定されていません");
+                    }
+                    Value result, cb_result /*null for here*/;
+                    foreign::Callback cb{.result = cb_result};
+                    auto c = foreign::call_foreign(s, lib, *func_name, *args_, result, cb);
+                    if (c == EvalState::normal) {
+                        s.stacks.eval.eval_stack.push_back(EvalValue(result));
+                    }
+                    else if (c == EvalState::call) {
+                        s.foreign_callback_stack.push_back({lib, *func_name, std::move(*args_), result, s.cmd_line, 1});
+                        s.cmds.push_back({{s.current_script_name, s.current_script_line}, {"$builtin.foreign_callback"}});
+                        s.call_stack.push_back(CallStack{
+                            .back_pos = s.cmds.size() - 1,  // back to the $builtin.foreign_callback
+                            .stacks = std::move(s.stacks),
+                            .function_scope = cb.func.capture
+                                                  ? cb.func.capture->clone()
+                                                  : std::make_shared<Scope>(),
+
+                        });
+                        s.stacks.clear();
+                        s.stacks.args = std::move(cb.args);
+                        s.stacks.blocks.push_back(Block{.start = cb.func.start, .type = BlockType::func_block});
+                        s.cmd_line = cb.func.start;  // start from next line of `func`
+                        return EvalState::jump;      // anyway jump to the callback
+                    }
+                    return c;
+                }
+                if (*key == U"typeof") {
+                    if (args.size() != 1) {
+                        return s.eval_error(U"$builtin.typeof: 引数の数が正しくありません");
+                    }
+                    auto& target = args[0];
+                    return builtin_typeof(s, target);
+                }
+                if (*key == U"from_utf8") {
+                    if (args.size() != 1 &&
+                        args.size() != 2) {
+                        return s.eval_error(U"$builtin.from_utf8: 引数の数が正しくありません");
+                    }
+                    auto bytes = args[0].bytes();
+                    if (!bytes) {
+                        return s.eval_error(U"$builtin.from_utf8: バイト列以外に適用されました");
+                    }
+                    bool replace_invalid = false;
+                    if (args.size() == 2) {
+                        // ignore 2nd argument if not a boolean
+                        if (auto b = args[1].boolean(); b) {
+                            replace_invalid = b->value;
+                        }
+                    }
+                    std::u32string result;
+                    if (!futils::utf::convert(bytes->data, result, false, replace_invalid)) {
+                        s.special_object_result = false;
+                        s.special_object_error_reason = U"不正なUTF-8バイト列です";
+                        s.stacks.eval.eval_stack.push_back(EvalValue(nullptr));  // return null
+                        return EvalState::normal;
+                    }
+                    s.special_object_result = true;
+                    s.stacks.eval.eval_stack.push_back(EvalValue(result));
+                    return EvalState::normal;
+                }
+                if (*key == U"to_utf8") {
+                    if (args.size() != 1) {
+                        return s.eval_error(U"$builtin.to_utf8: 引数の数が正しくありません");
+                    }
+                    auto& target = args[0];
+                    if (auto str = target.string(); str) {
+                        std::string result;
+                        if (!futils::utf::convert(*str, result)) {
+                            s.special_object_result = false;
+                            s.special_object_error_reason = U"不正なUTF-32文字列です";
+                            s.stacks.eval.eval_stack.push_back(EvalValue(nullptr));
+                            return EvalState::normal;
+                        }
+                        s.special_object_result = true;
+                        s.stacks.eval.eval_stack.push_back(EvalValue(Bytes{result}));
+                        return EvalState::normal;
+                    }
+                    return s.eval_error(U"$builtin.to_utf8: 文字列以外に適用されました");
                 }
             }
         }
@@ -254,13 +443,9 @@ namespace expr {
             auto& a = access[i];
             if (auto key = a.key()) {
                 if (auto obj = target->object()) {
-                    auto it = obj->find(*key);
-                    if (it == obj->end()) {
-                        return s.eval_error(U"オブジェクトにキーが見つかりません");
-                    }
-                    target = &it->second;
+                    target = &(*obj)[*key];
                 }
-                else if (auto arr = target->array(); !may_create && key == U"length" && i == access.size() - 1) {
+                else if (auto arr = target->array(); arr && !may_create && key == U"length" && i == access.size() - 1) {
                     return EvalState::call;  // indicate length access
                 }
                 else {
@@ -290,6 +475,113 @@ namespace expr {
         return EvalState::normal;
     }
 
+    save::Object value_to_save_object(Value& value) {
+        auto make_null = [] {
+            save::Object obj;
+            obj.object_type = save::ObjectType::object_null;
+            return obj;
+        };
+        if (value.null()) {
+            return make_null();
+        }
+        if (auto b = value.boolean()) {
+            save::Object obj;
+            obj.object_type = b->value ? save::ObjectType::object_true : save::ObjectType::object_false;
+            return obj;
+        }
+        if (auto n = value.number()) {
+            save::Object obj;
+            obj.object_type = save::ObjectType::object_int;
+            save::Varint v;
+            set_varint_len(v, *n);
+            obj.int_value(v);
+            return obj;
+        }
+        if (auto str = value.string()) {
+            save::Object obj;
+            obj.object_type = save::ObjectType::object_string;
+            save::Name name;
+            name.name = futils::utf::convert<std::string>(*str);
+            set_varint_len(name.len, name.name.size());
+            obj.string_value(std::move(name));
+            return obj;
+        }
+        if (auto b = value.bytes()) {
+            save::Object obj;
+            obj.object_type = save::ObjectType::object_bytes;
+            save::Name name;
+            name.name = b->data;
+            set_varint_len(name.len, name.name.size());
+            obj.bytes_value(std::move(name));
+            return obj;
+        }
+        if (auto arr = value.array()) {
+            save::Object obj;
+            obj.object_type = save::ObjectType::object_array;
+            std::vector<save::Object> values;
+            for (auto& v : *arr) {
+                values.push_back(value_to_save_object(v));
+            }
+            save::Varint len;
+            set_varint_len(len, values.size());
+            obj.array_len(len);
+            obj.array(std::move(values));
+            return obj;
+        }
+        if (auto v = value.object()) {
+            save::Object obj;
+            obj.object_type = save::ObjectType::object_map;
+            std::vector<save::Pair> values;
+            for (auto& [k, v] : *v) {
+                save::Pair map;
+                map.name.name = futils::utf::convert<std::string>(k);
+                set_varint_len(map.name.len, map.name.name.size());
+                map.value = value_to_save_object(v);
+                values.push_back(std::move(map));
+            }
+            save::Varint len;
+            set_varint_len(len, values.size());
+            obj.map_len(len);
+            obj.map(std::move(values));
+            return obj;
+        }
+        return make_null();
+    }
+
+    Value save_object_to_value(save::Object& obj) {
+        Value result;
+        if (obj.object_type == save::ObjectType::object_null) {
+            return Value();
+        }
+        if (obj.object_type == save::ObjectType::object_true || obj.object_type == save::ObjectType::object_false) {
+            return Value(Boolean{obj.object_type == save::ObjectType::object_true});
+        }
+        if (auto map = obj.map()) {
+            std::map<std::u32string, Value> values;
+            for (auto& kv : *map) {
+                auto d = futils::utf::convert<std::u32string>(kv.name.name);
+                values[d] = save_object_to_value(kv.value);
+            }
+            return Value(values);
+        }
+        if (auto arr = obj.array()) {
+            std::vector<Value> values;
+            for (auto& v : *arr) {
+                values.push_back(save_object_to_value(v));
+            }
+        }
+        if (auto str = obj.string_value()) {
+            return Value(futils::utf::convert<std::u32string>(str->name));
+        }
+        if (auto bytes = obj.bytes_value()) {
+            return Value(Bytes{bytes->name});
+        }
+        if (auto s = obj.int_value()) {
+            return Value(s->value());
+        }
+        return Value();  // fallback
+    }
+
     EvalState assign_access(RuntimeState& s, std::vector<Access>& access, Value& value_) {
         if (access.size() == 0) {
             return s.eval_error(U"不正な代入です");
@@ -312,10 +604,6 @@ namespace expr {
             s.special_object_error_reason = U"";
             auto obj = *obj_;
             if (obj == SpecialObject::SaveData) {
-                auto value = value_.string();
-                if (!value) {
-                    return EvalState::normal;
-                }
                 if (access.size() == 1) {
                     return EvalState::normal;
                 }
@@ -357,6 +645,10 @@ namespace expr {
                         return EvalState::normal;
                     }
                     if (key == U"name") {
+                        auto value = value_.string();
+                        if (!value) {
+                            return EvalState::normal;
+                        }
                         if (access.size() != 4) {
                             return EvalState::normal;
                         }
@@ -372,12 +664,41 @@ namespace expr {
                     }
                 }
                 if (key == U"location") {
+                    auto value = value_.string();
+                    if (!value) {
+                        return EvalState::normal;
+                    }
                     s.save.location.name = futils::utf::convert<std::string>(*value);
                     set_varint_len(s.save.location.len, s.save.location.name.size());
                 }
                 if (key == U"phase") {
+                    auto value = value_.string();
+                    if (!value) {
+                        return EvalState::normal;
+                    }
                     s.save.phase.name = futils::utf::convert<std::string>(*value);
                     set_varint_len(s.save.phase.len, s.save.phase.name.size());
+                }
+                if (key == U"storage") {
+                    if (value_.foreign()) {
+                        s.special_object_result = false;
+                        s.special_object_error_reason = U"外部オブジェクトをセーブデータに保存することはできません";
+                        return EvalState::normal;
+                    }
+                    if (value_.func()) {
+                        s.special_object_result = false;
+                        s.special_object_error_reason = U"関数をセーブデータに保存することはできません";
+                        return EvalState::normal;
+                    }
+                    auto r = &s.save_data_storage;
+                    auto res = recursive_access(r, access, s, 2, true);
+                    if (res != EvalState::normal) {
+                        return res;
+                    }
+                    *r = std::move(value_);
+                    s.special_object_result = true;
+                    s.special_object_error_reason = U"";
+                    return EvalState::normal;
                 }
             }
             else if (obj == SpecialObject::Global) {
@@ -460,10 +781,21 @@ namespace expr {
                     }
                     return Value(futils::utf::convert<std::u32string>(s.save.phase.name));
                 }
+                if (key == U"storage") {
+                    auto r = &s.save_data_storage;
+                    auto res = recursive_access(r, access, s, 2, false);
+                    if (res == EvalState::call) {
+                        return Value(r->array()->size());
+                    }
+                    if (res != EvalState::normal) {
+                        return std::nullopt;  // this is an error
+                    }
+                    return *r;
+                }
             }
             else if (obj == SpecialObject::Args) {
                 if (access.size() == 1) {
-                    return null;
+                    return Value(s.stacks.args);
                 }
                 if (auto key = access[1].key()) {
                     if (*key == U"length") {
@@ -495,7 +827,13 @@ namespace expr {
                 if (access.size() != 1) {
                     return null;
                 }
-                return Value(futils::utf::convert<std::u32string>(s.prompt_result));
+                return Value(s.prompt_result);
+            }
+            else if (obj == SpecialObject::Output) {
+                if (access.size() != 1) {
+                    return null;
+                }
+                return Value(s.story_text);
             }
             else if (obj == SpecialObject::Global) {
                 if (access.size() == 1) {
@@ -602,7 +940,7 @@ std::shared_ptr<expr::Expr> parse_expr(futils::Sequencer<futils::view::rvec>& se
     };
     size_t max_layer = 1 + layers.size() + 1;
     auto skip_space = [&]() {
-        while (seq.consume_if(' ') || seq.consume_if('\t')) {
+        while (seq.consume_if(' ') || seq.consume_if('\t') || seq.consume_if('\n') || seq.consume_if('\r')) {
         }
     };
     while (layer < max_layer) {
@@ -659,6 +997,9 @@ std::shared_ptr<expr::Expr> parse_expr(futils::Sequencer<futils::view::rvec>& se
                 else if (name == "input") {
                     special = expr::SpecialObject::Input;
                 }
+                else if (name == "output") {
+                    special = expr::SpecialObject::Output;
+                }
                 else if (name == "result") {
                     special = expr::SpecialObject::Result;
                 }
@@ -710,6 +1051,23 @@ std::shared_ptr<expr::Expr> parse_expr(futils::Sequencer<futils::view::rvec>& se
                 }
                 str_lit->value = futils::utf::convert<std::u32string>(value);
                 result = str_lit;
+            }
+            else if (seq.match("r\"")) {
+                seq.consume();  // skip r
+                auto begin = seq.rptr;
+                auto r = futils::comb2::composite::c_str(seq, 0, 0);
+                if (r != futils::comb2::Status::match) {
+                    return nullptr;
+                }
+                auto end = seq.rptr;
+                auto bytes_lit = std::make_shared<expr::BytesLiteralExpr>();
+                auto s = seq.buf.buffer.substr(begin + 1, end - begin - 2);
+                std::string value;
+                if (!futils::escape::unescape_str(s, value)) {
+                    return nullptr;
+                }
+                bytes_lit->value = std::move(value);
+                result = bytes_lit;
             }
             else if (futils::number::is_digit(seq.current())) {
                 auto begin = seq.rptr;
@@ -888,20 +1246,10 @@ std::shared_ptr<expr::Expr> parse_expr(futils::view::rvec expr) {
     return parse_expr(seq);
 }
 
-struct ScriptLineMap {
-    futils::view::rvec script_name;
-    size_t line = 0;
-};
-
-struct LineMappedCommand {
-    ScriptLineMap line_map;
-    std::vector<futils::view::rvec> cmd;
-};
-
-struct GameMain {
+struct ScriptInstance {
     RuntimeState state;
 
-    GameMain(TextController& text, save::SaveData& save, futils::wrap::path_string& save_data_path)
+    ScriptInstance(TextController& text, save::SaveData& save, futils::wrap::path_string& save_data_path)
         : state{text, save, save_data_path} {
     }
 
@@ -912,8 +1260,16 @@ struct GameMain {
         if (state.eval_error_reason.size()) {
             e += U"\n" + state.eval_error_reason;
         }
-        state.text.write_story(e, 1);
         state.game_end_request = GameEndRequest::failure;
+        if (state.builtin_eval_stack.empty()) {
+            state.text.write_story(e, 1);
+        }
+        else {
+            state.eval_error_reason.clear();
+            state.special_object_error_reason = e;
+            state.special_object_result = false;
+            do_return_builtin_eval(Value());
+        }
     }
 
     bool result_to_bool(const Value& result, bool& cond) {
@@ -976,13 +1332,16 @@ struct GameMain {
     }
 
     bool do_eval(size_t& line) {
-        while (state.stacks.expr_stack.size() > 0) {
-            auto expr = state.stacks.expr_stack.back();
-            state.stacks.expr_stack.pop_back();
+        while (state.stacks.eval.expr_stack.size() > 0) {
+            auto expr = state.stacks.eval.expr_stack.back();
+            state.stacks.eval.expr_stack.pop_back();
             auto result = expr->eval(state);
             if (result == expr::EvalState::error) {
                 report_script_error(U"式の評価に失敗しました");
                 return false;
+            }
+            if (result == expr::EvalState::jump) {
+                return false;  // jump to another script
             }
             if (result == expr::EvalState::call) {
                 if (state.call_stack.empty()) {  // check callee is set
@@ -1007,9 +1366,39 @@ struct GameMain {
         }
         auto& call = state.call_stack.back();
         state.stacks = std::move(call.stacks);
-        state.stacks.eval_stack.push_back(std::move(return_value));  // return value
+        if (!call.no_return_value) {
+            state.stacks.eval.eval_stack.push_back(std::move(return_value));  // return value
+        }
         line = call.back_pos - 1;
         state.call_stack.pop_back();
+    }
+
+    void do_return_builtin_eval(Value&& return_value) {
+        if (state.builtin_eval_stack.empty()) {
+            report_script_error(U"$builtin.eval関数のスタックが空です(bug)");
+            return;
+        }
+        auto& builtin = state.builtin_eval_stack.back();
+        if (state.call_stack.size() < builtin.call_stack_size) {
+            state.builtin_eval_stack.clear();  // clear all to avoid recursive call
+            report_script_error(U"$builtin.evalのコールスタックが不正です(bug)");
+        }
+        if (state.foreign_callback_stack.size() < builtin.foreign_callback_count) {
+            state.builtin_eval_stack.clear();  // clear all to avoid recursive call
+            report_script_error(U"$builtin.evalの外部関数コールスタックが不正です(bug)");
+        }
+        while (state.foreign_callback_stack.size() > builtin.foreign_callback_count) {
+            state.foreign_callback_stack.pop_back();
+        }
+        while (state.call_stack.size() > builtin.call_stack_size) {
+            state.call_stack.pop_back();
+        }
+        state.stacks.eval = std::move(builtin.stacks);
+        state.stacks.eval.eval_stack.push_back(std::move(return_value));  // return value
+        state.cmd_line = builtin.back_line - 1;
+        state.builtin_eval_stack.pop_back();
+        state.cmds.pop_back();
+        state.game_end_request = GameEndRequest::none;
     }
 
     void run_command(std::vector<futils::view::rvec>& cmd, size_t& line, std::vector<LineMappedCommand>& lines) {
@@ -1017,28 +1406,14 @@ struct GameMain {
         if (inst == "reload_script") {
             state.game_end_request = GameEndRequest::reload;
         }
+        else if (inst == "go_title") {
+            state.game_end_request = GameEndRequest::go_title;
+        }
         else if (inst == "clear_screen") {
             state.text.clear_screen();
         }
-        else if (inst == "speed" || inst == "wait" || inst == "delay_offset") {
-            if (cmd.size() < 2) {
-                report_script_error(U"引数が足りません");
-                return;
-            }
-            size_t val = 0;
-            if (!futils::number::parse_integer(cmd[1], val)) {
-                report_script_error(U"数値を指定してください");
-                return;
-            }
-            if (inst == "speed") {
-                state.text_speed = val;
-            }
-            else if (inst == "wait") {
-                state.after_wait = val;
-            }
-            else if (inst == "delay_offset") {
-                state.delay_offset = val;
-            }
+        else if (inst == "thread_yield") {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
         else if (inst == "layout") {
             if (cmd.size() < 2) {
@@ -1055,7 +1430,9 @@ struct GameMain {
                 report_script_error(U"不明なレイアウトです");
             }
         }
-        else if (inst == "new_text" || inst == "new_prompt" || inst == "add_text" || inst == "text" || inst == "prompt") {
+        else if (inst == "new_text" || inst == "new_prompt" || inst == "add_text" ||
+                 inst == "text" || inst == "prompt" ||
+                 inst == "raw") {
             bool new_text = false;
             if (cmd.size() >= 2) {
                 if (inst == "add_text") {
@@ -1090,6 +1467,14 @@ struct GameMain {
                     }
                     auto v = state.get_variable(var_name);
                     if (!v) {
+                        if (var_name == U"input") {
+                            futils::strutil::append(out, state.prompt_result);
+                            return;
+                        }
+                        if (var_name == U"output") {
+                            futils::strutil::append(out, state.story_text);
+                            return;
+                        }
                         return;  // not found
                     }
                     if (auto s = v->string()) {
@@ -1130,19 +1515,20 @@ struct GameMain {
             if (inst == "new_text" || inst == "add_text" || inst == "text") {
                 state.text.write_story(state.story_text, speed, after_wait, delay_offset);
             }
-            else {
-                state.prompt_result = state.text.write_prompt(state.story_text, speed, after_wait, delay_offset);
+            else if (inst == "new_prompt" || inst == "prompt") {
+                state.prompt_result = futils::utf::convert<std::u32string>(state.text.write_prompt(state.story_text, speed, after_wait, delay_offset));
             }
         }
         else if (inst == "exit") {
             state.game_end_request = GameEndRequest::exit;
         }
         else if (inst == "save") {
-            save(true);
+            save();
         }
-        else if (inst == "assert" || inst == "eval" ||
+        else if (inst == "assert" || inst == "eval" || inst == "$builtin.eval" ||
                  inst == "if" || inst == "elif" || inst == "while" ||
-                 inst == "return") {
+                 inst == "return" ||
+                 inst == "speed" || inst == "wait" || inst == "delay_offset") {
             if (inst == "elif" && !state.jump_from_if) {
                 if (state.stacks.blocks.empty() || state.stacks.blocks.back().type != BlockType::if_block) {
                     report_script_error(U"elifがifブロックの外にあります");
@@ -1153,13 +1539,13 @@ struct GameMain {
                 skip_to_end(line, lines, false);
                 return;
             }
-            if (state.stacks.eval_stack.empty()) {
+            if (state.stacks.eval.eval_stack.empty()) {
                 if (cmd.size() < 2) {
                     if (inst == "return") {
                         do_return(line, Value());
                         return;
                     }
-                    report_script_error(U"引数が足りません");
+                    report_script_error(U"引数が足りません");  // at here, even if $builtin.eval, this is an error
                     return;
                 }
                 auto expr = parse_expr(cmd[1]);
@@ -1168,22 +1554,22 @@ struct GameMain {
                     return;
                 }
                 expr->push(state);
-                state.stacks.root_expr = expr;
+                state.stacks.eval.root_expr = expr;
             }
-            if (!state.stacks.root_expr) {
+            if (!state.stacks.eval.root_expr) {
                 report_script_error(U"式が指定されていません");
                 return;
             }
             if (!do_eval(line)) {
-                return;  // error or incomplete
-            }
-            if (state.stacks.eval_stack.size() != 1 ||
-                state.stacks.expr_stack.size() != 0) {
-                report_script_error(U"スタックが正しく処理されていません");
                 return;
             }
-            auto result = state.stacks.eval_stack.back();
-            state.stacks.eval_stack.pop_back();
+            if (state.stacks.eval.eval_stack.size() != 1 ||
+                state.stacks.eval.expr_stack.size() != 0) {
+                report_script_error(U"スタックが正しく処理されていません(bug)");
+                return;
+            }
+            auto result = state.stacks.eval.eval_stack.back();
+            state.stacks.eval.eval_stack.pop_back();
             if (inst == "if" || inst == "elif" || inst == "while") {
                 bool cond = false;
                 auto r = result.eval(state);
@@ -1210,10 +1596,10 @@ struct GameMain {
                 }
                 state.jump_from_if = false;
                 if (inst == "if" || inst == "elif") {
-                    state.stacks.blocks.push_back({line, BlockType::if_block, std::move(state.stacks.root_expr)});
+                    state.stacks.blocks.push_back({line, BlockType::if_block, std::move(state.stacks.eval.root_expr)});
                 }
                 else {
-                    state.stacks.blocks.push_back({line, BlockType::while_block, std::move(state.stacks.root_expr)});
+                    state.stacks.blocks.push_back({line, BlockType::while_block, std::move(state.stacks.eval.root_expr)});
                 }
             }
             else if (inst == "assert") {
@@ -1238,6 +1624,37 @@ struct GameMain {
                     return;
                 }
                 do_return(line, std::move(*r));
+            }
+            else if (inst == "$builtin.eval") {
+                auto r = result.eval(state);
+                if (!r) {
+                    report_script_error(U"式の評価に失敗しました");
+                    return;
+                }
+                state.special_object_result = true;
+                state.special_object_error_reason = U"";
+                do_return_builtin_eval(std::move(*r));
+            }
+            else if (inst == "delay_offset" || inst == "speed" || inst == "wait") {
+                auto r = result.eval(state);
+                if (!r) {
+                    report_script_error(U"式の評価に失敗しました");
+                    return;
+                }
+                auto v = r->number();
+                if (!v) {
+                    report_script_error(U"数値を指定してください");
+                    return;
+                }
+                if (inst == "speed") {
+                    state.text_speed = *v;
+                }
+                else if (inst == "wait") {
+                    state.after_wait = *v;
+                }
+                else if (inst == "delay_offset") {
+                    state.delay_offset = *v;
+                }
             }
         }
         else if (inst == "break" || inst == "continue") {
@@ -1267,6 +1684,7 @@ struct GameMain {
             auto type = state.stacks.blocks.back().type;
             if (type == BlockType::while_block) {
                 line = state.stacks.blocks.back().start - 1;  // reenter
+                state.stacks.blocks.pop_back();
             }
             else if (type == BlockType::if_block) {
                 state.stacks.blocks.pop_back();
@@ -1314,50 +1732,87 @@ struct GameMain {
             }
             state.set_variable(u32name, Value(std::move(func)));
         }
+        else if (inst == "$builtin.foreign_callback") {
+            if (state.foreign_callback_stack.empty()) {
+                report_script_error(U"外部コールバックが登録されていません");
+                return;
+            }
+            if (line != lines.size() - 1) {
+                report_script_error(U"外部コールバックの呼び出し後にコマンドがあります(bug)");
+                return;
+            }
+            auto& f = state.foreign_callback_stack.back();
+            if (state.stacks.eval.eval_stack.empty()) {
+                report_script_error(U"スタックが空です(bug)");
+                return;
+            }
+            auto result = state.stacks.eval.eval_stack.back();
+            state.stacks.eval.eval_stack.pop_back();
+            auto r = result.eval(state);
+            if (!r) {
+                report_script_error(U"式の評価に失敗しました");
+                return;
+            }
+            foreign::Callback cb{.result = *r};
+            cb.count = f.callback_count;
+            auto res = foreign::call_foreign(state, f.lib, f.func_name, f.args, f.result, cb);
+            if (res == expr::EvalState::normal) {
+                state.stacks.eval.eval_stack.push_back(std::move(f.result));
+                auto back_pos = f.back_pos;
+                state.foreign_callback_stack.pop_back();
+                state.cmd_line = back_pos - 1;  // back_pos - 1 because of line++
+                state.cmds.pop_back();          // remove $builtin.foreign_callback
+            }
+            else if (res == expr::EvalState::call) {
+                f.callback_count++;
+                state.call_stack.push_back(CallStack{
+                    .back_pos = line,
+                    .stacks = std::move(state.stacks),
+                    .function_scope = cb.func.capture ? cb.func.capture->clone() : std::make_shared<Scope>(),
+                });
+                state.stacks.clear();
+                state.stacks.args = std::move(cb.args);
+                state.stacks.blocks.push_back(Block{.start = cb.func.start, .type = BlockType::func_block});
+                state.cmd_line = cb.func.start;  // start from next line of `func`
+            }
+            else if (res == expr::EvalState::error) {
+                report_script_error(U"外部コールバックの実行に失敗しました");
+                return;
+            }
+            else {
+                report_script_error(U"外部コールバックの実行に失敗しました(bug)");
+                return;
+            }
+        }
         else {
             report_script_error(U"不明なコマンド: " + futils::utf::convert<std::u32string>(inst));
         }
     }
 
-    void save(bool via_command) {
+    void save() {
+        state.save.storage = expr::value_to_save_object(state.save_data_storage);
         std::string buffer;
         futils::binary::writer w{futils::binary::resizable_buffer_writer<std::string>(), &buffer};
         if (auto err = state.save.encode(w)) {
-            if (via_command) {
-                state.special_object_result = false;
-                state.special_object_error_reason = U"セーブデータのエンコードに失敗しました\n" + err.error<std::u32string>();
-                return;
-            }
-            state.text.write_story(U"failed to encode save data: " + err.error<std::u32string>(), 1);
-            state.game_end_request = GameEndRequest::failure;
+            state.special_object_result = false;
+            state.special_object_error_reason = U"セーブデータのエンコードに失敗しました\n" + err.error<std::u32string>();
             return;
         }
         auto res = futils::file::File::create(state.save_data_path);
         if (!res) {
-            if (via_command) {
-                state.special_object_result = false;
-                state.special_object_error_reason = U"セーブデータファイルの作成に失敗しました\n" + res.error().error<std::u32string>();
-                return;
-            }
-            state.text.write_story(U"failed to open save data file", 1);
-            state.game_end_request = GameEndRequest::failure;
+            state.special_object_result = false;
+            state.special_object_error_reason = U"セーブデータファイルの作成に失敗しました\n" + res.error().error<std::u32string>();
             return;
         }
         futils::file::FileStream<std::string> fs{*res};
         futils::binary::writer buffer_writer{fs.get_direct_write_handler(), &fs};
         if (!buffer_writer.write(w.written())) {
-            if (via_command) {
-                state.special_object_result = false;
-                state.special_object_error_reason = U"セーブデータの書き込みに失敗しました\n" + fs.error.error<std::u32string>();
-                return;
-            }
-            state.text.write_story(U"failed to write save data", 1);
-            state.game_end_request = GameEndRequest::failure;
+            state.special_object_result = false;
+            state.special_object_error_reason = U"セーブデータの書き込みに失敗しました\n" + fs.error.error<std::u32string>();
             return;
         }
-        if (via_command) {
-            state.special_object_result = true;
-        }
+        state.special_object_result = true;
+        state.special_object_error_reason = U"";
     }
 
     void load_script(std::vector<futils::view::rvec>& recursive_check, futils::view::rvec script, futils::view::rvec name, std::vector<LineMappedCommand>& cmds) {
@@ -1401,7 +1856,7 @@ struct GameMain {
             // expression, so interpret this line as eval command (syntax sugar)
             else if (cmd[0][0] == '$' || cmd[0] == "true" || cmd[0] == "null" || cmd[0] == "false" ||
                      futils::number::is_digit(cmd[0][0]) || cmd[0][0] == '"' || cmd[0][0] == '[' || cmd[0][0] == '{' ||
-                     cmd[0][0] == '(' ||
+                     cmd[0][0] == '(' || (cmd[0].size() >= 2 && (cmd[0][0] == 'r' && cmd[0][1] == '"')) ||
                      cmd[0][0] == '!' || cmd[0][0] == '+' || cmd[0][0] == '-' || cmd[0][0] == '~') {
                 cmds.push_back({{name, i}, {"eval", l}});
             }
@@ -1411,24 +1866,47 @@ struct GameMain {
         }
     }
 
+    void run_async_callback() {
+        if (state.async_callback_channel) {
+            if (auto cb = state.async_callback_channel->receive()) {
+                // interrupt current command and run callback
+                state.call_stack.push_back(CallStack{
+                    .back_pos = state.cmd_line,
+                    .stacks = std::move(state.stacks),
+                    .function_scope = cb->func.capture ? cb->func.capture->clone() : std::make_shared<Scope>(),
+                    .no_return_value = true,
+                });
+                state.stacks.clear();
+                state.stacks.args = std::move(cb->args);
+                state.stacks.blocks.push_back(Block{.start = cb->func.start, .type = BlockType::func_block});
+                state.cmd_line = cb->func.start + 1;  // start from next line of `func`
+            }
+        }
+    }
+
     void run_script(futils::view::rvec script) {
         state.stacks.clear();
         state.global_variables.clear();
         state.call_stack.clear();
+        state.builtin_eval_stack.clear();
+        state.foreign_callback_stack.clear();
         state.jump_from_if = false;
-        std::vector<LineMappedCommand> cmds;
+        state.async_callback_channel = nullptr;
+        state.cmds.clear();
+        state.cmd_line = 0;
         std::vector<futils::view::rvec> recursive_check;
-        load_script(recursive_check, script, state.current_script_name, cmds);
+        load_script(recursive_check, script, state.current_script_name, state.cmds);
         if (state.game_end_request != GameEndRequest::none) {
             return;
         }
-        size_t c = 0;
+        size_t& c = state.cmd_line;
         auto prev_phase = state.save.phase.name;
-        while (c < cmds.size()) {
-            auto& cmd = cmds[c];
+        while (c < state.cmds.size()) {
+            run_async_callback();
+            auto& cmd = state.cmds[c];
             state.current_script_line = cmd.line_map.line;
             state.current_script_name = cmd.line_map.script_name;
-            run_command(cmd.cmd, c, cmds);
+            run_command(cmd.cmd, c, state.cmds);
             if (signaled || state.game_end_request != GameEndRequest::none) {
                 return;
             }
@@ -1466,6 +1944,7 @@ struct GameMain {
     }
 
     void main_loop() {
+        state.save_data_storage = expr::save_object_to_value(state.save.storage);
         for (;;) {
             run_phase(state.save.phase.name, false);
             if (state.game_end_request == GameEndRequest::failure) {
@@ -1493,7 +1972,8 @@ struct GameMain {
                 state.text.write_story(U"ゲームを終了します....", 1);
                 return;
             }
-            if (state.game_end_request == GameEndRequest::reload) {
+            if (state.game_end_request == GameEndRequest::reload ||
+                state.game_end_request == GameEndRequest::go_title) {
                 return;
             }
         }
@@ -1525,7 +2005,7 @@ GameEndRequest run_game(TextController& ctrl, save::SaveData& data, const char* 
     if (res != 0) {
         return GameEndRequest::failure;
     }
-    GameMain game{ctrl, data, save_data_name};
+    ScriptInstance game{ctrl, data, save_data_name};
     game.game_start();
     return game.state.game_end_request;
 }

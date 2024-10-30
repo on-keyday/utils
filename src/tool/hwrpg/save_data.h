@@ -70,64 +70,74 @@ namespace save {
         }
         return std::nullopt;
     }
-    enum class ItemID : std::uint8_t {
-        none = 0,
+    enum class ObjectType : std::uint8_t {
+        object_null = 0,
+        object_true = 1,
+        object_false = 2,
+        object_int = 3,
+        object_string = 4,
+        object_bytes = 5,
+        object_array = 6,
+        object_map = 7,
     };
-    constexpr const char* to_string(ItemID e) {
+    constexpr const char* to_string(ObjectType e) {
         switch (e) {
-            case ItemID::none:
-                return "none";
+            case ObjectType::object_null:
+                return "object_null";
+            case ObjectType::object_true:
+                return "object_true";
+            case ObjectType::object_false:
+                return "object_false";
+            case ObjectType::object_int:
+                return "object_int";
+            case ObjectType::object_string:
+                return "object_string";
+            case ObjectType::object_bytes:
+                return "object_bytes";
+            case ObjectType::object_array:
+                return "object_array";
+            case ObjectType::object_map:
+                return "object_map";
         }
         return "";
     }
 
-    constexpr std::optional<ItemID> ItemID_from_string(std::string_view str) {
+    constexpr std::optional<ObjectType> ObjectType_from_string(std::string_view str) {
         if (str.empty()) {
             return std::nullopt;
         }
-        if (str == "none") {
-            return ItemID::none;
+        if (str == "object_null") {
+            return ObjectType::object_null;
+        }
+        if (str == "object_true") {
+            return ObjectType::object_true;
+        }
+        if (str == "object_false") {
+            return ObjectType::object_false;
+        }
+        if (str == "object_int") {
+            return ObjectType::object_int;
+        }
+        if (str == "object_string") {
+            return ObjectType::object_string;
+        }
+        if (str == "object_bytes") {
+            return ObjectType::object_bytes;
+        }
+        if (str == "object_array") {
+            return ObjectType::object_array;
+        }
+        if (str == "object_map") {
+            return ObjectType::object_map;
         }
         return std::nullopt;
     }
-    enum class ActionID : std::uint8_t {
-        none = 0,
-    };
-    constexpr const char* to_string(ActionID e) {
-        switch (e) {
-            case ActionID::none:
-                return "none";
-        }
-        return "";
-    }
-
-    constexpr std::optional<ActionID> ActionID_from_string(std::string_view str) {
-        if (str.empty()) {
-            return std::nullopt;
-        }
-        if (str == "none") {
-            return ActionID::none;
-        }
-        return std::nullopt;
-    }
-    struct StoryFlags {
-        std::uint64_t reserved = 0;
-        ::futils::error::Error<> encode(::futils::binary::writer& w) const;
-        ::futils::error::Error<> decode(::futils::binary::reader& r);
-        static constexpr size_t fixed_header_size = 8;
-    };
-    inline ::futils::error::Error<> StoryFlags::encode(::futils::binary::writer& w) const {
-        if (!::futils::binary::write_num(w, static_cast<std::uint64_t>((*this).reserved), true)) {
-            return ::futils::error::Error<>("encode: StoryFlags::reserved: write std::uint64_t failed", ::futils::error::Category::lib);
-        }
-        return ::futils::error::Error<>();
-    }
-    inline ::futils::error::Error<> StoryFlags::decode(::futils::binary::reader& r) {
-        if (!::futils::binary::read_num(r, (*this).reserved, true)) {
-            return ::futils::error::Error<>("decode: StoryFlags::reserved: read int failed", ::futils::error::Category::lib);
-        }
-        return ::futils::error::Error<>();
-    }
+    struct Varint;
+    struct Name;
+    struct Object;
+    struct Pair;
+    struct PlayerData;
+    struct SaveData;
     struct Varint {
         ::futils::binary::flags_t<std::uint64_t, 2, 62> flags_1_;
         bits_flag_alias_method(flags_1_, 0, prefix);
@@ -136,150 +146,69 @@ namespace save {
         ::futils::error::Error<> decode(::futils::binary::reader& r);
         static constexpr size_t fixed_header_size = 0;
     };
-    inline ::futils::error::Error<> Varint::encode(::futils::binary::writer& w) const {
-        if ((*this).prefix() == 0) {
-            std::uint8_t tmp2 = 0;
-            tmp2 = (*this).value();
-            tmp2 |= std::uint8_t(0) << 6;
-            if (!::futils::binary::write_num(w, tmp2, true)) {
-                return ::futils::error::Error<>("encode: Varint::value: write bit field failed", ::futils::error::Category::lib);
-            }
-        }
-        else if ((*this).prefix() == 1) {
-            std::uint16_t tmp2 = 0;
-            tmp2 = (*this).value();
-            tmp2 |= std::uint16_t(1) << 14;
-            if (!::futils::binary::write_num(w, tmp2, true)) {
-                return ::futils::error::Error<>("encode: Varint::value: write bit field failed", ::futils::error::Category::lib);
-            }
-        }
-        else if ((*this).prefix() == 2) {
-            std::uint32_t tmp2 = 0;
-            tmp2 = (*this).value();
-            tmp2 |= std::uint32_t(2) << 30;
-            if (!::futils::binary::write_num(w, tmp2, true)) {
-                return ::futils::error::Error<>("encode: Varint::value: write bit field failed", ::futils::error::Category::lib);
-            }
-        }
-        else if ((*this).prefix() == 3) {
-            std::uint64_t tmp2 = 0;
-            tmp2 = (*this).value();
-            tmp2 |= std::uint64_t(3) << 62;
-            if (!::futils::binary::write_num(w, tmp2, true)) {
-                return ::futils::error::Error<>("encode: Varint::value: write bit field failed", ::futils::error::Category::lib);
-            }
-        }
-        return ::futils::error::Error<>();
-    }
-    inline ::futils::error::Error<> Varint::decode(::futils::binary::reader& r) {
-        if (!r.load_stream(1)) {
-            return ::futils::error::Error<>("decode: Varint::value: read bit field failed", ::futils::error::Category::lib);
-        }
-        std::uint8_t tmp3 = (r.top() >> 6) & 0x3;
-        (*this).prefix(tmp3);
-        if ((*this).prefix() == 0) {
-            std::uint8_t tmp4 = 0;
-            if (!::futils::binary::read_num(r, tmp4, true)) {
-                return ::futils::error::Error<>("decode: Varint::value: read bit field failed", ::futils::error::Category::lib);
-            }
-            tmp4 &= ~(std::uint8_t(0x3) << 6);
-            (*this).value(tmp4);
-        }
-        else if ((*this).prefix() == 1) {
-            std::uint16_t tmp5 = 0;
-            if (!::futils::binary::read_num(r, tmp5, true)) {
-                return ::futils::error::Error<>("decode: Varint::value: read bit field failed", ::futils::error::Category::lib);
-            }
-            tmp5 &= ~(std::uint16_t(0x3) << 14);
-            (*this).value(tmp5);
-        }
-        else if ((*this).prefix() == 2) {
-            std::uint32_t tmp6 = 0;
-            if (!::futils::binary::read_num(r, tmp6, true)) {
-                return ::futils::error::Error<>("decode: Varint::value: read bit field failed", ::futils::error::Category::lib);
-            }
-            tmp6 &= ~(std::uint32_t(0x3) << 30);
-            (*this).value(tmp6);
-        }
-        else if ((*this).prefix() == 3) {
-            std::uint64_t tmp7 = 0;
-            if (!::futils::binary::read_num(r, tmp7, true)) {
-                return ::futils::error::Error<>("decode: Varint::value: read bit field failed", ::futils::error::Category::lib);
-            }
-            tmp7 &= ~(std::uint64_t(0x3) << 62);
-            (*this).value(tmp7);
-        }
-        return ::futils::error::Error<>();
-    }
-    struct Item {
-        Varint id;
-        ::futils::error::Error<> encode(::futils::binary::writer& w) const;
-        ::futils::error::Error<> decode(::futils::binary::reader& r);
-    };
-    inline ::futils::error::Error<> Item::encode(::futils::binary::writer& w) const {
-        if (auto err = (*this).id.encode(w)) {
-            return err;
-        }
-        return ::futils::error::Error<>();
-    }
-    inline ::futils::error::Error<> Item::decode(::futils::binary::reader& r) {
-        if (auto err = (*this).id.decode(r)) {
-            return err;
-        }
-        return ::futils::error::Error<>();
-    }
-    struct Action {
-        Varint id;
-        ::futils::error::Error<> encode(::futils::binary::writer& w) const;
-        ::futils::error::Error<> decode(::futils::binary::reader& r);
-    };
-    inline ::futils::error::Error<> Action::encode(::futils::binary::writer& w) const {
-        if (auto err = (*this).id.encode(w)) {
-            return err;
-        }
-        return ::futils::error::Error<>();
-    }
-    inline ::futils::error::Error<> Action::decode(::futils::binary::reader& r) {
-        if (auto err = (*this).id.decode(r)) {
-            return err;
-        }
-        return ::futils::error::Error<>();
-    }
     struct Name {
         Varint len;
         std::string name;
         ::futils::error::Error<> encode(::futils::binary::writer& w) const;
         ::futils::error::Error<> decode(::futils::binary::reader& r);
     };
-    inline ::futils::error::Error<> Name::encode(::futils::binary::writer& w) const {
-        if (auto err = (*this).len.encode(w)) {
-            return err;
-        }
-        auto tmp_8_ = (*this).len.value();
-        if (tmp_8_ != (*this).name.size()) {
-            return ::futils::error::Error<>("encode: Name::name: dynamic length is not compatible with its length; tmp_8_!=(*this).name.size()", ::futils::error::Category::lib);
-        }
-        if (!w.write((*this).name)) {
-            return ::futils::error::Error<>("encode: Name::name: write array failed", ::futils::error::Category::lib);
-        }
-        return ::futils::error::Error<>();
-    }
-    inline ::futils::error::Error<> Name::decode(::futils::binary::reader& r) {
-        if (auto err = (*this).len.decode(r)) {
-            return err;
-        }
-        auto tmp_9_ = (*this).len.value();
-        if (!r.read((*this).name, tmp_9_)) {
-            return ::futils::error::Error<>("decode: Name::name: read byte array failed", ::futils::error::Category::lib);
-        }
-        return ::futils::error::Error<>();
-    }
+    struct Object {
+        ObjectType object_type{};
+        struct union_struct_4 {
+            Varint int_value;
+        };
+        struct union_struct_5 {
+            Name string_value;
+        };
+        struct union_struct_6 {
+            Name bytes_value;
+        };
+        struct union_struct_7 {
+            Varint array_len;
+            std::vector<Object> array;
+        };
+        struct union_struct_8 {
+            Varint map_len;
+            std::vector<Pair> map;
+        };
+        std::variant<std::monostate, union_struct_4, union_struct_5, union_struct_6, union_struct_7, union_struct_8> union_variant_3;
+        std::optional<std::vector<Object>> array() const;
+        bool array(std::vector<Object>&& v);
+        bool array(const std::vector<Object>& v);
+        std::optional<Varint> array_len() const;
+        bool array_len(Varint&& v);
+        bool array_len(const Varint& v);
+        std::optional<Name> bytes_value() const;
+        bool bytes_value(Name&& v);
+        bool bytes_value(const Name& v);
+        std::optional<Varint> int_value() const;
+        bool int_value(Varint&& v);
+        bool int_value(const Varint& v);
+        std::optional<std::vector<Pair>> map() const;
+        bool map(std::vector<Pair>&& v);
+        bool map(const std::vector<Pair>& v);
+        std::optional<Varint> map_len() const;
+        bool map_len(Varint&& v);
+        bool map_len(const Varint& v);
+        std::optional<Name> string_value() const;
+        bool string_value(Name&& v);
+        bool string_value(const Name& v);
+        ::futils::error::Error<> encode(::futils::binary::writer& w) const;
+        ::futils::error::Error<> decode(::futils::binary::reader& r);
+        static constexpr size_t fixed_header_size = 1;
+    };
+    struct Pair {
+        Name name;
+        Object value;
+        ::futils::error::Error<> encode(::futils::binary::writer& w) const;
+        ::futils::error::Error<> decode(::futils::binary::reader& r);
+    };
     struct PlayerData {
         Name name;
         std::uint8_t max_items = 0;
         std::uint8_t max_actions = 0;
         std::uint8_t item_len = 0;
-        std::vector<Item> items;
+        std::vector<Object> items;
         bool set_items(auto&& v) {
             if (v.size() > 0xff) {
                 return false;
@@ -289,7 +218,7 @@ namespace save {
             return true;
         }
         std::uint8_t action_len = 0;
-        std::vector<Action> actions;
+        std::vector<Object> actions;
         bool set_actions(auto&& v) {
             if (v.size() > 0xff) {
                 return false;
@@ -301,6 +230,628 @@ namespace save {
         ::futils::error::Error<> encode(::futils::binary::writer& w) const;
         ::futils::error::Error<> decode(::futils::binary::reader& r);
     };
+    struct SaveData {
+        std::uint8_t version = 0;
+        Name phase;
+        Name location;
+        std::uint8_t players_len = 0;
+        std::vector<PlayerData> players;
+        bool set_players(auto&& v) {
+            if (v.size() > 0xff) {
+                return false;
+            }
+            (*this).players_len = v.size();
+            (*this).players = std::forward<decltype(v)>(v);
+            return true;
+        }
+        Object storage;
+        ::futils::error::Error<> encode(::futils::binary::writer& w) const;
+        ::futils::error::Error<> decode(::futils::binary::reader& r);
+        static constexpr size_t fixed_header_size = 1;
+    };
+    inline std::optional<std::vector<Object>> Object::array() const {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_array) == true) {
+            if (!std::holds_alternative<union_struct_7>(union_variant_3)) {
+                return std::nullopt;
+            }
+            return std::get<4>((*this).union_variant_3).array;
+        }
+        return std::nullopt;
+    }
+    inline bool Object::array(const std::vector<Object>& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_array) == true) {
+            if (!std::holds_alternative<union_struct_7>(union_variant_3)) {
+                union_variant_3 = union_struct_7();
+            }
+            std::get<4>((*this).union_variant_3).array = v;
+            return true;
+        }
+        return false;
+    }
+    inline bool Object::array(std::vector<Object>&& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_array) == true) {
+            if (!std::holds_alternative<union_struct_7>(union_variant_3)) {
+                union_variant_3 = union_struct_7();
+            }
+            std::get<4>((*this).union_variant_3).array = std::move(v);
+            return true;
+        }
+        return false;
+    }
+    inline std::optional<Varint> Object::array_len() const {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_array) == true) {
+            if (!std::holds_alternative<union_struct_7>(union_variant_3)) {
+                return std::nullopt;
+            }
+            return std::get<4>((*this).union_variant_3).array_len;
+        }
+        return std::nullopt;
+    }
+    inline bool Object::array_len(const Varint& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_array) == true) {
+            if (!std::holds_alternative<union_struct_7>(union_variant_3)) {
+                union_variant_3 = union_struct_7();
+            }
+            std::get<4>((*this).union_variant_3).array_len = v;
+            return true;
+        }
+        return false;
+    }
+    inline bool Object::array_len(Varint&& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_array) == true) {
+            if (!std::holds_alternative<union_struct_7>(union_variant_3)) {
+                union_variant_3 = union_struct_7();
+            }
+            std::get<4>((*this).union_variant_3).array_len = std::move(v);
+            return true;
+        }
+        return false;
+    }
+    inline std::optional<Name> Object::bytes_value() const {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            if (!std::holds_alternative<union_struct_6>(union_variant_3)) {
+                return std::nullopt;
+            }
+            return std::get<3>((*this).union_variant_3).bytes_value;
+        }
+        return std::nullopt;
+    }
+    inline bool Object::bytes_value(const Name& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            if (!std::holds_alternative<union_struct_6>(union_variant_3)) {
+                union_variant_3 = union_struct_6();
+            }
+            std::get<3>((*this).union_variant_3).bytes_value = v;
+            return true;
+        }
+        return false;
+    }
+    inline bool Object::bytes_value(Name&& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            if (!std::holds_alternative<union_struct_6>(union_variant_3)) {
+                union_variant_3 = union_struct_6();
+            }
+            std::get<3>((*this).union_variant_3).bytes_value = std::move(v);
+            return true;
+        }
+        return false;
+    }
+    inline std::optional<Varint> Object::int_value() const {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            if (!std::holds_alternative<union_struct_4>(union_variant_3)) {
+                return std::nullopt;
+            }
+            return std::get<1>((*this).union_variant_3).int_value;
+        }
+        return std::nullopt;
+    }
+    inline bool Object::int_value(const Varint& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            if (!std::holds_alternative<union_struct_4>(union_variant_3)) {
+                union_variant_3 = union_struct_4();
+            }
+            std::get<1>((*this).union_variant_3).int_value = v;
+            return true;
+        }
+        return false;
+    }
+    inline bool Object::int_value(Varint&& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            if (!std::holds_alternative<union_struct_4>(union_variant_3)) {
+                union_variant_3 = union_struct_4();
+            }
+            std::get<1>((*this).union_variant_3).int_value = std::move(v);
+            return true;
+        }
+        return false;
+    }
+    inline std::optional<std::vector<Pair>> Object::map() const {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_array) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_map) == true) {
+            if (!std::holds_alternative<union_struct_8>(union_variant_3)) {
+                return std::nullopt;
+            }
+            return std::get<5>((*this).union_variant_3).map;
+        }
+        return std::nullopt;
+    }
+    inline bool Object::map(const std::vector<Pair>& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_array) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_map) == true) {
+            if (!std::holds_alternative<union_struct_8>(union_variant_3)) {
+                union_variant_3 = union_struct_8();
+            }
+            std::get<5>((*this).union_variant_3).map = v;
+            return true;
+        }
+        return false;
+    }
+    inline bool Object::map(std::vector<Pair>&& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_array) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_map) == true) {
+            if (!std::holds_alternative<union_struct_8>(union_variant_3)) {
+                union_variant_3 = union_struct_8();
+            }
+            std::get<5>((*this).union_variant_3).map = std::move(v);
+            return true;
+        }
+        return false;
+    }
+    inline std::optional<Varint> Object::map_len() const {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_array) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_map) == true) {
+            if (!std::holds_alternative<union_struct_8>(union_variant_3)) {
+                return std::nullopt;
+            }
+            return std::get<5>((*this).union_variant_3).map_len;
+        }
+        return std::nullopt;
+    }
+    inline bool Object::map_len(const Varint& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_array) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_map) == true) {
+            if (!std::holds_alternative<union_struct_8>(union_variant_3)) {
+                union_variant_3 = union_struct_8();
+            }
+            std::get<5>((*this).union_variant_3).map_len = v;
+            return true;
+        }
+        return false;
+    }
+    inline bool Object::map_len(Varint&& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_bytes) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_array) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_map) == true) {
+            if (!std::holds_alternative<union_struct_8>(union_variant_3)) {
+                union_variant_3 = union_struct_8();
+            }
+            std::get<5>((*this).union_variant_3).map_len = std::move(v);
+            return true;
+        }
+        return false;
+    }
+    inline std::optional<Name> Object::string_value() const {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return std::nullopt;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            if (!std::holds_alternative<union_struct_5>(union_variant_3)) {
+                return std::nullopt;
+            }
+            return std::get<2>((*this).union_variant_3).string_value;
+        }
+        return std::nullopt;
+    }
+    inline bool Object::string_value(const Name& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            if (!std::holds_alternative<union_struct_5>(union_variant_3)) {
+                union_variant_3 = union_struct_5();
+            }
+            std::get<2>((*this).union_variant_3).string_value = v;
+            return true;
+        }
+        return false;
+    }
+    inline bool Object::string_value(Name&& v) {
+        if (((*this).object_type == ObjectType::object_int) == true) {
+            return false;
+        }
+        if (((*this).object_type == ObjectType::object_string) == true) {
+            if (!std::holds_alternative<union_struct_5>(union_variant_3)) {
+                union_variant_3 = union_struct_5();
+            }
+            std::get<2>((*this).union_variant_3).string_value = std::move(v);
+            return true;
+        }
+        return false;
+    }
+    inline ::futils::error::Error<> Varint::encode(::futils::binary::writer& w) const {
+        if ((*this).prefix() == 0) {
+            std::uint8_t tmp9 = 0;
+            tmp9 = (*this).value();
+            tmp9 |= std::uint8_t(0) << 6;
+            if (!::futils::binary::write_num(w, tmp9, true)) {
+                return ::futils::error::Error<>("encode: Varint::value: write bit field failed", ::futils::error::Category::lib);
+            }
+        }
+        else if ((*this).prefix() == 1) {
+            std::uint16_t tmp9 = 0;
+            tmp9 = (*this).value();
+            tmp9 |= std::uint16_t(1) << 14;
+            if (!::futils::binary::write_num(w, tmp9, true)) {
+                return ::futils::error::Error<>("encode: Varint::value: write bit field failed", ::futils::error::Category::lib);
+            }
+        }
+        else if ((*this).prefix() == 2) {
+            std::uint32_t tmp9 = 0;
+            tmp9 = (*this).value();
+            tmp9 |= std::uint32_t(2) << 30;
+            if (!::futils::binary::write_num(w, tmp9, true)) {
+                return ::futils::error::Error<>("encode: Varint::value: write bit field failed", ::futils::error::Category::lib);
+            }
+        }
+        else if ((*this).prefix() == 3) {
+            std::uint64_t tmp9 = 0;
+            tmp9 = (*this).value();
+            tmp9 |= std::uint64_t(3) << 62;
+            if (!::futils::binary::write_num(w, tmp9, true)) {
+                return ::futils::error::Error<>("encode: Varint::value: write bit field failed", ::futils::error::Category::lib);
+            }
+        }
+        return ::futils::error::Error<>();
+    }
+    inline ::futils::error::Error<> Varint::decode(::futils::binary::reader& r) {
+        if (!r.load_stream(1)) {
+            return ::futils::error::Error<>("decode: Varint::value: read bit field failed", ::futils::error::Category::lib);
+        }
+        std::uint8_t tmp10 = (r.top() >> 6) & 0x3;
+        (*this).prefix(tmp10);
+        if ((*this).prefix() == 0) {
+            std::uint8_t tmp11 = 0;
+            if (!::futils::binary::read_num(r, tmp11, true)) {
+                return ::futils::error::Error<>("decode: Varint::value: read bit field failed", ::futils::error::Category::lib);
+            }
+            tmp11 &= ~(std::uint8_t(0x3) << 6);
+            (*this).value(tmp11);
+        }
+        else if ((*this).prefix() == 1) {
+            std::uint16_t tmp12 = 0;
+            if (!::futils::binary::read_num(r, tmp12, true)) {
+                return ::futils::error::Error<>("decode: Varint::value: read bit field failed", ::futils::error::Category::lib);
+            }
+            tmp12 &= ~(std::uint16_t(0x3) << 14);
+            (*this).value(tmp12);
+        }
+        else if ((*this).prefix() == 2) {
+            std::uint32_t tmp13 = 0;
+            if (!::futils::binary::read_num(r, tmp13, true)) {
+                return ::futils::error::Error<>("decode: Varint::value: read bit field failed", ::futils::error::Category::lib);
+            }
+            tmp13 &= ~(std::uint32_t(0x3) << 30);
+            (*this).value(tmp13);
+        }
+        else if ((*this).prefix() == 3) {
+            std::uint64_t tmp14 = 0;
+            if (!::futils::binary::read_num(r, tmp14, true)) {
+                return ::futils::error::Error<>("decode: Varint::value: read bit field failed", ::futils::error::Category::lib);
+            }
+            tmp14 &= ~(std::uint64_t(0x3) << 62);
+            (*this).value(tmp14);
+        }
+        return ::futils::error::Error<>();
+    }
+    inline ::futils::error::Error<> Name::encode(::futils::binary::writer& w) const {
+        if (auto err = (*this).len.encode(w)) {
+            return err;
+        }
+        auto tmp_15_ = (*this).len.value();
+        if (tmp_15_ != (*this).name.size()) {
+            return ::futils::error::Error<>("encode: Name::name: dynamic length is not compatible with its length; tmp_15_!=(*this).name.size()", ::futils::error::Category::lib);
+        }
+        if (!w.write((*this).name)) {
+            return ::futils::error::Error<>("encode: Name::name: write array failed", ::futils::error::Category::lib);
+        }
+        return ::futils::error::Error<>();
+    }
+    inline ::futils::error::Error<> Name::decode(::futils::binary::reader& r) {
+        if (auto err = (*this).len.decode(r)) {
+            return err;
+        }
+        auto tmp_16_ = (*this).len.value();
+        if (!r.read((*this).name, tmp_16_)) {
+            return ::futils::error::Error<>("decode: Name::name: read byte array failed", ::futils::error::Category::lib);
+        }
+        return ::futils::error::Error<>();
+    }
+    inline ::futils::error::Error<> Object::encode(::futils::binary::writer& w) const {
+        auto tmp_17_ = static_cast<std::uint8_t>((*this).object_type);
+        if (!::futils::binary::write_num(w, static_cast<std::uint8_t>(tmp_17_), true)) {
+            return ::futils::error::Error<>("encode: Object::object_type: write std::uint8_t failed", ::futils::error::Category::lib);
+        }
+        if ((*this).object_type == ObjectType::object_int) {
+            if (!std::holds_alternative<union_struct_4>(union_variant_3)) {
+                return ::futils::error::Error<>("encode: Object: union_variant_3 variant alternative union_struct_4 is not set", ::futils::error::Category::lib);
+            }
+            if (auto err = std::get<1>((*this).union_variant_3).int_value.encode(w)) {
+                return err;
+            }
+        }
+        else if ((*this).object_type == ObjectType::object_string) {
+            if (!std::holds_alternative<union_struct_5>(union_variant_3)) {
+                return ::futils::error::Error<>("encode: Object: union_variant_3 variant alternative union_struct_5 is not set", ::futils::error::Category::lib);
+            }
+            if (auto err = std::get<2>((*this).union_variant_3).string_value.encode(w)) {
+                return err;
+            }
+        }
+        else if ((*this).object_type == ObjectType::object_bytes) {
+            if (!std::holds_alternative<union_struct_6>(union_variant_3)) {
+                return ::futils::error::Error<>("encode: Object: union_variant_3 variant alternative union_struct_6 is not set", ::futils::error::Category::lib);
+            }
+            if (auto err = std::get<3>((*this).union_variant_3).bytes_value.encode(w)) {
+                return err;
+            }
+        }
+        else if ((*this).object_type == ObjectType::object_array) {
+            if (!std::holds_alternative<union_struct_7>(union_variant_3)) {
+                return ::futils::error::Error<>("encode: Object: union_variant_3 variant alternative union_struct_7 is not set", ::futils::error::Category::lib);
+            }
+            if (auto err = std::get<4>((*this).union_variant_3).array_len.encode(w)) {
+                return err;
+            }
+            auto tmp_18_ = std::get<4>((*this).union_variant_3).array_len.value();
+            if (tmp_18_ != std::get<4>((*this).union_variant_3).array.size()) {
+                return ::futils::error::Error<>("encode: Object::array: dynamic length is not compatible with its length; tmp_18_!=std::get<4>((*this).union_variant_3).array.size()", ::futils::error::Category::lib);
+            }
+            for (auto& tmp_19_ : std::get<4>((*this).union_variant_3).array) {
+                if (auto err = tmp_19_.encode(w)) {
+                    return err;
+                }
+            }
+        }
+        else if ((*this).object_type == ObjectType::object_map) {
+            if (!std::holds_alternative<union_struct_8>(union_variant_3)) {
+                return ::futils::error::Error<>("encode: Object: union_variant_3 variant alternative union_struct_8 is not set", ::futils::error::Category::lib);
+            }
+            if (auto err = std::get<5>((*this).union_variant_3).map_len.encode(w)) {
+                return err;
+            }
+            auto tmp_20_ = std::get<5>((*this).union_variant_3).map_len.value();
+            if (tmp_20_ != std::get<5>((*this).union_variant_3).map.size()) {
+                return ::futils::error::Error<>("encode: Object::map: dynamic length is not compatible with its length; tmp_20_!=std::get<5>((*this).union_variant_3).map.size()", ::futils::error::Category::lib);
+            }
+            for (auto& tmp_21_ : std::get<5>((*this).union_variant_3).map) {
+                if (auto err = tmp_21_.encode(w)) {
+                    return err;
+                }
+            }
+        }
+        return ::futils::error::Error<>();
+    }
+    inline ::futils::error::Error<> Object::decode(::futils::binary::reader& r) {
+        std::uint8_t tmp_22_ = 0;
+        if (!::futils::binary::read_num(r, tmp_22_, true)) {
+            return ::futils::error::Error<>("decode: Object::object_type: read int failed", ::futils::error::Category::lib);
+        }
+        (*this).object_type = static_cast<ObjectType>(tmp_22_);
+        if ((*this).object_type == ObjectType::object_int) {
+            if (!std::holds_alternative<union_struct_4>(union_variant_3)) {
+                union_variant_3 = union_struct_4();
+            }
+            if (auto err = std::get<1>((*this).union_variant_3).int_value.decode(r)) {
+                return err;
+            }
+        }
+        else if ((*this).object_type == ObjectType::object_string) {
+            if (!std::holds_alternative<union_struct_5>(union_variant_3)) {
+                union_variant_3 = union_struct_5();
+            }
+            if (auto err = std::get<2>((*this).union_variant_3).string_value.decode(r)) {
+                return err;
+            }
+        }
+        else if ((*this).object_type == ObjectType::object_bytes) {
+            if (!std::holds_alternative<union_struct_6>(union_variant_3)) {
+                union_variant_3 = union_struct_6();
+            }
+            if (auto err = std::get<3>((*this).union_variant_3).bytes_value.decode(r)) {
+                return err;
+            }
+        }
+        else if ((*this).object_type == ObjectType::object_array) {
+            if (!std::holds_alternative<union_struct_7>(union_variant_3)) {
+                union_variant_3 = union_struct_7();
+            }
+            if (auto err = std::get<4>((*this).union_variant_3).array_len.decode(r)) {
+                return err;
+            }
+            auto tmp_23_ = std::get<4>((*this).union_variant_3).array_len.value();
+            std::get<4>((*this).union_variant_3).array.clear();
+            for (size_t tmp_25_ = 0; tmp_25_ < tmp_23_; ++tmp_25_) {
+                Object tmp_24_;
+                if (auto err = tmp_24_.decode(r)) {
+                    return err;
+                }
+                std::get<4>((*this).union_variant_3).array.push_back(std::move(tmp_24_));
+            }
+        }
+        else if ((*this).object_type == ObjectType::object_map) {
+            if (!std::holds_alternative<union_struct_8>(union_variant_3)) {
+                union_variant_3 = union_struct_8();
+            }
+            if (auto err = std::get<5>((*this).union_variant_3).map_len.decode(r)) {
+                return err;
+            }
+            auto tmp_26_ = std::get<5>((*this).union_variant_3).map_len.value();
+            std::get<5>((*this).union_variant_3).map.clear();
+            for (size_t tmp_28_ = 0; tmp_28_ < tmp_26_; ++tmp_28_) {
+                Pair tmp_27_;
+                if (auto err = tmp_27_.decode(r)) {
+                    return err;
+                }
+                std::get<5>((*this).union_variant_3).map.push_back(std::move(tmp_27_));
+            }
+        }
+        return ::futils::error::Error<>();
+    }
+    inline ::futils::error::Error<> Pair::encode(::futils::binary::writer& w) const {
+        if (auto err = (*this).name.encode(w)) {
+            return err;
+        }
+        if (auto err = (*this).value.encode(w)) {
+            return err;
+        }
+        return ::futils::error::Error<>();
+    }
+    inline ::futils::error::Error<> Pair::decode(::futils::binary::reader& r) {
+        if (auto err = (*this).name.decode(r)) {
+            return err;
+        }
+        if (auto err = (*this).value.decode(r)) {
+            return err;
+        }
+        return ::futils::error::Error<>();
+    }
     inline ::futils::error::Error<> PlayerData::encode(::futils::binary::writer& w) const {
         if (auto err = (*this).name.encode(w)) {
             return err;
@@ -314,24 +865,24 @@ namespace save {
         if (!::futils::binary::write_num(w, static_cast<std::uint8_t>((*this).item_len), true)) {
             return ::futils::error::Error<>("encode: PlayerData::item_len: write std::uint8_t failed", ::futils::error::Category::lib);
         }
-        auto tmp_10_ = (*this).item_len;
-        if (tmp_10_ != (*this).items.size()) {
-            return ::futils::error::Error<>("encode: PlayerData::items: dynamic length is not compatible with its length; tmp_10_!=(*this).items.size()", ::futils::error::Category::lib);
+        auto tmp_29_ = (*this).item_len;
+        if (tmp_29_ != (*this).items.size()) {
+            return ::futils::error::Error<>("encode: PlayerData::items: dynamic length is not compatible with its length; tmp_29_!=(*this).items.size()", ::futils::error::Category::lib);
         }
-        for (auto& tmp_11_ : (*this).items) {
-            if (auto err = tmp_11_.encode(w)) {
+        for (auto& tmp_30_ : (*this).items) {
+            if (auto err = tmp_30_.encode(w)) {
                 return err;
             }
         }
         if (!::futils::binary::write_num(w, static_cast<std::uint8_t>((*this).action_len), true)) {
             return ::futils::error::Error<>("encode: PlayerData::action_len: write std::uint8_t failed", ::futils::error::Category::lib);
         }
-        auto tmp_12_ = (*this).action_len;
-        if (tmp_12_ != (*this).actions.size()) {
-            return ::futils::error::Error<>("encode: PlayerData::actions: dynamic length is not compatible with its length; tmp_12_!=(*this).actions.size()", ::futils::error::Category::lib);
+        auto tmp_31_ = (*this).action_len;
+        if (tmp_31_ != (*this).actions.size()) {
+            return ::futils::error::Error<>("encode: PlayerData::actions: dynamic length is not compatible with its length; tmp_31_!=(*this).actions.size()", ::futils::error::Category::lib);
         }
-        for (auto& tmp_13_ : (*this).actions) {
-            if (auto err = tmp_13_.encode(w)) {
+        for (auto& tmp_32_ : (*this).actions) {
+            if (auto err = tmp_32_.encode(w)) {
                 return err;
             }
         }
@@ -350,47 +901,29 @@ namespace save {
         if (!::futils::binary::read_num(r, (*this).item_len, true)) {
             return ::futils::error::Error<>("decode: PlayerData::item_len: read int failed", ::futils::error::Category::lib);
         }
-        auto tmp_14_ = (*this).item_len;
+        auto tmp_33_ = (*this).item_len;
         (*this).items.clear();
-        for (size_t tmp_16_ = 0; tmp_16_ < tmp_14_; ++tmp_16_) {
-            Item tmp_15_;
-            if (auto err = tmp_15_.decode(r)) {
+        for (size_t tmp_35_ = 0; tmp_35_ < tmp_33_; ++tmp_35_) {
+            Object tmp_34_;
+            if (auto err = tmp_34_.decode(r)) {
                 return err;
             }
-            (*this).items.push_back(std::move(tmp_15_));
+            (*this).items.push_back(std::move(tmp_34_));
         }
         if (!::futils::binary::read_num(r, (*this).action_len, true)) {
             return ::futils::error::Error<>("decode: PlayerData::action_len: read int failed", ::futils::error::Category::lib);
         }
-        auto tmp_17_ = (*this).action_len;
+        auto tmp_36_ = (*this).action_len;
         (*this).actions.clear();
-        for (size_t tmp_19_ = 0; tmp_19_ < tmp_17_; ++tmp_19_) {
-            Action tmp_18_;
-            if (auto err = tmp_18_.decode(r)) {
+        for (size_t tmp_38_ = 0; tmp_38_ < tmp_36_; ++tmp_38_) {
+            Object tmp_37_;
+            if (auto err = tmp_37_.decode(r)) {
                 return err;
             }
-            (*this).actions.push_back(std::move(tmp_18_));
+            (*this).actions.push_back(std::move(tmp_37_));
         }
         return ::futils::error::Error<>();
     }
-    struct SaveData {
-        std::uint8_t version = 0;
-        Name phase;
-        Name location;
-        std::uint8_t players_len = 0;
-        std::vector<PlayerData> players;
-        bool set_players(auto&& v) {
-            if (v.size() > 0xff) {
-                return false;
-            }
-            (*this).players_len = v.size();
-            (*this).players = std::forward<decltype(v)>(v);
-            return true;
-        }
-        ::futils::error::Error<> encode(::futils::binary::writer& w) const;
-        ::futils::error::Error<> decode(::futils::binary::reader& r);
-        static constexpr size_t fixed_header_size = 1;
-    };
     inline ::futils::error::Error<> SaveData::encode(::futils::binary::writer& w) const {
         if (!::futils::binary::write_num(w, static_cast<std::uint8_t>((*this).version), true)) {
             return ::futils::error::Error<>("encode: SaveData::version: write std::uint8_t failed", ::futils::error::Category::lib);
@@ -404,14 +937,17 @@ namespace save {
         if (!::futils::binary::write_num(w, static_cast<std::uint8_t>((*this).players_len), true)) {
             return ::futils::error::Error<>("encode: SaveData::players_len: write std::uint8_t failed", ::futils::error::Category::lib);
         }
-        auto tmp_20_ = (*this).players_len;
-        if (tmp_20_ != (*this).players.size()) {
-            return ::futils::error::Error<>("encode: SaveData::players: dynamic length is not compatible with its length; tmp_20_!=(*this).players.size()", ::futils::error::Category::lib);
+        auto tmp_39_ = (*this).players_len;
+        if (tmp_39_ != (*this).players.size()) {
+            return ::futils::error::Error<>("encode: SaveData::players: dynamic length is not compatible with its length; tmp_39_!=(*this).players.size()", ::futils::error::Category::lib);
         }
-        for (auto& tmp_21_ : (*this).players) {
-            if (auto err = tmp_21_.encode(w)) {
+        for (auto& tmp_40_ : (*this).players) {
+            if (auto err = tmp_40_.encode(w)) {
                 return err;
             }
+        }
+        if (auto err = (*this).storage.encode(w)) {
+            return err;
         }
         return ::futils::error::Error<>();
     }
@@ -428,14 +964,17 @@ namespace save {
         if (!::futils::binary::read_num(r, (*this).players_len, true)) {
             return ::futils::error::Error<>("decode: SaveData::players_len: read int failed", ::futils::error::Category::lib);
         }
-        auto tmp_22_ = (*this).players_len;
+        auto tmp_41_ = (*this).players_len;
         (*this).players.clear();
-        for (size_t tmp_24_ = 0; tmp_24_ < tmp_22_; ++tmp_24_) {
-            PlayerData tmp_23_;
-            if (auto err = tmp_23_.decode(r)) {
+        for (size_t tmp_43_ = 0; tmp_43_ < tmp_41_; ++tmp_43_) {
+            PlayerData tmp_42_;
+            if (auto err = tmp_42_.decode(r)) {
                 return err;
             }
-            (*this).players.push_back(std::move(tmp_23_));
+            (*this).players.push_back(std::move(tmp_42_));
+        }
+        if (auto err = (*this).storage.decode(r)) {
+            return err;
         }
         return ::futils::error::Error<>();
     }

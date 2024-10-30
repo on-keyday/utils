@@ -17,31 +17,15 @@ enum UIState:
     game_start
 
 
-format StoryFlags:
-    reserved:u64
-
-enum ItemID:
-    :u8
-    none
-
-enum ActionID:
-    :u8
-    none
-
-format Item:
-    id :common.Varint
-
-format Action:
-    id :common.Varint
 
 format PlayerData:
     name :common.Name
     max_items :u8
     max_actions :u8
     item_len :u8
-    items :[item_len]Item
+    items :[item_len]Object
     action_len :u8
-    actions :[action_len]Action
+    actions :[action_len]Object
 
 
 
@@ -51,5 +35,38 @@ format SaveData:
     location :common.Name
     players_len :u8
     players :[players_len]PlayerData
+    storage :Object
 
 
+enum ObjectType:
+    :u8
+    object_null
+    object_true
+    object_false
+    object_int
+    object_string
+    object_bytes
+    object_array
+    object_map
+
+
+
+format Object:
+    object_type :ObjectType
+    if object_type == ObjectType.object_int:
+        int_value :common.Varint
+    elif object_type == ObjectType.object_string:
+        string_value :common.Name
+    elif object_type == ObjectType.object_bytes:
+        bytes_value :common.Name
+    elif object_type == ObjectType.object_array:
+        array_len :common.Varint
+        array :[array_len.value]Object
+    elif object_type == ObjectType.object_map:
+        map_len :common.Varint
+        map :[map_len.value]Pair
+
+format Pair:
+    config.order.after = "Object"
+    name :common.Name
+    value :Object

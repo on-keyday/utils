@@ -266,29 +266,38 @@ int Main(Flags& flags, futils::cmdline::option::Context& ctx) {
         return 1;
     }
     TextController text{futils::console::Window::create(text_layout, 80, 10).value()};
-    Menu menu;
-    while (menu.run(text, flags)) {
-        ;
-    }
     int res = 0;
-    if (menu.state == save::UIState::game_start) {
-        while (true) {
-            auto gr = run_game(text, menu.save_data, embed_file, embed_index, menu.save_data_path);
-            if (gr == GameEndRequest::reload) {
-                unload_embed();
-                auto tmp = make_embed(target_dir, embed_file, embed_index);
-                if (tmp != 0) {
-                    return tmp;  // cannot reload
+    while (true) {
+        Menu menu;
+        while (menu.run(text, flags)) {
+            ;
+        }
+        if (menu.state == save::UIState::game_start) {
+            GameEndRequest gr;
+            while (true) {
+                gr = run_game(text, menu.save_data, embed_file, embed_index, menu.save_data_path);
+                if (gr == GameEndRequest::reload) {
+                    unload_embed();
+                    auto tmp = make_embed(target_dir, embed_file, embed_index);
+                    if (tmp != 0) {
+                        return tmp;  // cannot reload
+                    }
+                    text.clear_screen();
+                    text.write_story(U"再読み込みします....", 1);
+                    continue;
                 }
+                break;
+            }
+            if (gr == GameEndRequest::go_title) {
                 text.clear_screen();
-                text.write_story(U"再読み込みします....", 1);
+                unload_embed();
                 continue;
             }
             // gr is 1: exit, 2: failure, 3: interrupt, 4: reload
             // so 1, 2, 3, 4 -> 0, 1, 2, 3
             res = static_cast<int>(gr) - 1;
-            break;
         }
+        break;
     }
     text.show_cursor();
     return res;

@@ -1,12 +1,16 @@
 
 func define_save_functions
 func do_save_common
+  if $builtin.typeof($global.save_callback) == "function"
+    $global.save_callback()
+  end
   save
   if $result
     new_prompt セーブしました
     return true
   else
-    new_prompt $result.reason
+    $reason = $result.reason
+    new_prompt $reason
     return false
   end
 end

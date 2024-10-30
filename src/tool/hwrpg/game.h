@@ -16,6 +16,8 @@
 #include <json/convert_json.h>
 #include <json/json_export.h>
 #include <set>
+#include "i8n.h"
+#include <thread/concurrent_queue.h>
 
 extern futils::wrap::UtfOut& cout;
 extern futils::wrap::UtfIn& cin;
@@ -105,6 +107,7 @@ enum class GameEndRequest {
     failure,
     interrupt,
     reload,
+    go_title,
 };
 GameEndRequest run_game(TextController& ctrl, save::SaveData& data, const char* dataFile, const char* indexFile, futils::wrap::path_string& save_data_name);
 
@@ -167,13 +170,74 @@ struct Func {
     std::shared_ptr<Scope> capture;
 };
 
+struct Bytes {
+    std::string data;
+};
+
+namespace expr {
+
+    enum class EvalState {
+        normal,
+        call,
+        jump,  // for $builtin.eval
+        error,
+    };
+}
+
+struct RuntimeState;
+namespace foreign {
+    struct ForeignLibrary {
+        futils::wrap::path_string path;
+        void* data = nullptr;
+        std::function<void(void*)> unload;
+
+        ~ForeignLibrary() {
+            if (unload) {
+                unload(data);
+            }
+        }
+    };
+
+    struct ForeignData {
+        std::map<futils::wrap::path_string, std::shared_ptr<ForeignLibrary>> libraries;
+    };
+
+    struct Callback {
+        Func func;
+        ValueArray args;
+        Value& result;
+        size_t count = 0;
+    };
+
+    std::shared_ptr<ForeignLibrary> load_foreign(RuntimeState& s, std::u32string& name);
+    bool unload_foreign(RuntimeState& s, std::shared_ptr<ForeignLibrary>& lib);
+    expr::EvalState call_foreign(RuntimeState& s, std::shared_ptr<ForeignLibrary>& lib, std::u32string& name, std::vector<Value>& args, Value& result, Callback& callback);
+    enum class ForeignType {
+        library_object,
+        library_specific_start,
+    };
+}  // namespace foreign
+
+struct Foreign {
+    foreign::ForeignType type = foreign::ForeignType::library_object;
+    std::shared_ptr<void> data;
+};
+
 struct Value {
    private:
-    std::variant<std::monostate, std::u32string, std::int64_t, Boolean, Func, ValueArray, ValueMap> value;
+    std::variant<std::monostate, Foreign, Bytes, std::u32string, std::int64_t, Boolean, Func, ValueArray, ValueMap> value;
 
    public:
     Value() {}
     Value(std::u32string v)
+        : value(v) {
+    }
+
+    Value(Bytes v)
+        : value(v) {
+    }
+
+    Value(Foreign v)
         : value(v) {
     }
 
@@ -208,6 +272,20 @@ struct Value {
         return std::nullopt;
     }
 
+    const Bytes* bytes() const {
+        if (auto p = std::get_if<Bytes>(&value)) {
+            return p;
+        }
+        return nullptr;
+    }
+
+    const Foreign* foreign() const {
+        if (auto p = std::get_if<Foreign>(&value)) {
+            return p;
+        }
+        return nullptr;
+    }
+
     std::optional<std::int64_t> number() const {
         if (auto p = std::get_if<std::int64_t>(&value)) {
             return *p;
@@ -222,11 +300,18 @@ struct Value {
         return std::nullopt;
     }
 
-    std::optional<Func> func() const {
+    const Func* func() const {
         if (auto p = std::get_if<Func>(&value)) {
-            return *p;
+            return p;
         }
-        return std::nullopt;
+        return nullptr;
+    }
+
+    Func* func() {
+        if (auto p = std::get_if<Func>(&value)) {
+            return p;
+        }
+        return nullptr;
     }
 
     ValueArray* array() {
@@ -250,6 +335,7 @@ namespace expr {
         SaveData,
         Args,
         Input,
+        Output,
         Result,
         Builtin,
         Const,
@@ -327,12 +413,6 @@ namespace expr {
         }
     };
 
-    enum class EvalState {
-        normal,
-        call,
-        error,
-    };
-
 }  // namespace expr
 
 struct Block {
@@ -345,18 +425,16 @@ struct RuntimeState;
 
 struct EvalValue {
    private:
-    std::variant<std::monostate, std::u32string, std::int64_t, Boolean, Func,
+    std::variant<Value,
                  Assignable,
-                 std::vector<expr::Access>,
-                 ValueArray,
-                 ValueMap>
+                 std::vector<expr::Access>>
         value;
 
    public:
     EvalValue(std::nullptr_t) {}
 
     EvalValue(std::u32string v)
-        : value(v) {
+        : value(Value(v)) {
     }
 
     EvalValue(Assignable v)
@@ -364,60 +442,61 @@ struct EvalValue {
     }
 
     EvalValue(std::int64_t v)
-        : value(v) {
+        : value(Value(v)) {
     }
 
     EvalValue(Boolean v)
-        : value(v) {
+        : value(Value(v)) {
     }
 
     EvalValue(Func v)
-        : value(v) {
+        : value(Value(v)) {
     }
 
-    EvalValue(Value v) {
-        if (v.null()) {
-            value = std::monostate();
-        }
-        else if (auto str = v.string()) {
-            value = std::move(*str);
-        }
-        else if (auto n = v.number()) {
-            value = *n;
-        }
-        else if (auto b = v.boolean()) {
-            value = *b;
-        }
-        else if (auto f = v.func()) {
-            value = *f;
-        }
-        else if (auto a = v.array()) {
-            value = std::move(*a);
-        }
-        else if (auto o = v.object()) {
-            value = std::move(*o);
-        }
+    EvalValue(Bytes v)
+        : value(Value(v)) {
+    }
+
+    EvalValue(Value v)
+        : value(std::move(v)) {
     }
 
     EvalValue(std::vector<expr::Access> v)
         : value(std::move(v)) {
     }
 
-    EvalValue(std::vector<Value> v)
-        : value(std::move(v)) {
+    EvalValue(ValueArray v)
+        : value(Value(std::move(v))) {
     }
 
-    EvalValue(std::map<std::u32string, Value> v)
-        : value(std::move(v)) {
+    EvalValue(ValueMap v)
+        : value(Value(std::move(v))) {
+    }
+
+    Value* get_value() {
+        if (auto p = std::get_if<Value>(&value)) {
+            return p;
+        }
+        return nullptr;
+    }
+
+    const Value* get_value() const {
+        if (auto p = std::get_if<Value>(&value)) {
+            return p;
+        }
+        return nullptr;
     }
 
     bool null() const {
-        return std::holds_alternative<std::monostate>(value);
+        if (auto p = get_value()) {
+            return p->null();
+        }
+        return false;
     }
 
     std::optional<std::u32string> string() const {
-        if (auto p = std::get_if<std::u32string>(&value)) {
-            return *p;
+        if (auto p = get_value()) {
+            return p->string();
         }
         return std::nullopt;
     }
@@ -437,82 +516,152 @@ struct EvalValue {
     }
 
     std::optional<std::int64_t> number() const {
-        if (auto p = std::get_if<std::int64_t>(&value)) {
-            return *p;
+        if (auto p = get_value()) {
+            return p->number();
         }
         return std::nullopt;
     }
 
     std::optional<Boolean> boolean() const {
-        if (auto p = std::get_if<Boolean>(&value)) {
-            return *p;
+        if (auto p = get_value()) {
+            return p->boolean();
         }
         return std::nullopt;
     }
 
     ValueArray* array() {
-        if (auto p = std::get_if<ValueArray>(&value)) {
-            return p;
+        if (auto p = get_value()) {
+            return p->array();
         }
         return nullptr;
     }
 
     ValueMap* object() {
-        if (auto p = std::get_if<ValueMap>(&value)) {
-            return p;
+        if (auto p = get_value()) {
+            return p->object();
         }
         return nullptr;
     }
 
-    std::optional<Func> func() const {
-        if (auto p = std::get_if<Func>(&value)) {
-            return *p;
+    const Func* func() const {
+        if (auto p = get_value()) {
+            return p->func();
         }
-        return std::nullopt;
+        return nullptr;
+    }
+
+    Func* func() {
+        if (auto p = get_value()) {
+            return p->func();
+        }
+        return nullptr;
     }
 
     std::optional<Value> eval(RuntimeState& s);
 };
 
-struct Stacks {
-    std::vector<Block> blocks;
-    std::vector<Value> args;
+struct EvalStacks {
     std::vector<std::shared_ptr<expr::Expr>> expr_stack;
     std::vector<EvalValue> eval_stack;
     std::shared_ptr<expr::Expr> root_expr;
 
     void clear() {
-        blocks.clear();
-        args.clear();
         expr_stack.clear();
         eval_stack.clear();
         root_expr.reset();
+    }
+};
+
+struct Stacks {
+    std::vector<Block> blocks;
+    std::vector<Value> args;
+    EvalStacks eval;
+
+    void clear() {
+        blocks.clear();
+        args.clear();
+        eval.clear();
     }
 };
 struct CallStack {
     size_t back_pos;
     Stacks stacks;
     std::shared_ptr<Scope> function_scope;
+    bool no_return_value = false;
 };
+
+struct ScriptLineMap {
+    futils::view::rvec script_name;
+    size_t line = 0;
+};
+
+struct LineMappedCommand {
+    ScriptLineMap line_map;
+    std::vector<futils::view::rvec> cmd;
+};
+
+struct BuiltinEvalExpr {
+    futils::view::swap_wvec expr;
+    size_t back_line = 0;
+    EvalStacks stacks;
+    size_t call_stack_size = 0;
+    size_t foreign_callback_count = 0;
+
+    BuiltinEvalExpr(futils::view::swap_wvec e, size_t l, EvalStacks s, size_t c, size_t f)
+        : expr(std::move(e)), back_line(l), stacks(std::move(s)), call_stack_size(c), foreign_callback_count(f) {
+    }
+
+    BuiltinEvalExpr(BuiltinEvalExpr&&) = default;
+
+    ~BuiltinEvalExpr() {
+        if (!expr.w.null()) {
+            delete[] expr.w.data();
+            expr.w = {};
+        }
+    }
+};
+
+struct ForeignCallbackStack {
+    std::shared_ptr<foreign::ForeignLibrary> lib;
+    std::u32string func_name;
+    ValueArray args;
+    Value result;
+    size_t back_pos;
+    size_t callback_count = 0;
+};
+
+struct AsyncCallback {
+    Func func;
+    std::vector<Value> args;
+};
+
+using AsyncFuncChannel = futils::thread::MultiProducerChannelBuffer<AsyncCallback, std::allocator<AsyncCallback>>;
 
 struct RuntimeState {
     TextController& text;
     save::SaveData& save;
     futils::wrap::path_string& save_data_path;
+    Value save_data_storage;
+    // this is for debug
     futils::view::rvec current_script_name;
     size_t current_script_line = 0;
+    std::shared_ptr<AsyncFuncChannel> async_callback_channel;
+
     bool jump_from_if = false;
     size_t text_speed = 100;
     size_t after_wait = 1000;
     size_t delay_offset = 0;
     std::u32string story_text;
-    std::string prompt_result;
+    std::u32string prompt_result;
     std::map<std::u32string, Value> global_variables;
+    std::shared_ptr<foreign::ForeignData> foreign_data;
 
     GameEndRequest game_end_request = GameEndRequest::none;
     GameConfig config;
 
     std::vector<CallStack> call_stack;
+
+    std::vector<ForeignCallbackStack> foreign_callback_stack;
 
     Stacks stacks;
 
@@ -520,7 +669,18 @@ struct RuntimeState {
     std::u32string special_object_error_reason;
     std::u32string eval_error_reason;
 
+    // this indicates actual commends and their index
+    std::vector<LineMappedCommand> cmds;
+    size_t cmd_line = 0;
+
+    std::vector<BuiltinEvalExpr> builtin_eval_stack;
+
     expr::EvalState eval_error(std::u32string_view reason) {
+        eval_error_reason = reason;
+        return expr::EvalState::error;
+    }
+
+    expr::EvalState eval_error(i8n::Message msg, std::u32string_view reason) {
         eval_error_reason = reason;
         return expr::EvalState::error;
     }

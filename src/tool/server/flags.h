@@ -21,6 +21,7 @@ struct Flags : futils::cmdline::templ::HelpOption {
     bool memory_debug = false;
     bool verbose = false;
     bool bind_public = false;
+    bool no_input = false;
     std::string public_key;
     std::string private_key;
     futils::wrap::path_string libssl;
@@ -47,6 +48,7 @@ struct Flags : futils::cmdline::templ::HelpOption {
         ctx.VarBool(&ssl, "ssl", "enable ssl");
         ctx.VarBool(&bind_public, "bind-public", "bind to public address (default: only localhost)");
         ctx.VarString(&key_log, "key-log", "key log file", "FILE");
+        ctx.VarBool(&no_input, "no-input", "no input mode");
     }
 #ifdef _WIN32
 #define SUFFIX ".dll"

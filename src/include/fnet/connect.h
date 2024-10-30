@@ -39,7 +39,7 @@ namespace futils::fnet {
         }
     };
 
-    auto connect(view::rvec hostname, view::rvec port, SockAttr attr, bool wait_write = true) {
+    inline auto connect(view::rvec hostname, view::rvec port, SockAttr attr, bool wait_write = true) {
         return resolve_address(hostname, port, attr)
             .and_then([](WaitAddrInfo&& info) {
                 return info.wait();
@@ -86,7 +86,7 @@ namespace futils::fnet {
         connect,
     };
 
-    auto connect_with(view::rvec hostname, view::rvec port, SockAttr attr, bool wait_write, auto&& with) {
+    inline auto connect_with(view::rvec hostname, view::rvec port, SockAttr attr, bool wait_write, auto&& with) {
         return resolve_address(hostname, port, attr)
             .and_then([&](WaitAddrInfo&& info) {
                 return with(WithState::addr_solve, [&](auto t, std::uint32_t = 0) {

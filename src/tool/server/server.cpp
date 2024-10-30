@@ -280,6 +280,7 @@ int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
     }
     auto& servstate = s->state();
     futils::wrap::path_string str;
+    // avoid ctrl-c
     auto _ = futils::file::File::stdin_file().interactive_console_read();
     auto input_callback = [&] {
         if (!servstate.busy() && m.try_lock()) {
@@ -295,6 +296,9 @@ int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
                 }).detach();
             }
             m.unlock();
+        }
+        if (flag.no_input) {
+            return true;
         }
         futils::wrap::input(str, true);
         if (!str.size()) {
