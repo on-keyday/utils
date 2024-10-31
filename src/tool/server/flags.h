@@ -10,9 +10,9 @@
 #include <env/env_sys.h>
 #include <fnet/dll/dll_path.h>
 struct Flags : futils::cmdline::templ::HelpOption {
-    std::string port = "8091";
-    std::string secure_port = "8092";
-    std::string quic_port = "8092";
+    std::string port;
+    std::string secure_port;
+    std::string quic_port;
     bool only_secure = false;
     bool cleartext_http2 = false;
     bool quic = false;
