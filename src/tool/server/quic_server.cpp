@@ -79,6 +79,10 @@ futils::fnet::quic::log::ConnLogCallbacks log_cb{
 bool setup_http3_server(Flags& flag, std::shared_ptr<futils::fnet::server::State>& state, std::string& out_address) {
     auto hm = std::make_shared<HandlerMap>();
     auto tls_conf_or_err = futils::fnet::tls::configure_with_error();
+    if (!tls_conf_or_err) {
+        cout << "failed to configure tls " << tls_conf_or_err.error().error() << "\n";
+        return false;
+    }
     auto tls_conf = tls_conf_or_err.value();
     if (auto ok = tls_conf.set_cert_chain(flag.public_key.c_str(), flag.private_key.c_str()); !ok) {
         cout << "failed to load cert " << ok.error().error() << "\n";
