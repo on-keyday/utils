@@ -182,13 +182,13 @@ int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
         if (flag.public_key.size() && flag.private_key.size()) {
             auto conf = futils::fnet::tls::configure_with_error();
             if (!conf) {
-                cout << "failed to configure tls " << conf.error().error<std::string>();
+                cout << "failed to configure tls " << conf.error().error<std::string>() << "\n";
                 return -1;
             }
             serv.tls_config = std::move(conf.value());
             auto r = serv.tls_config.set_cert_chain(flag.public_key.c_str(), flag.private_key.c_str());
             if (!r) {
-                cout << "failed to load cert " << r.error().error<std::string>();
+                cout << "failed to load cert " << r.error().error<std::string>() << "\n";
                 return -1;
             }
             serv.tls_config.set_alpn_select_callback(
@@ -224,7 +224,10 @@ int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
     });
     s->set_max_and_active(std::thread::hardware_concurrency() - 1, 5);
     s->set_reduce_skip(10);
-    futils::fnet::expected<std::pair<futils::fnet::Socket, futils::fnet::SockAddr>> server, secure_server;
+    constexpr auto uninit = futils::fnet::error::Error("not initialized", futils::fnet::error::Category::app);
+    futils::fnet::expected<std::pair<futils::fnet::Socket, futils::fnet::SockAddr>>
+        server = futils::fnet::unexpect(uninit),
+        secure_server = futils::fnet::unexpect(uninit);
     if (flag.only_secure && (!flag.ssl && !flag.quic)) {
         cout << "only secure server without --ssl or --http3 is not allowed\n";
         return -1;
@@ -232,12 +235,12 @@ int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
     if (!flag.only_secure) {
         server = serv::prepare_listener(flag.port, 10000, true, false, flag.bind_public ? futils::view::rvec{} : "localhost");
         if (!server) {
-            futils::wrap::cout_wrap() << "failed to create server " << server.error().error<std::string>();
+            futils::wrap::cout_wrap() << "failed to create server " << server.error().error<std::string>() << "\n";
             return -1;
         }
         auto addr = server->first.get_local_addr();
         if (!addr) {
-            futils::wrap::cout_wrap() << "failed to get local address " << addr.error().error<std::string>();
+            futils::wrap::cout_wrap() << "failed to get local address " << addr.error().error<std::string>() << "\n";
             return -1;
         }
         serv.normal_port = addr->port().u16();
@@ -246,12 +249,12 @@ int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
     if (flag.ssl) {
         secure_server = serv::prepare_listener(flag.secure_port, 10000, true, true, flag.bind_public ? futils::view::rvec{} : "localhost");
         if (!secure_server) {
-            futils::wrap::cout_wrap() << "failed to create secure server " << secure_server.error().error<std::string>();
+            futils::wrap::cout_wrap() << "failed to create secure server " << secure_server.error().error<std::string>() << "\n";
             return -1;
         }
         auto addr = secure_server->first.get_local_addr();
         if (!addr) {
-            futils::wrap::cout_wrap() << "failed to get local address " << addr.error().error<std::string>();
+            futils::wrap::cout_wrap() << "failed to get local address " << addr.error().error<std::string>() << "\n";
             return -1;
         }
         serv.secure_port = addr->port().u16();

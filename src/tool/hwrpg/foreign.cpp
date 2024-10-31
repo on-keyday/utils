@@ -20,10 +20,14 @@
 #include "foreign.h"
 
 namespace foreign {
-
+    using foreign_func = void (*)(ForeignCallback*);
 #if defined(FOREIGN_LIBRARY_WINDOWS)
     HMODULE load_library_platform(const futils::wrap::path_string& path) {
         return LoadLibraryW(path.c_str());
+    }
+
+    foreign_func get_function_platform(void* handle, const std::string& name) {
+        return (foreign_func)GetProcAddress((HMODULE)handle, name.c_str());
     }
 
     void unload_library_platform(HMODULE handle) {
@@ -33,6 +37,10 @@ namespace foreign {
 #elif defined(FOREIGN_LIBRARY_POSIX)
     void* load_library_platform(const futils::wrap::path_string& path) {
         return dlopen(path.c_str(), RTLD_LAZY);
+    }
+
+    foreign_func get_function_platform(void* handle, const std::string& name) {
+        return (foreign_func)dlsym(handle, name.c_str());
     }
 
     void unload_library_platform(void* handle) {
@@ -106,14 +114,13 @@ namespace foreign {
         if (!lib->data || !lib->unload) {
             return state.eval_error(U"ライブラリが読み込まれていません(bug)");
         }
-        auto handle = (HMODULE)lib->data;
-        auto func = GetProcAddress(handle, futils::utf::convert<std::string>(name).c_str());
+        auto handle = lib->data;
+        auto func = get_function_platform(handle, futils::utf::convert<std::string>(name).c_str());
         if (!func) {
             state.special_object_result = false;
             state.special_object_error_reason = U"関数" + name + U"が見つかりません";
             return expr::EvalState::normal;
         }
-        auto callback = (void (*)(ForeignCallback*))(func);
         struct InternalHolder {
             std::vector<Value>& args;
             Value& result;
@@ -412,7 +419,7 @@ namespace foreign {
             },
         };
         // clang-format on
-        callback(&cb);
+        func(&cb);
         if (holder.abort_reason) {
             return state.eval_error(*holder.abort_reason);
         }

@@ -77,6 +77,10 @@ futils::fnet::quic::log::ConnLogCallbacks log_cb{
 };
 
 bool setup_http3_server(Flags& flag, std::shared_ptr<futils::fnet::server::State>& state, std::string& out_address) {
+    if (!futils::fnet::quic::crypto::has_quic_ext()) {
+        cout << "quic extension not available for libssl\n";
+        return false;
+    }
     auto hm = std::make_shared<HandlerMap>();
     auto tls_conf_or_err = futils::fnet::tls::configure_with_error();
     if (!tls_conf_or_err) {

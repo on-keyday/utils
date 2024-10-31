@@ -15,6 +15,7 @@
 #include <unicode/utf/convert.h>
 #include <thread/concurrent_queue.h>
 #include <fnet/util/uri.h>
+#include <thread>
 #ifdef _WIN32
 #define EXPORT __declspec(dllexport)
 #else

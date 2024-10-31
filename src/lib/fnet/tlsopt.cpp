@@ -31,12 +31,23 @@ namespace futils {
                 err.ssl_code = lazy::ssl::SSL_get_error_(s, res);
             }
             bool cant_load = false;
+            bool has_system_error = false;
             auto get_error_code = [&]() -> std::uint32_t {
                 if (is_boring_ssl()) {  // boring ssl
-                    return lazy::crypto::bssl::ERR_get_error_();
+                    auto err = lazy::crypto::bssl::ERR_get_error_();
+                    auto str = lazy::crypto::bssl::ERR_lib_error_string_(err);
+                    if (view::rvec(str) == "system library") {
+                        has_system_error = true;
+                    }
+                    return err;
                 }
                 else if (is_open_ssl()) {  // open ssl
-                    return lazy::crypto::ossl::ERR_get_error_();
+                    auto err = lazy::crypto::ossl::ERR_get_error_();
+                    auto str = lazy::crypto::ossl::ERR_lib_error_string_(err);
+                    if (view::rvec(str) == "system library") {
+                        has_system_error = true;
+                    }
+                    return err;
                 }
                 cant_load = true;
                 return 0;
@@ -64,6 +75,14 @@ namespace futils {
                     sub->alt_err = LibSubError{};
                     sub = sub->alt_err.as<LibSubError>();
                     sub->code = next_err;
+                }
+            }
+            if (has_system_error) {
+                if (sub) {
+                    sub->alt_err = error::Errno();
+                }
+                else {
+                    err.alt_err = error::Errno();
                 }
             }
             return reterr();
