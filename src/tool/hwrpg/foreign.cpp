@@ -63,7 +63,7 @@ namespace foreign {
         }
         auto path = futils::utf::convert<futils::wrap::path_string>(name);
         std::error_code ec;
-        auto abs_path = fs::absolute(path, ec);
+        auto abs_path = io::fs::absolute(path, ec);
         if (ec) {
             state.special_object_result = false;
             state.special_object_error_reason = futils::utf::convert<std::u32string>(ec.message());

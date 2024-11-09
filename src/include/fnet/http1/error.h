@@ -14,7 +14,7 @@ namespace futils::fnet::http1 {
         ReadState state = ReadState::uninit;
         size_t pos = 0;
         header::HeaderError header_error = header::HeaderError::none;
-        body::BodyReadResult body_error = body::BodyReadResult::full;
+        body::BodyResult body_error = body::BodyResult::full;
         bool is_resumable = false;
 
         constexpr void error(auto&& pb) {
@@ -26,7 +26,7 @@ namespace futils::fnet::http1 {
                 strutil::append(pb, ", header_error=");
                 strutil::append(pb, header::to_string(header_error));
             }
-            if (body_error != body::BodyReadResult::full) {
+            if (body_error != body::BodyResult::full) {
                 strutil::append(pb, ", body_error=");
                 strutil::append(pb, body::to_string(body_error));
             }
@@ -36,16 +36,16 @@ namespace futils::fnet::http1 {
         }
 
         constexpr explicit operator bool() const {
-            return header_error != header::HeaderError::none || body_error != body::BodyReadResult::full;
+            return header_error != header::HeaderError::none || body_error != body::BodyResult::full;
         }
     };
 
     struct HTTPWriteError {
         header::HeaderError header_error = header::HeaderError::none;
-        body::BodyReadResult body_error = body::BodyReadResult::full;
+        body::BodyResult body_error = body::BodyResult::full;
 
         constexpr explicit operator bool() const {
-            return header_error != header::HeaderError::none || body_error != body::BodyReadResult::full;
+            return header_error != header::HeaderError::none || body_error != body::BodyResult::full;
         }
 
         constexpr void error(auto&& pb) {
@@ -54,7 +54,7 @@ namespace futils::fnet::http1 {
                 strutil::append(pb, " header_error=");
                 strutil::append(pb, header::to_string(header_error));
             }
-            if (body_error != body::BodyReadResult::full) {
+            if (body_error != body::BodyResult::full) {
                 strutil::append(pb, " body_error=");
                 strutil::append(pb, body::to_string(body_error));
             }

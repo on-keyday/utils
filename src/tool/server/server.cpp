@@ -62,7 +62,7 @@ void http_serve(void*, std::shared_ptr<futils::fnet::server::Requester>&& req, f
                             user_data->headers.emplace(std::move(key), std::move(value));
                         }
                     }))) {
-                if (futils::fnet::is_resumable(err)) {
+                if (futils::fnet::http::is_resumable(err)) {
                     // futils::fnet::server::wait_for_data(std::move(req), s);
                     return;
                 }

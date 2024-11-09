@@ -116,6 +116,16 @@ namespace futils::fnet::http3 {
             return make_error(err);
         }
 
+        template <class Body>
+        Error write_body(Body&& body, bool fin = true) {
+            auto handler = get_stream();
+            if (!handler) {
+                return make_error(H3Error::H3_INTERNAL_ERROR, "handler is not set");
+            }
+            auto err = handler->write(body, fin);
+            return make_error(err);
+        }
+
         template <class Method, class Path, class Header>
         Error read_request(Method&& method, Path&& path, Header&& header) {
             auto handler = get_stream();

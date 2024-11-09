@@ -46,17 +46,17 @@ struct Menu {
     save::SaveData save_data;
     futils::wrap::path_string save_data_path;
 
-    void show_title(TextController& text) {
+    void show_title(io::TextController& text) {
         std::string buf;
-        ansiesc::window_title(buf, "Hello, World! - とある世界の物語");
+        io::ansiesc::window_title(buf, "Hello, World! - とある世界の物語");
         cout << buf;
+        text.set_layout(U"center");
         text.clear_screen();
-        text.layout.reset_layout(center_layout);
-        text.write_title("Hello, World! - とある世界の物語");
-        text.layout.reset_layout(text_layout);
+        text.write_story(U"Hello, World! - とある世界の物語", 0, 1000, 0);
+        text.set_layout(U"text");
     }
 
-    void show_menu(TextController& text) {
+    void show_menu(io::TextController& text) {
         auto result = text.write_prompt(U"メニュー\n\n1. はじめる\n2. セーブデータを作る\n3. セーブデータを消す\n4. やめる", 0, 0);
         if (result == "1") {
             state = save::UIState::save_data_select;
@@ -72,10 +72,10 @@ struct Menu {
         }
     }
 
-    void create_save_data(TextController& text, Flags& flags) {
-        fs::path save_data_dir{flags.save_data_dir};
-        if (!fs::exists(save_data_dir)) {
-            fs::create_directories(save_data_dir);
+    void create_save_data(io::TextController& text, Flags& flags) {
+        io::fs::path save_data_dir{flags.save_data_dir};
+        if (!io::fs::exists(save_data_dir)) {
+            io::fs::create_directories(save_data_dir);
         }
         auto save_data_name = text.write_prompt(U"セーブデータ名を入力してください。(enterでキャンセル)", 0, 0);
         if (save_data_name == "") {
@@ -104,18 +104,18 @@ struct Menu {
         state = save::UIState::confrontation;
     }
 
-    void show_save_files(TextController& text, Flags& flags, bool delete_mode = false) {
-        fs::path save_data_dir{flags.save_data_dir};
-        fs::directory_entry entry{save_data_dir};
+    void show_save_files(io::TextController& text, Flags& flags, bool delete_mode = false) {
+        io::fs::path save_data_dir{flags.save_data_dir};
+        io::fs::directory_entry entry{save_data_dir};
         if (!entry.exists()) {
             text.write_story(U"セーブデータが見つかりません。", 0);
             state = save::UIState::confrontation;
             return;
         }
-        std::vector<fs::path> save_files;
+        std::vector<io::fs::path> save_files;
         auto collect_save_files = [&] {
             save_files.clear();
-            for (auto& file : fs::directory_iterator{save_data_dir}) {
+            for (auto& file : io::fs::directory_iterator{save_data_dir}) {
                 if (file.is_regular_file() && file.path().extension() == ".hwrpg") {
                     save_files.push_back(file.path());
                 }
@@ -167,11 +167,11 @@ struct Menu {
             if (selected < save_files.size()) {
                 auto& file = save_files[selected];
                 if (delete_mode) {
-                    file = fs::canonical(file);
+                    file = io::fs::canonical(file);
                     auto name = file.filename().replace_extension("").u32string();
                     auto p = text.write_prompt(U"セーブデータ「" + name + U"」を削除しますか?(y/n)", 0, 0);
                     if (p == "y") {
-                        if (!fs::remove(file)) {
+                        if (!io::fs::remove(file)) {
                             text.write_story(U"セーブデータ「" + name + U"」の削除に失敗しました。", 0);
                         }
                         else {
@@ -204,7 +204,7 @@ struct Menu {
         }
     }
 
-    bool run(TextController& text, Flags& flags) {
+    bool run(io::TextController& text, Flags& flags) {
         switch (state) {
             case save::UIState::start:
                 show_title(text);
@@ -265,7 +265,11 @@ int Main(Flags& flags, futils::cmdline::option::Context& ctx) {
         cout << "save data directory is not specified\n";
         return 1;
     }
-    TextController text{futils::console::Window::create(text_layout, 80, 10).value()};
+    if (!cout.is_tty()) {
+        cout << "this program is for console\n";
+        return 1;
+    }
+    io::TextController text{futils::console::Window::create(io::text_layout, 80, 10).value()};
     int res = 0;
     while (true) {
         Menu menu;
@@ -299,7 +303,7 @@ int Main(Flags& flags, futils::cmdline::option::Context& ctx) {
         }
         break;
     }
-    text.show_cursor();
+    text.finish();
     return res;
 }
 

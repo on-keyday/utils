@@ -199,6 +199,10 @@ namespace futils::console {
         constexpr auto dy() const {
             return vertical;
         }
+
+        constexpr Window()
+            : horizontal{0}, vertical{0}, layout_data{} {}
+
         static constexpr std::optional<Window> create(view::rvec layout, size_t x, size_t y) {
             if (layout.size() != x * y) {
                 return std::nullopt;

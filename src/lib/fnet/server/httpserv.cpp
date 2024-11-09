@@ -116,7 +116,7 @@ namespace futils {
                             r = std::allocate_shared<Requester>(glheap_allocator<Requester>());
                             set(r);
                             r->addr = req->client.addr;
-                            r->http = HTTP(http2::HTTP2(s));
+                            r->http = http::HTTP(http2::HTTP2(s));
                         }
                         return r;
                     });
@@ -130,14 +130,14 @@ namespace futils {
             void may_init_version_specific(HTTPServ* serv, std::shared_ptr<Transport>& req, StateContext& as) {
                 if (!req->version_specific) {
                     auto init_http1 = [&]() {
-                        req->version = HTTPVersion::http1;
+                        req->version = http::HTTPVersion::http1;
                         auto requester = std::allocate_shared<Requester>(glheap_allocator<Requester>());
                         requester->addr = req->client.addr;
-                        requester->http = HTTP(http1::HTTP1());
+                        requester->http = http::HTTP(http1::HTTP1());
                         req->version_specific = requester;
                     };
                     auto init_http2 = [&]() {
-                        req->version = HTTPVersion::http2;
+                        req->version = http::HTTPVersion::http2;
                         auto h2 = std::allocate_shared<http2::FrameHandler>(glheap_allocator<http2::FrameHandler>(), http2::HTTP2Role::server);
                         req->version_specific = h2;
                         auto err = h2->send_settings({.enable_push = false});
@@ -165,7 +165,7 @@ namespace futils {
                             init_http2();
                         }
                         else {
-                            as.log(log_level::err, &req->client.addr, unknown_http_version);
+                            as.log(log_level::err, &req->client.addr, http::unknown_http_version);
                             req->may_shutdown_tls(as);
                         }
                     }
@@ -217,6 +217,9 @@ namespace futils {
                                 auto h = h1->http.http1();
                                 if (h->read_ctx.on_no_body_semantics() && response_sent(*h1) && h->read_ctx.is_keep_alive()) {
                                     c.log(log_level::debug, "connection keep-alive via http1", t->client.addr);
+                                    response_sent(*h1) = false;
+                                    h->read_ctx.reset();
+                                    h->write_ctx.reset();
                                     do_read(s, std::move(t), std::move(c));
                                 }
                                 else if (h->read_ctx.is_resumable() && !response_sent(*h1) && !h->read_ctx.on_no_body_semantics()) {

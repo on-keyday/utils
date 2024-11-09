@@ -14,11 +14,12 @@
 #include <termios.h>
 #include <unistd.h>
 #include <sys/select.h>
+#include <fcntl.h>
 #endif
 
 namespace futils::file {
     struct Callback {
-        void (*callback)(wrap::path_char, void*);
+        void (*callback)(std::uint32_t, void*);
         void* data;
     };
 
@@ -40,6 +41,22 @@ namespace futils::file {
                     continue;
                 }
                 if (C == 0 && !ctrl_key) {
+                    if (key.wVirtualKeyCode == VK_UP) {
+                        cb.callback(key_up, cb.data);
+                        continue;
+                    }
+                    if (key.wVirtualKeyCode == VK_DOWN) {
+                        cb.callback(key_down, cb.data);
+                        continue;
+                    }
+                    if (key.wVirtualKeyCode == VK_LEFT) {
+                        cb.callback(key_left, cb.data);
+                        continue;
+                    }
+                    if (key.wVirtualKeyCode == VK_RIGHT) {
+                        cb.callback(key_right, cb.data);
+                        continue;
+                    }
                     zero_input = true;
                     return true;
                 }
@@ -56,7 +73,7 @@ namespace futils::file {
         return ret;
     }
 
-    file_result<void> ConsoleBuffer::interact(void* data, void (*callback)(wrap::path_char, void*)) {
+    file_result<void> ConsoleBuffer::interact(void* data, void (*callback)(std::uint32_t, void*)) {
         auto h = reinterpret_cast<HANDLE>(handle);
         for (;;) {
             INPUT_RECORD record;
@@ -144,9 +161,12 @@ namespace futils::file {
 
         // Apply the new settings
         tcsetattr(handle, TCSANOW, &new_settings);
+
+        // Restore the file descriptor
+        fcntl(handle, F_SETFL, rec2);
     }
 
-    file_result<void> ConsoleBuffer::interact(void* data, void (*callback)(wrap::path_char, void*)) {
+    file_result<void> ConsoleBuffer::interact(void* data, void (*callback)(std::uint32_t, void*)) {
         ::fd_set set;
         FD_ZERO(&set);
         FD_SET(handle, &set);
@@ -161,15 +181,40 @@ namespace futils::file {
             if (ret == 0) {
                 return {};
             }
-            char c;
-            auto red = read(handle, &c, 1);
+            char c[3];
+            auto red = read(handle, c, 3);
             if (red == -1) {
                 return helper::either::unexpected{FileError{.method = "read", .err_code = errno}};
             }
             if (red == 0) {
                 return {};
             }
-            callback(c, data);
+            if (red == 3) {
+                if (c[0] == '\033' && c[1] == '[') {
+                    switch (c[2]) {
+                        case 'A':
+                            callback(key_up, data);
+                            continue;
+                        case 'B':
+                            callback(key_down, data);
+                            continue;
+                        case 'C':
+                            callback(key_right, data);
+                            continue;
+                        case 'D':
+                            callback(key_left, data);
+                            continue;
+                        default:
+                            break;  // ignore
+                    }
+                }
+            }
+            else if (red == 1 && c[0] == 0x7f) {
+                c[0] = '\b';  // backspace
+            }
+            for (size_t i = 0; i < red; i++) {
+                callback(c[i], data);
+            }
         }
     }
 
@@ -191,7 +236,10 @@ namespace futils::file {
         // Apply the new settings
         tcsetattr(handle, TCSANOW, &new_settings);
 
-        return ConsoleBuffer{handle, old_settings.c_lflag, old_settings.c_cc[VMIN], old_settings.c_cc[VTIME]};
+        auto savefl = fcntl(handle, F_GETFL, 0);
+        fcntl(handle, F_SETFL, savefl | O_NONBLOCK);
+
+        return ConsoleBuffer{handle, old_settings.c_lflag, old_settings.c_cc[VMIN], old_settings.c_cc[VTIME], static_cast<uint32_t>(savefl)};
     }
 
     file_result<void> File::set_virtual_terminal_output(bool flag) const {

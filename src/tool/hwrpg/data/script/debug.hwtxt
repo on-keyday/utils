@@ -49,7 +49,10 @@ func debug_session
                      > phase - show/change phase  eval - eval expr
             new_prompt Command List(2/2)
                      > title - go to title
+                     > resume - exit debug session
             speed 1
+        elif $cmd[0] == "resume"
+            return
         elif $cmd[0] == "eval"
             if $cmd.length != 2
                 $invalid_argument()

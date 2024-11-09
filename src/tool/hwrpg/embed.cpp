@@ -148,20 +148,20 @@ int verify_embed(const char* dataFile, const char* indexFile) {
 }
 
 int make_embed(const char* target_dir, const char* embed_file, const char* embed_index) {
-    auto root_path = fs::path{target_dir};
-    auto entries = fs::recursive_directory_iterator{root_path};
-    if (!fs::exists(root_path)) {
+    auto root_path = io::fs::path{target_dir};
+    auto entries = io::fs::recursive_directory_iterator{root_path};
+    if (!io::fs::exists(root_path)) {
         cout << "target directory not found\n";
         return 1;
     }
     auto embed_file_data = futils::file::File::create(embed_file);
     if (!embed_file_data) {
-        cout << "failed to create " << embed_file << embed_file_data.error().error<std::string>() << "\n";
+        cout << "failed to create " << embed_file << ": " << embed_file_data.error().error<std::string>() << "\n";
         return 1;
     }
     auto embed_index_data = futils::file::File::create(embed_index);
     if (!embed_index_data) {
-        cout << "failed to create " << embed_index << embed_index_data.error().error<std::string>() << "\n";
+        cout << "failed to create " << embed_index << ": " << embed_index_data.error().error<std::string>() << "\n";
         return 1;
     }
     futils::file::FileStream<std::string> efs{*embed_file_data}, ifs{*embed_index_data};
@@ -197,7 +197,7 @@ int make_embed(const char* target_dir, const char* embed_file, const char* embed
                 cout << "warning: failed to read " << path.u8string() << "\n";
                 continue;
             }
-            auto relative_path = fs::relative(path, root_path);
+            auto relative_path = io::fs::relative(path, root_path);
             auto u8path = relative_path.generic_u8string();
             embed::EmbedFileIndex file;
             set_varint_len(file.name.len, u8path.size());
@@ -264,7 +264,7 @@ void unload_embed() {
     embed_files = {};
 }
 
-int load_embed(const char* dataFile, const char* indexFile, TextController& text) {
+int load_embed(const char* dataFile, const char* indexFile, io::TextController& text) {
     auto res = load_and_verify_embed_impl(
         embed_files, dataFile, indexFile,
         [](auto&&...) {
@@ -296,7 +296,7 @@ int load_embed(const char* dataFile, const char* indexFile, TextController& text
     return 0;
 }
 
-futils::view::rvec read_file(futils::view::rvec file, TextController& err) {
+futils::view::rvec read_file(futils::view::rvec file, io::TextController& err) {
     auto found = embed_files.files.find(file);
     if (found == embed_files.files.end()) {
         auto fileNameU32 = futils::utf::convert<std::u32string>(file);

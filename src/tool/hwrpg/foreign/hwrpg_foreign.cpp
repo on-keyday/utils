@@ -26,23 +26,24 @@ using QuicContext = futils::fnet::quic::use::smartptr::Context;
 using Multiplexer = futils::fnet::quic::server::HandlerMap<futils::fnet::quic::use::smartptr::DefaultTypeConfig>;
 
 struct HttpRequest {
+    std::string method;
     futils::uri::URI<std::string> uri;
     std::shared_ptr<FuncDataAsync> callback;
 };
 
+using RequestQueue = futils::thread::MultiProducerChannelBuffer<HttpRequest, std::allocator<HttpRequest>>;
+
 struct Connections {
     std::shared_ptr<Multiplexer> connections;
-    futils::fnet::quic::context::Config config;
     futils::fnet::Socket sock;
-    std::shared_ptr<futils::thread::MultiProducerChannelBuffer<HttpRequest, std::allocator<HttpRequest>>> que;
+    std::shared_ptr<RequestQueue> que;
 };
 
 static Connections connections;
 
 static void schedule_recv() {
     while (connections.connections) {
-        connections.connections->schedule_recv();
-        std::this_thread::yield();
+        connections.connections->schedule_recv(true);
     }
 }
 
@@ -56,7 +57,7 @@ static void schedule_send() {
 static void do_send() {
     futils::byte buffer[65536];
     while (connections.connections) {
-        auto [packet, addr, exist] = connections.connections->create_packet(futils::view::wvec(buffer));
+        auto [packet, addr, exist] = connections.connections->create_packet(futils::view::wvec(buffer), true);
         if (!exist) {
             std::this_thread::yield();
             continue;
@@ -67,13 +68,21 @@ static void do_send() {
         }
     }
 }
+
 using Mgr = futils::fnet::BufferManager<futils::byte[65536]>;
 static void recv_callback(futils::fnet::Socket&& sock, Mgr& mgr, futils::fnet::NetAddrPort addr_raw, futils::fnet::NotifyResult&& r) {
     auto expected = r.readfrom_unwrap(mgr.get_buffer(), addr_raw, [&](futils::view::wvec buf) {
         return sock.readfrom(buf);
     });
     const auto d = futils::helper::defer([&] {
-        sock.readfrom_async(futils::fnet::async_addr_then(Mgr{}, recv_callback));
+        while (true) {
+            auto res = sock.readfrom_async(futils::fnet::async_addr_then(Mgr{}, recv_callback));
+            if (!res) {
+                std::this_thread::yield();
+                continue;
+            }
+            break;
+        }
     });
     if (!expected) {
         return;
@@ -89,6 +98,18 @@ static void do_recv() {
     connections.sock.readfrom_async(futils::fnet::async_addr_then(Mgr{}, recv_callback));
     while (connections.connections) {
         futils::fnet::wait_io_event(1);
+    }
+}
+
+static void request_handler() {
+    while (true) {
+        auto r = connections.que->receive_wait();
+        if (!r) {
+            continue;
+        }
+        if (r->uri.port.empty()) {
+            r->uri.port = "443";
+        }
     }
 }
 
@@ -109,21 +130,29 @@ static bool init_connections(const char* cert, const char* key) {
     }
     connections.sock = std::move(*sock);
     tls_conf->set_alpn("\x02h3");
-    connections.config = futils::fnet::quic::use::use_default_config(std::move(*tls_conf));
+    auto conf = futils::fnet::quic::use::use_default_config(std::move(*tls_conf));
     connections.connections = std::make_shared<Multiplexer>();
     auto& c = connections.connections;
-    c->set_client_config({
-        .init_recv_stream = [](std::shared_ptr<void>& app, futils::fnet::quic::use::smartptr::RecvStream& stream) { futils::fnet::quic::stream::impl::set_stream_reader(stream, true, Multiplexer::stream_recv_notify_callback); },
-        .init_send_stream = [](std::shared_ptr<void>& app, futils::fnet::quic::use::smartptr::SendStream& stream) { futils::fnet::quic::stream::impl::set_on_send_callback(stream, Multiplexer::stream_send_notify_callback); },
-        .on_transport_parameter_read = futils::fnet::http3::multiplexer_on_transport_parameter_read<futils::qpack::TypeConfig<futils::fnet::flex_storage>, futils::fnet::quic::use::smartptr::DefaultTypeConfig>,
-        .on_uni_stream_recv = futils::fnet::http3::multiplexer_recv_uni_stream<futils::qpack::TypeConfig<futils::fnet::flex_storage>, futils::fnet::quic::use::smartptr::DefaultTypeConfig>,
+    c->set_client_config(std::move(conf),
+                         {
+                             .init_recv_stream = [](std::shared_ptr<void>& app, futils::fnet::quic::use::smartptr::RecvStream& stream) { futils::fnet::quic::stream::impl::set_stream_reader(stream, true, Multiplexer::stream_recv_notify_callback); },
+                             .init_send_stream = [](std::shared_ptr<void>& app, futils::fnet::quic::use::smartptr::SendStream& stream) { futils::fnet::quic::stream::impl::set_on_send_callback(stream, Multiplexer::stream_send_notify_callback); },
+                             .on_transport_parameter_read = futils::fnet::http3::multiplexer_on_transport_parameter_read<futils::qpack::TypeConfig<futils::fnet::flex_storage>, futils::fnet::quic::use::smartptr::DefaultTypeConfig>,
+                             .on_uni_stream_recv = futils::fnet::http3::multiplexer_recv_uni_stream<futils::qpack::TypeConfig<futils::fnet::flex_storage>, futils::fnet::quic::use::smartptr::DefaultTypeConfig>,
 
-    });
+                         });
     std::thread(schedule_recv).detach();
     std::thread(schedule_send).detach();
     std::thread(do_send).detach();
     std::thread(do_recv).detach();
+    connections.que = std::make_shared<RequestQueue>();
+    std::thread(request_handler).detach();
     return true;
+}
+
+void set_string(const char* value, size_t size, void* user) {
+    auto str = (std::string*)user;
+    str->append(value, size);
 }
 
 extern "C" EXPORT void init_quic_client(ForeignCallback* cb) {
@@ -138,12 +167,8 @@ extern "C" EXPORT void init_quic_client(ForeignCallback* cb) {
         cb->set_boolean(ret, 0);
         return;
     }
-    auto set = [](const char* value, size_t size, void* user) {
-        auto str = (std::string*)user;
-        str->append(value, size);
-    };
-    if (!cb->get_string_callback(cert_arg, &cert, set) ||
-        !cb->get_string_callback(key_arg, &key, set)) {
+    if (!cb->get_string_callback(cert_arg, &cert, set_string) ||
+        !cb->get_string_callback(key_arg, &key, set_string)) {
         cb->set_boolean(ret, 0);
         return;
     }
@@ -152,8 +177,8 @@ extern "C" EXPORT void init_quic_client(ForeignCallback* cb) {
     if (libssl_path && libcrypto_path) {
         std::string ssl;
         std::string crypto;
-        if (!cb->get_string_callback(libssl_path, &ssl, set) ||
-            !cb->get_string_callback(libcrypto_path, &crypto, set)) {
+        if (!cb->get_string_callback(libssl_path, &ssl, set_string) ||
+            !cb->get_string_callback(libcrypto_path, &crypto, set_string)) {
             cb->set_boolean(ret, 0);
             return;
         }
@@ -169,6 +194,28 @@ extern "C" EXPORT void http_start_request(ForeignCallback* cb) {
     if (!connections.connections) {
         return;
     }
+    auto obj = cb->get_arg(cb->data, 0);
+    if (!obj) {
+        return;
+    }
+    auto uri_obj = cb->get_object_element(obj, "uri", 0);
+    if (!uri_obj) {
+        return;
+    }
+    auto method_obj = cb->get_object_element(obj, "method", 0);
+    if (!method_obj) {
+        return;
+    }
+    std::string uri, method;
+    if (!cb->get_string_callback(uri_obj, &uri, set_string) ||
+        !cb->get_string_callback(method_obj, &method, set_string)) {
+        return;
+    }
+    HttpRequest req;
+    auto err = futils::uri::parse_ex(req.uri, uri);
+    if (err != futils::uri::ParseError::none) {
+        return;
+    }
     auto arg = cb->get_arg(cb->data, 1);
     if (!arg) {
         return;
@@ -182,6 +229,7 @@ extern "C" EXPORT void http_start_request(ForeignCallback* cb) {
         return;
     }
     std::shared_ptr<FuncDataAsync> async_f_holder(async_f, [](auto* p) { p->unload(p); });
+    connections.que->send(std::move(req));
 }
 
 extern "C" EXPORT void hwrpg_foreign_test(ForeignCallback* cb) {

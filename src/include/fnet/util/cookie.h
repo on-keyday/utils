@@ -21,7 +21,7 @@
 
 namespace futils {
 
-    namespace http::cookie {
+    namespace fnet::http::cookie {
         enum class SameSite {
             default_mode,
             lax_mode,
@@ -380,6 +380,6 @@ namespace futils {
             return internal::CookieWriter<String>::write(out, info, cookies);
         }
 
-    }  // namespace http::cookie
+    }  // namespace fnet::http::cookie
 
 }  // namespace futils

@@ -189,7 +189,25 @@ namespace futils::fnet::http2 {
         }
 
         template <class Body>
-        Error read_data(Body&& body) {
+        Error write_body(Body&& body, bool fin = true) {
+            auto handler = handler_.lock();
+            if (!handler) {
+                return Error{H2Error::internal, false, "handler is not set"};
+            }
+            auto ok = handler->send_data(std::forward<decltype(body)>(body), fin);
+            if (!ok) {
+                return Error{
+                    .code = H2Error::internal,
+                    .stream = true,
+                    .debug = "failed to write data",
+                    .is_resumable = ok == http1::body::BodyResult::incomplete,
+                };
+            }
+            return no_error;
+        }
+
+        template <class Body>
+        Error read_body(Body&& body) {
             auto handler = handler_.lock();
             if (!handler) {
                 return Error{H2Error::internal, false, "handler is not set"};
@@ -200,7 +218,7 @@ namespace futils::fnet::http2 {
                     .code = H2Error::internal,
                     .stream = true,
                     .debug = "failed to read data",
-                    .is_resumable = ok == http1::body::BodyReadResult::incomplete,
+                    .is_resumable = ok == http1::body::BodyResult::incomplete,
                 };
             }
             return no_error;

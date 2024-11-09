@@ -10,7 +10,7 @@
 // external
 #include "servh.h"
 #include "client.h"
-#include "../http.h"
+#include "../http/http.h"
 #include "state.h"
 #include "../tls/tls.h"
 
@@ -32,18 +32,18 @@ namespace futils {
                 fnet::flex_storage write_buf;
                 Client client;
                 tls::TLS tls;
-                HTTPVersion version = HTTPVersion::unknown;
+                http::HTTPVersion version = http::HTTPVersion::unknown;
                 std::shared_ptr<void> version_specific;
 
                 std::shared_ptr<Requester> http1_requester() {
-                    if (version != HTTPVersion::http1) {
+                    if (version != http::HTTPVersion::http1) {
                         return nullptr;
                     }
                     return std::static_pointer_cast<Requester>(version_specific);
                 }
 
                 std::shared_ptr<http2::FrameHandler> http2_frame_handler() {
-                    if (version != HTTPVersion::http2) {
+                    if (version != http::HTTPVersion::http2) {
                         return nullptr;
                     }
                     return std::static_pointer_cast<http2::FrameHandler>(version_specific);
@@ -141,14 +141,12 @@ namespace futils {
 
             struct Requester {
                private:
-                // friend std::weak_ptr<Transport>& transport(Requester& req);
                 friend bool& response_sent(Requester& req);
                 std::shared_ptr<void> user_data;
-                // std::weak_ptr<Transport> transport;
                 bool response_sent = false;
 
                public:
-                HTTP http;
+                http::HTTP http;
                 fnet::NetAddrPort addr;
 
                 template <class T>

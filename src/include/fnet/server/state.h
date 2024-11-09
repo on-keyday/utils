@@ -15,6 +15,7 @@
 #include <atomic>
 #include <cstdint>
 #include "../../thread/channel.h"
+#include "../../thread/concurrent_queue.h"
 #include <memory>
 #include <fnet/quic/server/server.h>
 #include <fnet/quic/quic.h>

@@ -1249,7 +1249,7 @@ std::shared_ptr<expr::Expr> parse_expr(futils::view::rvec expr) {
 struct ScriptInstance {
     RuntimeState state;
 
-    ScriptInstance(TextController& text, save::SaveData& save, futils::wrap::path_string& save_data_path)
+    ScriptInstance(io::TextController& text, save::SaveData& save, futils::wrap::path_string& save_data_path)
         : state{text, save, save_data_path} {
     }
 
@@ -1421,10 +1421,10 @@ struct ScriptInstance {
                 return;
             }
             if (cmd[1] == "center") {
-                state.text.layout.reset_layout(center_layout);
+                state.text.set_layout(U"center");
             }
             else if (cmd[1] == "text") {
-                state.text.layout.reset_layout(text_layout);
+                state.text.set_layout(U"text");
             }
             else {
                 report_script_error(U"不明なレイアウトです");
@@ -2000,7 +2000,7 @@ struct ScriptInstance {
     }
 };
 
-GameEndRequest run_game(TextController& ctrl, save::SaveData& data, const char* dataFile, const char* indexFile, futils::wrap::path_string& save_data_name) {
+GameEndRequest run_game(io::TextController& ctrl, save::SaveData& data, const char* dataFile, const char* indexFile, futils::wrap::path_string& save_data_name) {
     auto res = load_embed(dataFile, indexFile, ctrl);
     if (res != 0) {
         return GameEndRequest::failure;

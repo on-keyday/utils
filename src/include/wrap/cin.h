@@ -67,6 +67,8 @@ namespace futils {
 
             // edit line
             wrap::path_string* edit_buffer = nullptr;
+
+            file::ConsoleSpecialKey special_key = file::ConsoleSpecialKey::none;
         };
 
         /// @brief input from stdin with utf8 if console

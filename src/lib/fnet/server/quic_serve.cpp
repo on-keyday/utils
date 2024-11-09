@@ -156,7 +156,7 @@ namespace futils::fnet::server {
                 req->stream.stream = stream;
                 req->stream.state = http3::stream::StateMachine::server_start;
                 req->req.addr = q_state->handler.lock()->get_peer_addr(ctx->get_active_path());
-                req->req.http = HTTP(http3::HTTP3(std::shared_ptr<H3Stream>(req, &req->stream)));
+                req->req.http = http::HTTP(http3::HTTP3(std::shared_ptr<H3Stream>(req, &req->stream)));
                 setter(req);
                 return std::static_pointer_cast<void>(req);
             }));

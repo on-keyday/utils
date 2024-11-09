@@ -20,6 +20,7 @@
 #include <number/array.h>
 #include <fnet/util/uri_lex.h>
 #include "read_context.h"
+#include "write_context.h"
 #include "callback.h"
 #include "error_enum.h"
 
@@ -254,11 +255,11 @@ namespace futils::fnet::http1::header {
     constexpr auto http_version_len = 8;
 
     template <class T>
-    constexpr bool read_http_version(ReadContext& ctx, Sequencer<T>& seq) {
+    constexpr bool read_http_version(Sequencer<T>& seq, std::uint8_t& major, std::uint8_t& minor) {
         if (!seq.seek_if("HTTP/")) {
             return false;
         }
-        auto major = seq.current();
+        major = seq.current();
         if (!number::is_in_byte_range(major) || !number::is_digit(major)) {
             return false;
         }
@@ -266,12 +267,23 @@ namespace futils::fnet::http1::header {
         if (!seq.consume_if('.')) {
             return false;
         }
-        auto minor = seq.current();
+        minor = seq.current();
         if (!number::is_in_byte_range(minor) || !number::is_digit(minor)) {
             return false;
         }
         seq.consume();
-        ctx.scan_http_version(number::number_transform[major], number::number_transform[minor]);
+        major = number::number_transform[major];
+        minor = number::number_transform[minor];
+        return true;
+    }
+
+    template <class T>
+    constexpr bool read_http_version(ReadContext& ctx, Sequencer<T>& seq) {
+        std::uint8_t major, minor;
+        if (!read_http_version(seq, major, minor)) {
+            return false;
+        }
+        ctx.scan_http_version(major, minor);
         return true;
     }
 
@@ -624,7 +636,7 @@ namespace futils::fnet::http1::header {
     template <class String>
     constexpr bool is_valid_value(String&& value, bool allow_empty = false) {
         return strutil::validate(value, allow_empty, [](auto&& c) {
-            return number::is_non_space_ascii(c) || c == ' ' || c == '\t';
+            return number::is_non_space_ascii(c) || is_tab_or_space(c);
         });
     }
 
@@ -648,8 +660,12 @@ namespace futils::fnet::http1::header {
         };
     }
 
-    template <class String, class Header, class Validate = decltype(strutil::no_check2())>
-    constexpr HeaderErr render_header_common(String& str, Header&& header, Validate&& validate = strutil::no_check2(), bool ignore_invalid = false) {
+    template <class Output, class Header, class Validate = decltype(strutil::no_check2())>
+    constexpr HeaderErr render_header_common(WriteContext& ctx, Output&& str, Header&& header, Validate&& validate = strutil::no_check2(), bool ignore_invalid = false) {
+        if (ctx.state() != WriteState::header &&
+            ctx.state() != WriteState::trailer) {
+            return HeaderError::invalid_state;
+        }
         HeaderError validation_error = HeaderError::none;
         auto header_add = [&](auto&& key, auto&& value) -> HeaderErr {
             if (validation_error != HeaderError::none) {
@@ -661,6 +677,7 @@ namespace futils::fnet::http1::header {
                 }
                 return HeaderError::validation_error;
             }
+            ctx.scan_header(key, value);
             strutil::append(str, key);
             strutil::append(str, ": ");
             strutil::append(str, value);
@@ -674,68 +691,189 @@ namespace futils::fnet::http1::header {
             return validation_error;
         }
         strutil::append(str, "\r\n");
+        if (ctx.is_invalid_content_length() && !ctx.is_flag(WriteFlag::allow_invalid_content_length)) {
+            return HeaderError::invalid_content_length;
+        }
+        if (ctx.state() == WriteState::trailer) {
+            ctx.set_state(WriteState::end);
+        }
+        else if (ctx.no_body()) {
+            if (ctx.has_chunked()) {
+                if (!ctx.is_flag(WriteFlag::allow_unexpected_content_length_or_chunked_with_no_body)) {
+                    return HeaderError::invalid_content_length;
+                }
+            }
+            if (ctx.has_content_length() && ctx.remain_content_length() != 0) {
+                if (!ctx.is_flag(WriteFlag::allow_unexpected_content_length_or_chunked_with_no_body)) {
+                    return HeaderError::invalid_content_length;
+                }
+            }
+            ctx.set_state(WriteState::end);
+        }
+        else if (ctx.has_chunked()) {
+            if (ctx.has_content_length()) {
+                if (!ctx.is_flag(WriteFlag::allow_both_chunked_and_content_length)) {
+                    return HeaderError::invalid_content_length;
+                }
+                ctx.set_state(WriteState::content_length_chunked_body);
+            }
+            else {
+                ctx.set_state(WriteState::chunked_body);
+            }
+        }
+        else if (ctx.has_content_length()) {
+            if (ctx.remain_content_length() == 0) {
+                ctx.set_state(WriteState::end);
+            }
+            else {
+                ctx.set_state(WriteState::content_length_body);
+            }
+        }
+        else {
+            if (!ctx.is_flag(WriteFlag::allow_no_length_info_body)) {
+                return HeaderError::invalid_content_length;
+            }
+            if (ctx.is_keep_alive()) {
+                if (!ctx.is_flag(WriteFlag::allow_no_length_even_if_keep_alive)) {
+                    return HeaderError::invalid_content_length;
+                }
+            }
+            ctx.set_state(WriteState::best_effort_body);
+        }
         return HeaderError::none;
     }
 
-    template <class String, class Method, class Path>
-    constexpr HeaderErr render_request_line(String& str, Method&& method, Path&& path, const char* version_str = "HTTP/1.1") {
-        if (strutil::contains(method, " ") ||
-            strutil::contains(method, "\r") ||
-            strutil::contains(method, "\n")) {
-            return HeaderError::invalid_method;
+    template <class Output, class Method, class Path>
+    constexpr HeaderErr render_request_line(WriteContext& ctx, Output& str, Method&& method, Path&& path, const char* version_str = "HTTP/1.1") {
+        if (ctx.state() != WriteState::uninit) {
+            return HeaderError::invalid_state;
         }
-        if (strutil::contains(path, " ") ||
-            strutil::contains(path, "\r") ||
-            strutil::contains(path, "\n")) {
-            return HeaderError::invalid_path;
+        ctx.is_server(false);
+        if (ctx.is_flag(WriteFlag::rough_method)) {
+            if (strutil::contains(method, " ") ||
+                strutil::contains(method, "\r") ||
+                strutil::contains(method, "\n")) {
+                return HeaderError::invalid_method;
+            }
         }
-        // version_str is trusted
+        else {
+            if (!is_valid_key(method)) {
+                return HeaderError::invalid_method;
+            }
+        }
+        if (ctx.is_flag(WriteFlag::rough_path)) {
+            if (strutil::contains(path, " ") ||
+                strutil::contains(path, "\r") ||
+                strutil::contains(path, "\n")) {
+                return HeaderError::invalid_path;
+            }
+        }
+        else {
+            if (!strutil::validate(path, false, [](auto&& c) {
+                    return uri::is_uri_usable(c);
+                })) {
+                return HeaderError::invalid_path;
+            }
+        }
+        if (!ctx.is_flag(WriteFlag::legacy_http_0_9) && !version_str) {
+            return HeaderError::invalid_version;
+        }
+        else if (version_str && !ctx.is_flag(WriteFlag::trust_version)) {
+            auto seq = make_ref_seq(version_str);
+            std::uint8_t major, minor;
+            if (!read_http_version(seq, major, minor) || !seq.eos()) {
+                return HeaderError::invalid_version;
+            }
+            ctx.scan_http_version(major, minor);
+        }
+        ctx.scan_method(method);
+        // method
+        // ex. GET
         strutil::append(str, method);
         str.push_back(' ');
+
+        // path
+        // ex. /index.html
         strutil::append(str, path);
-        if (!version_str) {  // if version_str is nullptr, that means this is HTTP/0.9
+
+        // version string
+        // HTTP/x.x
+        if (version_str) {  // if version_str is nullptr, that means this is HTTP/0.9
             str.push_back(' ');
             strutil::append(str, version_str);
         }
         strutil::append(str, "\r\n");
-        return HeaderError::none;
-    }
 
-    template <class String, class Method, class Path, class Header, class Validate = decltype(strutil::no_check2())>
-    constexpr HeaderErr render_request(String& str, Method&& method, Path&& path, Header&& header, Validate&& validate = strutil::no_check2(), bool ignore_invalid = false, const char* version_str = "HTTP/1.1") {
-        if (auto err = render_request_line(str, method, path, version_str); !err) {
-            return err;
-        }
-        return render_header_common(str, header, validate, ignore_invalid);
+        ctx.set_state(WriteState::header);
+        return HeaderError::none;
     }
 
     template <class String, class Status, class Phrase>
-    constexpr HeaderErr render_status_line(String& str, Status&& status, Phrase&& phrase, const char* version_str = "HTTP/1.1") {
+    constexpr HeaderErr render_status_line(WriteContext& ctx, String& str, Status&& status, Phrase&& phrase, const char* version_str = "HTTP/1.1") {
+        if (ctx.state() != WriteState::uninit) {
+            return HeaderError::invalid_state;
+        }
+        ctx.is_server(true);
         auto status_ = int(status);
-        if (status_ < 100 && status_ > 599) {
+        if (status_ < 100 || status_ > 599) {
             return HeaderError::invalid_status_code;
         }
-        // phrase and version_str is trusted
+        ctx.scan_status_code(status_);
+        if (!ctx.is_flag(WriteFlag::trust_version)) {
+            if (!version_str) {
+                return HeaderError::invalid_version;
+            }
+            auto seq = make_ref_seq(version_str);
+            std::uint8_t major, minor;
+            if (!read_http_version(seq, major, minor) || !seq.eos()) {
+                return HeaderError::invalid_version;
+            }
+            ctx.scan_http_version(major, minor);
+        }
+        if (!ctx.is_flag(WriteFlag::trust_phrase)) {
+            if (strutil::contains(phrase, "\r") ||
+                strutil::contains(phrase, "\n")) {
+                return HeaderError::invalid_reason_phrase;
+            }
+        }
+        // version string
+        // HTTP/x.x
         strutil::append(str, version_str);
         str.push_back(' ');
-        char code[4] = "000";
+
+        // status code
+        // 3 digit number ex. 200
+        char code[] = "000";
         code[0] += (status_ / 100);
         code[1] += (status_ % 100 / 10);
-        code[2] += (status_ % 100 % 10);
+        code[2] += (status_ % 10);
         strutil::append(str, code);
-        strutil::append(str, " ");
+        str.push_back(' ');
+
+        // reason phrase (optional)
         strutil::append(str, phrase);
         strutil::append(str, "\r\n");
+
+        ctx.set_state(WriteState::header);
         return HeaderError::none;
     }
 
-    template <class String, class Status, class Phrase, class Header, class Validate = decltype(strutil::no_check2())>
-    constexpr HeaderErr render_response(String& str, Status&& status, Phrase&& phrase, Header&& header, Validate&& validate = strutil::no_check2(), bool ignore_invalid = false,
-                                        const char* version_str = "HTTP/1.1") {
-        if (auto err = render_status_line(str, status, phrase, version_str); !err) {
+    template <class Output, class Method, class Path, class Header, class Validate = decltype(strutil::no_check2())>
+    constexpr HeaderErr render_request(WriteContext& ctx, Output& str, Method&& method, Path&& path, Header&& header, Validate&& validate = strutil::no_check2(), bool ignore_invalid = false, const char* version_str = "HTTP/1.1") {
+        if (auto err = render_request_line(ctx, str, method, path, version_str); !err) {
             return err;
         }
-        return render_header_common(str, header, validate, ignore_invalid);
+        return render_header_common(ctx, str, header, validate, ignore_invalid);
+    }
+
+    template <class String, class Status, class Phrase, class Header, class Validate = decltype(strutil::no_check2())>
+    constexpr HeaderErr render_response(WriteContext& ctx, String& str, Status&& status, Phrase&& phrase, Header&& header,
+                                        Validate&& validate = strutil::no_check2(), bool ignore_invalid = false,
+                                        const char* version_str = "HTTP/1.1") {
+        if (auto err = render_status_line(ctx, str, status, phrase, version_str); !err) {
+            return err;
+        }
+        return render_header_common(ctx, str, header, validate, ignore_invalid);
     }
 
     void canonical_header(auto&& input, auto&& output) {
@@ -998,6 +1136,50 @@ namespace futils::fnet::http1::header {
         }
 
         static_assert(test_suspend());
+
+        constexpr bool render_test() {
+            auto report = [](const char* desc, auto... err) {
+                throw desc;
+            };
+            auto request = [&](auto&& method, auto&& path, auto&& header, auto&& expected, WriteState state) {
+                WriteContext ctx;
+                futils::number::Array<char, 100> str{};
+                if (auto err = render_request(ctx, str, method, path, header); !err) {
+                    report("render error", err, ctx, str);
+                }
+                if (!strutil::equal(str, expected)) {
+                    report("not equal", str, futils::strlen(expected));
+                }
+                if (ctx.state() != state) {
+                    report("state not equal", ctx.state(), state);
+                }
+            };
+            auto response = [&](auto&& status, auto&& phrase, auto&& header, auto&& expected, WriteState state) {
+                WriteContext ctx;
+                futils::number::Array<char, 100> str;
+                if (!render_response(ctx, str, status, phrase, header)) {
+                    report("render error", ctx, str);
+                }
+                if (!strutil::equal(str, expected)) {
+                    report("not equal", str, futils::strlen(expected));
+                }
+                if (ctx.state() != state) {
+                    report("state not equal", ctx.state(), state);
+                }
+            };
+            request("GET", "/", listT{}, "GET / HTTP/1.1\r\n\r\n", WriteState::end);
+            request("GET", "/", listT{{{"key", "value"}}, 1}, "GET / HTTP/1.1\r\nkey: value\r\n\r\n", WriteState::end);
+            request("POST", "/index.html", listT{{{"Content-Length", "20"}, {"key", "value"}, {"key2", "value2"}}, 3}, "POST /index.html HTTP/1.1\r\nContent-Length: 20\r\nkey: value\r\nkey2: value2\r\n\r\n", WriteState::content_length_body);
+            request("POST", "/index.html", listT{{{"Transfer-Encoding", "  chunked"}, {"key", "value"}, {"key2", "value2"}}, 3}, "POST /index.html HTTP/1.1\r\nTransfer-Encoding:   chunked\r\nkey: value\r\nkey2: value2\r\n\r\n", WriteState::chunked_body);
+            response(204, "No Content", listT{}, "HTTP/1.1 204 No Content\r\n\r\n", WriteState::end);
+            response(200, "OK", listT{{{"Content-Length", "0"}, {"key", "value"}}, 2}, "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nkey: value\r\n\r\n", WriteState::end);
+            response(200, "OK", listT{{{"Content-Length", "12"}, {"key", "value"}}, 2}, "HTTP/1.1 200 OK\r\nContent-Length: 12\r\nkey: value\r\n\r\n", WriteState::content_length_body);
+            response(200, "OK", listT{{{"Transfer-Encoding", "  chunked"}, {"key", "value"}}, 2}, "HTTP/1.1 200 OK\r\nTransfer-Encoding:   chunked\r\nkey: value\r\n\r\n", WriteState::chunked_body);
+
+            return true;
+        }
+
+        static_assert(render_test());
     }  // namespace test
 
 }  // namespace futils::fnet::http1::header

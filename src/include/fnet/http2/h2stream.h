@@ -124,23 +124,24 @@ namespace futils {
                     return http1::header::HeaderError::none;
                 }
 
-                http1::body::BodyReadResult receive_data(auto&& cb) {
+                http1::body::BodyResult receive_data(auto&& cb) {
                     if (state.recv_state() != http1::HTTPState::body) {
-                        return http1::body::BodyReadResult::invalid_state;
+                        return http1::body::BodyResult::invalid_state;
                     }
                     if (data_buffer.size() == 0) {
                         if (state.state() == State::closed) {
                             state.set_recv_state(http1::HTTPState::end);
-                            return http1::body::BodyReadResult::full;
+                            return http1::body::BodyResult::full;
                         }
-                        return http1::body::BodyReadResult::incomplete;
+                        return http1::body::BodyResult::incomplete;
                     }
                     cb(data_buffer);
+                    data_buffer.clear();
                     if (state.state() == State::closed) {
                         state.set_recv_state(http1::HTTPState::end);
+                        return http1::body::BodyResult::full;
                     }
-                    data_buffer.clear();
-                    return http1::body::BodyReadResult::full;
+                    return http1::body::BodyResult::incomplete;
                 }
 
                 Error send_data(view::rvec data, bool fin, byte* padding = nullptr) {

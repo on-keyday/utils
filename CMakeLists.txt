@@ -26,7 +26,7 @@ elseif(WIN32)
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options("-ftemplate-backtrace-limit=0")
-    add_compile_options("-fconstexpr-steps=2147483647")
+    add_compile_options("-fconstexpr-steps=10000000")
 
 
   endif()
@@ -41,7 +41,7 @@ else()
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
     set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
-    add_compile_options("-fconstexpr-steps=2147483647")
+    add_compile_options("-fconstexpr-steps=10000000")
 
     if(WASI_SDK_PREFIX)
       add_compile_definitions(_WASI_EMULATED_MMAN)

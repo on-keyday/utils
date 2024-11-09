@@ -346,7 +346,8 @@ namespace futils {
             }
 
            private:
-            context::Config config;
+            context::Config quic_server_config;
+            context::Config quic_client_config;
             connid::ExporterFn exporter_fn = {
                 connid::default_generator,
                 +[](std::shared_ptr<void> pmp, std::shared_ptr<void> pop, view::rvec id, view::rvec sr) {
@@ -366,18 +367,18 @@ namespace futils {
                 },
             };
 
-            bool is_supported(std::uint32_t ver) const {
-                return config.version == ver;
+            bool is_server_supported(std::uint32_t ver) const {
+                return quic_server_config.version == ver;
             }
 
             void setup_server_config() {
-                config.server = true;
-                config.connid_parameters.exporter.exporter = &this->exporter_fn;
-                config.connid_parameters.exporter.mux = this->weak_from_this();
+                quic_server_config.server = true;
+                quic_server_config.connid_parameters.exporter.exporter = &this->exporter_fn;
+                quic_server_config.connid_parameters.exporter.mux = this->weak_from_this();
             }
 
             context::Config get_config(std::shared_ptr<Opened<TConfig>> ptr, path::PathID id) {
-                auto copy = config;
+                auto copy = quic_server_config;
                 copy.connid_parameters.exporter.obj = std::move(ptr);
                 copy.path_parameters.original_path = id;
                 return copy;
@@ -534,7 +535,7 @@ namespace futils {
                     return;  // ignore smaller packet
                 }
                 // check versions
-                if (!is_supported(summary.version)) {
+                if (!is_server_supported(summary.version)) {
                     return;
                 }
                 auto origDst = summary.dstID;
@@ -555,17 +556,26 @@ namespace futils {
            public:
             void set_server_config(context::Config&& conf,
                                    MultiplexerConfig<TConfig> server_config = {}) {
-                config = std::move(conf);
+                quic_server_config = std::move(conf);
                 this->server_config = std::move(server_config);
                 setup_server_config();
             }
 
-            void set_client_config(MultiplexerConfig<TConfig> client_config) {
+            void set_client_config(context::Config&& conf, MultiplexerConfig<TConfig> client_config) {
+                quic_client_config = std::move(conf);
                 this->client_config = std::move(client_config);
             }
 
             std::shared_ptr<context::Context<TConfig>> open(const context::Config& conf, const NetAddrPort& dest, const char* host) {
                 auto opened = open_internal(conf, dest, host);
+                if (!opened) {
+                    return nullptr;
+                }
+                return std::shared_ptr<context::Context<TConfig>>(opened, &opened->ctx);
+            }
+
+            std::shared_ptr<context::Context<TConfig>> open(const NetAddrPort& dest, const char* host) {
+                auto opened = open_internal(quic_client_config, dest, host);
                 if (!opened) {
                     return nullptr;
                 }
@@ -590,7 +600,7 @@ namespace futils {
                     return false;
                 };
                 auto get_dstID_len = [&](binary::reader r, size_t* len) {
-                    *len = config.connid_parameters.connid_len;
+                    *len = quic_server_config.connid_parameters.connid_len;
                     return true;
                 };
                 auto res = packet::parse_packet<slib::vector>(r, crypto::authentication_tag_length, cb, is_stateless_reset, get_dstID_len);
@@ -653,7 +663,7 @@ namespace futils {
             }
 
             void schedule_send() {
-                handlers.schedule(config.internal_parameters.clock, send_que);
+                handlers.schedule(quic_server_config.internal_parameters.clock, send_que);
             }
 
             void schedule_recv(bool block = false) {

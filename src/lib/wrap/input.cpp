@@ -21,6 +21,7 @@ namespace futils {
     namespace wrap {
 
 #ifdef FUTILS_PLATFORM_WINDOWS
+        /*
         static bool read_record(wrap::path_string& buf, INPUT_RECORD& rec, bool& zero_input, wrap::InputState& state) {
             auto& cout = wrap::cout_wrap();
             auto echo_back = [&](auto&& buf) {
@@ -134,6 +135,7 @@ namespace futils {
                 Sleep(1);
             }
         }
+        */
 
         static void enable_ctrl_c_platform(bool en, unsigned int& flag) {
             auto handle = GetStdHandle(STD_INPUT_HANDLE);
@@ -177,7 +179,7 @@ namespace futils {
                 size_t u16_index = 0;
                 wrap::path_char tmp[3]{};
 
-                void operator()(wrap::path_char c) {
+                void operator()(std::uint32_t c) {
                     auto& cout = wrap::cout_wrap();
                     auto echo_back = [&](auto&& buf) {
                         if (!state->no_echo && cout.is_tty()) {
@@ -185,6 +187,10 @@ namespace futils {
                         }
                     };
                     input = true;
+                    if (file::is_special_key(c)) {
+                        state->special_key = file::ConsoleSpecialKey(c);
+                        return;
+                    }
                     if (c == '\b') {
                         if (buf.size()) {
                             buf.pop_back();
@@ -240,7 +246,7 @@ namespace futils {
                 }
             } i_act{buf, state};
             for (;;) {
-                auto err = b->interact(&i_act, [](wrap::path_char c, void* data) {
+                auto err = b->interact(&i_act, [](std::uint32_t c, void* data) {
                     auto& buf = *reinterpret_cast<Interact*>(data);
                     buf(c);
                 });

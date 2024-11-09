@@ -417,25 +417,39 @@ namespace futils::file {
         size_t transferred() const;
     };
 
+    enum ConsoleSpecialKey : std::uint32_t {
+        none = 0,
+        key_up = 0x1100001,
+        key_down = 0x1100002,
+        key_left = 0x1100003,
+        key_right = 0x1100004,
+    };
+
+    constexpr bool is_special_key(std::uint32_t key) noexcept {
+        return key >= key_up && key <= key_right;
+    }
+
     struct futils_DLL_EXPORT ConsoleBuffer {
        private:
         std::uintptr_t handle = ~0;
 
         friend struct futils_DLL_EXPORT File;
         std::uint64_t base_flag = 0;
-        byte rec[2]{};  // for linux
+        byte rec[2]{};           // for linux
+        std::uint32_t rec2 = 0;  // for linux
         bool zero_input = false;
-        constexpr ConsoleBuffer(std::uintptr_t handle, std::uint64_t base_flag, byte a = 0, byte b = 0)
+        constexpr ConsoleBuffer(std::uintptr_t handle, std::uint64_t base_flag, byte a = 0, byte b = 0, std::uint32_t c = 0)
             : handle(handle), base_flag(base_flag) {
             rec[0] = a;
             rec[1] = b;
+            rec2 = c;
         }
 
         constexpr ConsoleBuffer(std::uintptr_t handle)
             : handle(handle) {}
 
        public:
-        file_result<void> interact(void*, void (*callback)(wrap::path_char, void*));
+        file_result<void> interact(void*, void (*callback)(std::uint32_t, void*));
         constexpr ConsoleBuffer() = default;
         constexpr ConsoleBuffer(ConsoleBuffer&& in)
             : handle(std::exchange(in.handle, ~0)),

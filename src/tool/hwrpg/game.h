@@ -6,100 +6,18 @@
 */
 
 #pragma once
-#include <wrap/cout.h>
-#include <wrap/cin.h>
-#include <console/window.h>
-#include <console/ansiesc.h>
-#include <filesystem>
-#include <thread>
+
 #include "save_data.h"
 #include <json/convert_json.h>
 #include <json/json_export.h>
 #include <set>
 #include "i8n.h"
 #include <thread/concurrent_queue.h>
-
-extern futils::wrap::UtfOut& cout;
-extern futils::wrap::UtfIn& cin;
-extern bool signaled;
-constexpr auto text_layout = futils::console::make_layout_data<80, 10>(2);
-constexpr auto center_layout = futils::console::make_layout_data<80, 10>(4);
-namespace ansiesc = futils::console::escape;
-namespace fs = std::filesystem;
-struct TextController {
-    futils::console::Window layout;
-    void write_text(futils::view::rvec data) {
-        std::string buffer;
-        futils::binary::writer w{futils::binary::resizable_buffer_writer<std::string>(), &buffer};
-        layout.draw(w, data);
-        cout << w.written();
-    }
-
-    void write_title(futils::view::rvec title) {
-        write_text(title);
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-
-   private:
-    void move_back() {
-        cout << ansiesc::cursor(ansiesc::CursorMove::up, layout.dy());
-    }
-
-   public:
-    auto write_story(std::u32string_view text, size_t delay = 100, size_t after_wait = 1000, size_t delay_offset = 0) {
-        cout << ansiesc::cursor_visibility(ansiesc::CursorVisibility::hide);
-        move_back();
-        if (delay_offset == 0) {
-            write_text("");
-        }
-        if (delay == 0) {
-            move_back();
-            write_text(futils::utf::convert<std::string>(text));
-            std::this_thread::sleep_for(std::chrono::milliseconds(after_wait));
-            return;
-        }
-        std::string output;
-        std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-        for (size_t i = 0; i < text.size(); i++) {
-            if (i < delay_offset) {
-                continue;
-            }
-            output = futils::utf::convert<std::string>(text.substr(0, i + 1));
-            move_back();
-            write_text(output);
-            std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(after_wait));
-    };
-
-    auto show_cursor() {
-        cout << ansiesc::cursor_visibility(ansiesc::CursorVisibility::show);
-    }
-
-    void clear_screen() {
-        cout << ansiesc::erase(ansiesc::EraseTarget::screen, ansiesc::EraseMode::all);
-        cout << ansiesc::cursor_abs(0, 0);
-    }
-
-    auto write_prompt(std::u32string_view text, size_t delay = 100, size_t after_wait = 1000, size_t delay_offset = 0) {
-        write_story(text, delay, after_wait, delay_offset);
-        cout << ansiesc::erase(ansiesc::EraseTarget::line, ansiesc::EraseMode::back_of_cursor);
-        cout << ansiesc::cursor_visibility(ansiesc::CursorVisibility::show);
-        cout << "> ";
-        std::string answer;
-        cin >> answer;
-        while (!answer.empty() && (answer.back() == '\n' || answer.back() == '\r')) {
-            answer.pop_back();
-        }
-        cout << ansiesc::cursor_visibility(ansiesc::CursorVisibility::hide);
-        cout << ansiesc::cursor(ansiesc::CursorMove::up, 1);
-        return answer;
-    };
-};
+#include "io.h"
 
 int make_embed(const char* target_dir, const char* embed_file, const char* embed_index);
 int verify_embed(const char* dataFile, const char* indexFile);
-int load_embed(const char* dataFile, const char* indexFile, TextController& text);
+int load_embed(const char* dataFile, const char* indexFile, io::TextController& text);
 void unload_embed();
 enum class GameEndRequest {
     none,
@@ -109,9 +27,9 @@ enum class GameEndRequest {
     reload,
     go_title,
 };
-GameEndRequest run_game(TextController& ctrl, save::SaveData& data, const char* dataFile, const char* indexFile, futils::wrap::path_string& save_data_name);
+GameEndRequest run_game(io::TextController& ctrl, save::SaveData& data, const char* dataFile, const char* indexFile, futils::wrap::path_string& save_data_name);
 
-futils::view::rvec read_file(futils::view::rvec file, TextController& err);
+futils::view::rvec read_file(futils::view::rvec file, io::TextController& err);
 
 struct PhaseData {
     std::string name;
@@ -635,10 +553,13 @@ struct AsyncCallback {
     std::vector<Value> args;
 };
 
-using AsyncFuncChannel = futils::thread::MultiProducerChannelBuffer<AsyncCallback, std::allocator<AsyncCallback>>;
+template <class T>
+using AsyncChannel = futils::thread::MultiProducerChannelBuffer<T, std::allocator<T>>;
+
+using AsyncFuncChannel = AsyncChannel<AsyncCallback>;
 
 struct RuntimeState {
-    TextController& text;
+    io::TextController& text;
     save::SaveData& save;
     futils::wrap::path_string& save_data_path;
     Value save_data_storage;

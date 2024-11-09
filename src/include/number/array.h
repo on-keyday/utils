@@ -59,6 +59,14 @@ namespace futils {
             constexpr size_t capacity() const {
                 return strmode ? size_ - 1 : size_;
             }
+
+            constexpr const T* begin() const {
+                return buf;
+            }
+
+            constexpr const T* end() const {
+                return buf + i;
+            }
         };
     }  // namespace number
 }  // namespace futils

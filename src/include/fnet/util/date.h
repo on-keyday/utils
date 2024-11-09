@@ -18,7 +18,7 @@
 #include <ctime>
 
 namespace futils {
-    namespace http {
+    namespace fnet::http {
         namespace date {
             enum class DayName : std::uint8_t {
                 unset,
@@ -405,5 +405,5 @@ namespace futils {
             }
         }  // namespace date
 
-    }  // namespace http
+    }  // namespace fnet::http
 }  // namespace futils

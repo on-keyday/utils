@@ -93,7 +93,7 @@ namespace futils {
                 flex_storage input;
                 flex_storage output;
 
-                HTTPWriteError wrap_write_error(header::HeaderError herr, body::BodyReadResult berr) {
+                HTTPWriteError wrap_write_error(WriteContext& ctx, header::HeaderError herr, body::BodyResult berr) {
                     HTTPWriteError ret;
                     ret.header_error = herr;
                     ret.body_error = berr;
@@ -101,39 +101,111 @@ namespace futils {
                 }
 
                public:
+                WriteContext write_ctx;
+
+                HTTPWriteError write_request_line(WriteContext& ctx, auto&& method, auto&& path, auto&& version) {
+                    if (auto res = header::render_request_line(ctx, output, method, path, version);
+                        !res) {
+                        return wrap_write_error(ctx, res, body::BodyResult::full);
+                    }
+                    return HTTPWriteError{};
+                }
+
+                HTTPWriteError write_request_line(auto&& method, auto&& path, auto&& version) {
+                    return write_request_line(write_ctx, method, path, version);
+                }
+
+                HTTPWriteError write_status_line(WriteContext& ctx, auto&& version, auto&& status, auto&& phrase) {
+                    if (auto res = header::render_status_line(ctx, output, version, status, phrase);
+                        !res) {
+                        return wrap_write_error(ctx, res, body::BodyResult::full);
+                    }
+                    return HTTPWriteError{};
+                }
+
+                HTTPWriteError write_status_line(auto&& version, auto&& status, auto&& phrase) {
+                    return write_status_line(write_ctx, version, status, phrase);
+                }
+
+                HTTPWriteError write_header(WriteContext& ctx, auto&& header) {
+                    if (auto res = header::render_header_common(ctx, output, header, header::default_validator());
+                        !res) {
+                        return wrap_write_error(ctx, res, body::BodyResult::full);
+                    }
+                    return HTTPWriteError{};
+                }
+
+                HTTPWriteError write_header(auto&& header) {
+                    return write_header(write_ctx, header);
+                }
+
+                HTTPWriteError write_trailer(WriteContext& ctx, auto&& trailer) {
+                    if (auto res = header::render_header_common(ctx, output, trailer, header::default_validator());
+                        !res) {
+                        return wrap_write_error(ctx, res, body::BodyResult::full);
+                    }
+                    return HTTPWriteError{};
+                }
+
+                HTTPWriteError write_trailer(auto&& trailer) {
+                    return write_trailer(write_ctx, trailer);
+                }
+
+                template <class Method, class Path, class Header>
+                HTTPWriteError write_request(WriteContext& ctx, Method&& method, Path&& path, Header&& header, view::rvec body = {}, bool http_1_0 = false) {
+                    if (auto res = header::render_request(ctx, output, method, path, header, header::default_validator(), false, http_1_0 ? "HTTP/1.0" : "HTTP/1.1");
+                        !res) {
+                        return wrap_write_error(ctx, res, body::BodyResult::full);
+                    }
+                    if (body.size() > 0) {
+                        return write_body(body);
+                    }
+                    return HTTPWriteError{};
+                }
+
                 template <class Method, class Path, class Header>
                 HTTPWriteError write_request(Method&& method, Path&& path, Header&& header, view::rvec body = {}, bool http_1_0 = false) {
-                    if (auto res = header::render_request(output, method, path, header, header::default_validator(), false, http_1_0 ? "HTTP/1.0" : "HTTP/1.1");
-                        !res) {
-                        return wrap_write_error(res, body::BodyReadResult::full);
+                    return write_request(write_ctx, method, path, header, body, http_1_0);
+                }
+
+                template <class Status, class Header>
+                HTTPWriteError write_response(WriteContext& ctx, Status&& status, Header&& header, view::rvec body = {}, const char* reason = nullptr, bool http_1_0 = false) {
+                    if (!reason) {
+                        reason = reason_phrase(std::uint16_t(status), true);
                     }
-                    strutil::append(output, body);
+                    if (auto res = header::render_response(ctx, output, status, reason, header, header::default_validator(), false, http_1_0 ? "HTTP/1.0" : "HTTP/1.1");
+                        !res) {
+                        return wrap_write_error(ctx, res, body::BodyResult::full);
+                    }
+                    if (body.size() > 0) {
+                        return write_body(body);
+                    }
                     return HTTPWriteError{};
                 }
 
                 template <class Status, class Header>
                 HTTPWriteError write_response(Status&& status, Header&& header, view::rvec body = {}, const char* reason = nullptr, bool http_1_0 = false) {
-                    if (!reason) {
-                        reason = reason_phrase(std::uint16_t(status), true);
+                    return write_response(write_ctx, status, header, body, reason, http_1_0);
+                }
+
+                HTTPWriteError write_body(WriteContext& ctx, auto&& data) {
+                    auto res = http1::body::render_body(ctx, output, data);
+                    if (res != body::BodyResult::full) {
+                        return wrap_write_error(ctx, header::HeaderError::none, res);
                     }
-                    if (auto res = header::render_response(output, status, reason, header, header::default_validator(), false, http_1_0 ? "HTTP/1.0" : "HTTP/1.1");
-                        !res) {
-                        return wrap_write_error(res, body::BodyReadResult::full);
-                    }
-                    strutil::append(output, body);
                     return HTTPWriteError{};
                 }
 
-                void write_data(auto&& data, size_t len) {
-                    strutil::append(output, view::SizedView(data, len));
+                HTTPWriteError write_body(auto&& data) {
+                    return write_body(write_ctx, data);
                 }
 
-                void write_chunked_data(auto&& data, size_t len) {
-                    body::render_chunked_data(output, view::SizedView(data, len));
+                HTTPWriteError write_end_of_chunk(WriteContext& ctx) {
+                    return write_body(ctx, "");
                 }
 
-                void write_end_of_chunk() {
-                    write_chunked_data("", 0);
+                HTTPWriteError write_end_of_chunk() {
+                    return write_end_of_chunk(write_ctx);
                 }
 
                 view::rvec get_input() {
@@ -169,7 +241,7 @@ namespace futils {
                 }
 
                private:
-                HTTPReadError wrap_read_error(ReadContext& ctx, header::HeaderError herr, body::BodyReadResult berr) {
+                HTTPReadError wrap_read_error(ReadContext& ctx, header::HeaderError herr, body::BodyResult berr) {
                     HTTPReadError ret;
                     ret.state = ctx.state();
                     ret.pos = ctx.suspend_pos();
@@ -186,7 +258,7 @@ namespace futils {
                     auto check = make_cpy_seq(get_input());
                     header::HeaderError err = header::parse_response(ctx, check, version, status, reason, header);
                     if (err != header::HeaderError::none) {
-                        return wrap_read_error(ctx, err, body::BodyReadResult::full);
+                        return wrap_read_error(ctx, err, body::BodyResult::full);
                     }
                     return {ctx.state(), ctx.suspend_pos()};
                 }
@@ -197,7 +269,7 @@ namespace futils {
                     auto check = make_cpy_seq(get_input());
                     auto err = header::parse_request(ctx, check, method, path, version, header);
                     if (err != header::HeaderError::none) {
-                        return wrap_read_error(ctx, err, body::BodyReadResult::full);
+                        return wrap_read_error(ctx, err, body::BodyResult::full);
                     }
                     return {ctx.state(), ctx.suspend_pos()};
                 }
@@ -212,7 +284,7 @@ namespace futils {
                     auto check = make_cpy_seq(get_input());
                     auto err = header::parse_request_line(ctx, check, method, path, version);
                     if (err != header::HeaderError::none) {
-                        return wrap_read_error(ctx, err, body::BodyReadResult::full);
+                        return wrap_read_error(ctx, err, body::BodyResult::full);
                     }
                     return {ctx.state(), ctx.suspend_pos()};
                 }
@@ -227,7 +299,7 @@ namespace futils {
                     auto check = make_cpy_seq(get_input());
                     auto err = header::parse_status_line(ctx, check, version, status, reason);
                     if (err != header::HeaderError::none) {
-                        return wrap_read_error(ctx, err, body::BodyReadResult::full);
+                        return wrap_read_error(ctx, err, body::BodyResult::full);
                     }
                     return {ctx.state(), ctx.suspend_pos()};
                 }
@@ -239,7 +311,7 @@ namespace futils {
                 HTTPReadError read_body(ReadContext& ctx, auto&& buf) {
                     auto check = make_cpy_seq(get_input());
                     auto err = body::read_body(ctx, check, buf);
-                    if (err != body::BodyReadResult::full) {
+                    if (err != body::BodyResult::full) {
                         return wrap_read_error(ctx, header::HeaderError::none, err);
                     }
                     return {ctx.state(), ctx.suspend_pos()};
@@ -253,7 +325,7 @@ namespace futils {
                     auto check = make_cpy_seq(get_input());
                     auto err = header::parse_common(ctx, check, header);
                     if (err != header::HeaderError::none) {
-                        return wrap_read_error(ctx, err, body::BodyReadResult::full);
+                        return wrap_read_error(ctx, err, body::BodyResult::full);
                     }
                     return {ctx.state(), ctx.suspend_pos()};
                 }
@@ -274,97 +346,6 @@ namespace futils {
 
             constexpr auto sizeof_HTTP = sizeof(HTTP1);
         }  // namespace http1
-        /*
-       // check_response make sure input contains full of response header
-       // if input contains full header, this function returns header size
-       // otherwise returns 0
-       // begin_ok represents header is begin with HTTP/1.1 or HTTP/1.0 or not
-       size_t check_response(bool* begin_ok = nullptr) {
-           namespace h = header;
-           auto check = make_cpy_seq(get_input());
-           auto begcheck = [&](auto& seq) {
-               auto begin_check = seq.seek_if("HTTP/1.1") || seq.seek_if("HTTP/1.0");
-               if (begin_ok) {
-                   *begin_ok = begin_check;
-               }
-               return begin_check;
-           };
-           auto always_false = [](auto&&...) { return false; };
-           return h::guess_and_read_raw_header(check, always_false, begcheck);
-       }
-
-       // check_request make sure input contains full of request header
-       // if contains this function returns header size
-       // otherwise returns 0
-       // if validate_method is true this function checks header begin with known http method
-       size_t check_request(bool* begin_ok = nullptr, bool validate_method = true) {
-           namespace h = header;
-           auto check = make_cpy_seq(get_input());
-           auto begin_check = [&](auto& seq) {
-               if (validate_method) {
-                   for (auto meth : value::methods) {
-                       // auto rptr = seq.rptr;
-                       if (seq.seek_if(meth) && seq.consume_if(' ')) {
-                           goto OK;
-                       }
-                   }
-                   if (begin_ok) {
-                       *begin_ok = false;
-                   }
-                   return false;
-               }
-           OK:
-               if (begin_ok) {
-                   *begin_ok = true;
-               }
-               return true;
-           };
-           auto always_false = [](auto&&...) { return false; };
-           return h::guess_and_read_raw_header(check, always_false, begin_check);
-       }
-       */
-
-        /*
-       // strict_check_header is strict header checker
-       // this function uses check_request and check_response
-       // and check header byte is valid
-       // if not valid header beginning or not valid byte appears
-       // this function returns 0
-       // otherwise this function returns header length current available
-       size_t strict_check_header(bool request_header = true, bool* complete_header = nullptr) {
-           bool beg = false;
-           size_t len = 0;
-           if (complete_header) {
-               *complete_header = false;
-           }
-           if (request_header) {
-               len = check_request(&beg);
-           }
-           else {
-               len = check_response(&beg);
-           }
-           if (!beg) {
-               return 0;
-           }
-           if (len == 0) {
-               len = input.size();
-           }
-           else {
-               if (complete_header) {
-                   *complete_header = true;
-               }
-           }
-           for (size_t i = 0; i < len; i++) {
-               if (input[i] == '\r' || input[i] == '\n' || input[i] == '\t') {
-                   continue;
-               }
-               if (input[i] < 0x20 || input[i] > 0x7f) {
-                   return 0;
-               }
-           }
-           return len;
-       }
-       */
 
     }  // namespace fnet
 }  // namespace futils

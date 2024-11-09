@@ -65,6 +65,101 @@ namespace futils {
             }
         };
 
+        namespace internal {
+            template <class Heap>
+            auto async_error_chain(Heap& data_ptr, bool& no_del_if_error) {
+                return [&](error::Error&& err) -> expected<AsyncResult> {
+                    const auto d = helper::defer([&] {
+                        if (!no_del_if_error) {
+                            data_ptr->del(data_ptr);
+                        }
+                    });
+                    return unexpect(std::move(err));
+                };
+            }
+
+            template <class Heap, class Soc>
+            auto done_run_chain(Soc* self, Heap& data_ptr, auto& lambda) {
+                return [&, self](AsyncResult&& r) -> expected<AsyncResult> {
+                    if (r.state == NotifyState::done) {
+                        lambda(self->clone(), data_ptr, r.processed_bytes);
+                    }
+                    return std::move(r);
+                };
+            }
+
+            template <class Heap, class Soc>
+            auto done_run_with_addr_chain(Soc* self, Heap& data_ptr, auto& lambda) {
+                return [&, self](AsyncResult&& r) -> expected<AsyncResult> {
+                    if (r.state == NotifyState::done) {
+                        lambda(self->clone(), std::move(data_ptr->buffer_mgr.get_address()), data_ptr, r.processed_bytes);
+                    }
+                    return std::move(r);
+                };
+            }
+
+            template <class Soc, class HeapData>
+            auto callback_lambda() {
+                return +[](Soc&& socket, void* c, NotifyResult&& result) {
+                    HeapData* data_ptr = static_cast<HeapData*>(c);
+                    const auto d = helper::defer([&] {
+                        data_ptr->del(data_ptr);
+                    });
+                    (data_ptr->fn)(std::move(socket), data_ptr->buffer_mgr, std::move(result));
+                };
+            }
+
+            template <class Soc, class HeapData>
+            auto deferred_callback_lambda() {
+                return +[](Soc&& socket, void* ptr, NotifyResult&& result) {
+                    HeapData* data_ptr = static_cast<HeapData*>(ptr);
+                    const auto deferred = [](void* ptr, bool del_only) {
+                        auto* data_ptr = static_cast<HeapData*>(ptr);
+                        const auto d = helper::defer([&] {
+                            data_ptr->del(data_ptr);
+                        });
+                        if (!del_only) {
+                            (data_ptr->fn)(std::move(data_ptr->socket), data_ptr->buffer_mgr, std::move(data_ptr->result));
+                        }
+                    };
+                    data_ptr->socket = std::move(socket);
+                    data_ptr->result = std::move(result);
+                    data_ptr->notify(make_deferred_callback(data_ptr, deferred));
+                };
+            }
+
+            template <class Soc, class HeapData>
+            auto callback_lambda_with_addr() {
+                return +[](Soc&& socket, NetAddrPort&& addr, void* c, NotifyResult&& result) {
+                    HeapData* data_ptr = static_cast<HeapData*>(c);
+                    const auto d = helper::defer([&] {
+                        data_ptr->del(data_ptr);
+                    });
+                    (data_ptr->fn)(std::move(socket), data_ptr->buffer_mgr, std::move(addr), std::move(result));
+                };
+            }
+
+            template <class Soc, class HeapData>
+            auto deferred_callback_lambda_with_addr() {
+                return +[](Soc&& socket, NetAddrPort&& addr, void* c, NotifyResult&& result) {
+                    HeapData* data_ptr = static_cast<HeapData*>(c);
+                    const auto deferred = +[](void* ptr, bool del_only) {
+                        auto* data_ptr = static_cast<HeapData*>(ptr);
+                        const auto d = helper::defer([&] {
+                            data_ptr->del(data_ptr);
+                        });
+                        if (!del_only) {
+                            (data_ptr->fn)(std::move(data_ptr->socket), data_ptr->buffer_mgr, std::move(data_ptr->address), std::move(data_ptr->result));
+                        }
+                    };
+                    data_ptr->socket = std::move(socket);
+                    data_ptr->result = std::move(result);
+                    data_ptr->address = std::move(addr);
+                    data_ptr->notify(make_deferred_callback(data_ptr, deferred));
+                };
+            }
+        }  // namespace internal
+
         // Socket is wrapper class of native socket
         struct fnet_class_export Socket {
            private:
@@ -317,29 +412,13 @@ namespace futils {
 
                 using HeapData = AsyncContData<Fn, BufMgr, Del>;
 
-                auto lambda = [](Socket&& socket, void* c, NotifyResult&& result) {
-                    HeapData* data_ptr = static_cast<HeapData*>(c);
-                    const auto d = helper::defer([&] {
-                        data_ptr->del(data_ptr);
-                    });
-                    (data_ptr->fn)(std::move(socket), data_ptr->buffer_mgr, std::move(result));
-                };
+                static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
 
-                return read_async(data_ptr->buffer_mgr.get_buffer(), data_ptr, +lambda, flag)
-                    .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
-                        if (r.state == NotifyState::done) {
-                            lambda(this->clone(), data_ptr, r.processed_bytes);
-                        }
-                        return std::move(r);
-                    })
-                    .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] {
-                            if (!no_del_if_error) {
-                                data_ptr->del(data_ptr);
-                            }
-                        });
-                        return unexpect(std::move(err));
-                    });
+                auto lambda = internal::callback_lambda<Socket, HeapData>();
+
+                return read_async(data_ptr->buffer_mgr.get_buffer(), data_ptr, lambda, flag)
+                    .and_then(internal::done_run_chain(this, data_ptr, lambda))
+                    .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
             }
 
             template <class Notify, class Fn, class BufMgr, class Del>
@@ -350,37 +429,13 @@ namespace futils {
 
                 using HeapData = AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>;
 
-                auto lambda = [](Socket&& socket, void* ptr, NotifyResult&& result) {
-                    HeapData* data_ptr = static_cast<HeapData*>(ptr);
-                    const auto deferred = [](void* ptr, bool del_only) {
-                        auto* data_ptr = static_cast<HeapData*>(ptr);
-                        const auto d = helper::defer([&] {
-                            data_ptr->del(data_ptr);
-                        });
-                        if (!del_only) {
-                            (data_ptr->fn)(std::move(data_ptr->socket), data_ptr->buffer_mgr, std::move(data_ptr->result));
-                        }
-                    };
-                    data_ptr->socket = std::move(socket);
-                    data_ptr->result = std::move(result);
-                    data_ptr->notify(DeferredCallback(data_ptr, deferred));
-                };
+                static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
 
-                return read_async(data_ptr->buffer_mgr.get_buffer(), data_ptr, +lambda, flag)
-                    .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
-                        if (r.state == NotifyState::done) {
-                            lambda(this->clone(), data_ptr, r.processed_bytes);
-                        }
-                        return std::move(r);
-                    })
-                    .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] {
-                            if (!no_del_if_error) {
-                                data_ptr->del(data_ptr);
-                            }
-                        });
-                        return unexpect(std::move(err));
-                    });
+                auto lambda = internal::deferred_callback_lambda<Socket, HeapData>();
+
+                return read_async(data_ptr->buffer_mgr.get_buffer(), data_ptr, lambda, flag)
+                    .and_then(internal::done_run_chain(this, data_ptr, lambda))
+                    .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
             }
 
             template <class Fn, class BufMgr, class Del>
@@ -391,29 +446,13 @@ namespace futils {
 
                 using HeapData = AsyncContData<Fn, BufMgr, Del>;
 
-                auto lambda = [](Socket&& socket, void* c, NotifyResult&& result) {
-                    HeapData* data_ptr = static_cast<HeapData*>(c);
-                    const auto d = helper::defer([&] {
-                        data_ptr->del(data_ptr);
-                    });
-                    (data_ptr->fn)(std::move(socket), data_ptr->buffer_mgr, std::move(result));
-                };
+                static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
+
+                auto lambda = internal::callback_lambda<Socket, HeapData>();
 
                 return write_async(data_ptr->buffer_mgr.get_buffer(), data_ptr, +lambda, flag)
-                    .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
-                        if (r.state == NotifyState::done) {
-                            lambda(this->clone(), data_ptr, r.processed_bytes);
-                        }
-                        return std::move(r);
-                    })
-                    .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] {
-                            if (!no_del_if_error) {
-                                data_ptr->del(data_ptr);
-                            }
-                        });
-                        return unexpect(std::move(err));
-                    });
+                    .and_then(internal::done_run_chain(this, data_ptr, lambda))
+                    .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
             }
 
             template <class Notify, class Fn, class BufMgr, class Del>
@@ -424,38 +463,13 @@ namespace futils {
 
                 using HeapData = AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>;
 
-                auto lambda = [](Socket&& socket, void* c, NotifyResult&& result) {
-                    HeapData* data_ptr = static_cast<HeapData*>(c);
-                    const auto deferred = +[](void* ptr, bool del_only) {
-                        auto* data_ptr = static_cast<HeapData*>(ptr);
-                        const auto d = helper::defer([&] {
-                            data_ptr->del(data_ptr);
-                        });
-                        if (!del_only) {
-                            (data_ptr->fn)(std::move(data_ptr->socket), data_ptr->buffer_mgr, std::move(data_ptr->result));
-                        }
-                    };
-                    data_ptr->socket = std::move(socket);
-                    data_ptr->result = std::move(result);
-                    data_ptr->notify(DeferredCallback(data_ptr, deferred));
-                };
+                static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
+
+                auto lambda = internal::deferred_callback_lambda<Socket, HeapData>();
 
                 return write_async(data_ptr->buffer_mgr.get_buffer(), data_ptr, +lambda, flag)
-                    .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
-                        if (r.state == NotifyState::done) {
-                            lambda(this->clone(), data_ptr, r.processed_bytes);
-                        }
-                        return std::move(r);
-                    })
-                    .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] {
-                            if (!no_del_if_error) {
-                                data_ptr->del(data_ptr);
-                            }
-                        });
-
-                        return unexpect(std::move(err));
-                    });
+                    .and_then(internal::done_run_chain(this, data_ptr, lambda))
+                    .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
             }
 
             template <class Fn, class BufMgr, class Del>
@@ -466,30 +480,13 @@ namespace futils {
 
                 using HeapData = AsyncContData<Fn, BufMgr, Del>;
 
-                auto lambda = [](Socket&& socket, NetAddrPort&& addr, void* c, NotifyResult&& result) {
-                    HeapData* data_ptr = static_cast<HeapData*>(c);
-                    const auto d = helper::defer([&] {
-                        data_ptr->del(data_ptr);
-                    });
+                static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
 
-                    (data_ptr->fn)(std::move(socket), data_ptr->buffer_mgr, std::move(addr), std::move(result));
-                };
+                auto lambda = internal::callback_lambda_with_addr<Socket, HeapData>();
 
                 return readfrom_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
-                    .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
-                        if (r.state == NotifyState::done) {
-                            lambda(this->clone(), std::move(data_ptr->buffer_mgr.get_address()), data_ptr, r.processed_bytes);
-                        }
-                        return std::move(r);
-                    })
-                    .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] {
-                            if (!no_del_if_error) {
-                                data_ptr->del(data_ptr);
-                            }
-                        });
-                        return unexpect(std::move(err));
-                    });
+                    .and_then(internal::done_run_with_addr_chain(this, data_ptr, lambda))
+                    .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
             }
 
             template <class Notify, class Fn, class BufMgr, class Del>
@@ -500,38 +497,13 @@ namespace futils {
 
                 using HeapData = AsyncContDataWithNotify<Notify, AsyncContDataWithAddress<AsyncContData<Fn, BufMgr, Del>>>;
 
-                auto lambda = [](Socket&& socket, NetAddrPort&& addr, void* c, NotifyResult&& result) {
-                    HeapData* data_ptr = static_cast<HeapData*>(c);
-                    const auto deferred = +[](void* ptr, bool del_only) {
-                        auto* data_ptr = static_cast<HeapData*>(ptr);
-                        const auto d = helper::defer([&] {
-                            data_ptr->del(data_ptr);
-                        });
-                        if (!del_only) {
-                            (data_ptr->fn)(std::move(data_ptr->socket), data_ptr->buffer_mgr, std::move(data_ptr->address), std::move(data_ptr->result));
-                        }
-                    };
-                    data_ptr->socket = std::move(socket);
-                    data_ptr->result = std::move(result);
-                    data_ptr->address = std::move(addr);
-                    data_ptr->notify(DeferredCallback(data_ptr, deferred));
-                };
+                static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
+
+                auto lambda = internal::deferred_callback_lambda_with_addr<Socket, HeapData>();
 
                 return readfrom_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
-                    .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
-                        if (r.state == NotifyState::done) {
-                            lambda(this->clone(), std::move(data_ptr->buffer_mgr.get_address()), data_ptr, r.processed_bytes);
-                        }
-                        return std::move(r);
-                    })
-                    .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] {
-                            if (!no_del_if_error) {
-                                data_ptr->del(data_ptr);
-                            }
-                        });
-                        return unexpect(std::move(err));
-                    });
+                    .and_then(internal::done_run_with_addr_chain(this, data_ptr, lambda))
+                    .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
             }
 
             template <class Fn, class BufMgr, class Del>
@@ -542,31 +514,13 @@ namespace futils {
 
                 using HeapData = AsyncContData<Fn, BufMgr, Del>;
 
-                auto lambda = [](Socket&& socket, void* c, NotifyResult&& result) {
-                    HeapData* data_ptr = static_cast<HeapData*>(c);
+                static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
 
-                    const auto d = helper::defer([&] {
-                        data_ptr->del(data_ptr);
-                    });
-
-                    (data_ptr->fn)(std::move(socket), data_ptr->buffer_mgr, std::move(result));
-                };
+                auto lambda = internal::callback_lambda<Socket, HeapData>();
 
                 return writeto_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
-                    .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
-                        if (r.state == NotifyState::done) {
-                            lambda(this->clone(), data_ptr, r.processed_bytes);
-                        }
-                        return std::move(r);
-                    })
-                    .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] {
-                            if (!no_del_if_error) {
-                                data_ptr->del(data_ptr);
-                            }
-                        });
-                        return unexpect(std::move(err));
-                    });
+                    .and_then(internal::done_run_chain(this, data_ptr, lambda))
+                    .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
             }
 
             template <class Notify, class Fn, class BufMgr, class Del>
@@ -577,38 +531,13 @@ namespace futils {
 
                 using HeapData = AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>;
 
-                auto lambda = [](Socket&& socket, void* c, NotifyResult&& result) {
-                    HeapData* data_ptr = static_cast<HeapData*>(c);
-                    const auto deferred = +[](void* ptr, bool del_only) {
-                        auto* data_ptr = static_cast<HeapData*>(ptr);
-                        const auto d = helper::defer([&] {
-                            data_ptr->del(data_ptr);
-                        });
-                        if (!del_only) {
-                            (data_ptr->fn)(std::move(data_ptr->socket), data_ptr->buffer_mgr, std::move(data_ptr->result));
-                        }
-                    };
-                    data_ptr->socket = std::move(socket);
-                    data_ptr->result = std::move(result);
-                    data_ptr->notify(DeferredCallback(data_ptr, deferred));
-                };
+                static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
+
+                auto lambda = internal::deferred_callback_lambda<Socket, HeapData>();
 
                 return writeto_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
-                    .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
-                        if (r.state == NotifyState::done) {
-                            lambda(this->clone(), data_ptr, r.processed_bytes);
-                        }
-                        return std::move(r);
-                    })
-                    .or_else([&](error::Error&& err) -> expected<AsyncResult> {
-                        const auto d = helper::defer([&] {
-                            if (!no_del_if_error) {
-                                data_ptr->del(data_ptr);
-                            }
-                        });
-
-                        return unexpect(std::move(err));
-                    });
+                    .and_then(internal::done_run_chain(this, data_ptr, lambda))
+                    .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
             }
         };
 

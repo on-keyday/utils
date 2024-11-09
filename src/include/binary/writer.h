@@ -291,6 +291,33 @@ namespace futils {
                 return *this;
             }
 
+            template <class T>
+            constexpr basic_writer& append(T&& t)
+                requires std::is_same_v<std::decay_t<T>, C> || std::is_convertible_v<T, view::basic_rvec<C>> || internal::ArrayReadableBuffer<T, C>
+            {
+                using decayT = std::decay_t<T>;
+                if constexpr (std::is_same_v<decayT, C>) {
+                    push_back(t);
+                }
+                else if constexpr (std::is_convertible_v<T, view::basic_rvec<C>>) {
+                    write(t);
+                }
+                else if constexpr (internal::ArrayReadableBuffer<T, C>) {
+                    write(std::forward<T>(t));
+                }
+                else {
+                    static_assert(std::is_same_v<decayT, C>, "unsupported type");
+                }
+                return *this;
+            }
+
+            template <class T>
+            constexpr basic_writer& operator<<(T&& t)
+                requires std::is_same_v<std::decay_t<T>, C> || std::is_convertible_v<T, view::basic_rvec<C>> || internal::ArrayReadableBuffer<T, C>
+            {
+                return append(std::forward<T>(t));
+            }
+
             constexpr bool full() const {
                 return w.size() == index && (!handler || handler->full(this->ctx, index));
             }

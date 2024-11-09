@@ -131,6 +131,15 @@ namespace futils::thread {
             first->dec_ref(allocator);          // destroy the old head
             return data;
         }
+
+        std::optional<T> peek() {
+            auto first = head.load();
+            auto next = first->next.load();
+            if (!next) {
+                return std::nullopt;  // no data
+            }
+            return next->data;
+        }
     };
 
     template <typename T, class A>

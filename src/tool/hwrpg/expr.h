@@ -217,7 +217,7 @@ namespace expr {
         EvalState eval_bytes(RuntimeState& s, const Bytes& left, const Bytes& right) const {
             switch (op) {
                 case BinaryOp::add:
-                    s.stacks.eval.eval_stack.push_back(EvalValue(Bytes(left.data + right.data)));
+                    s.stacks.eval.eval_stack.push_back(EvalValue(Bytes{left.data + right.data}));
                     return EvalState::normal;
                 case BinaryOp::eq:
                     s.stacks.eval.eval_stack.push_back(EvalValue(Boolean{left.data == right.data}));
