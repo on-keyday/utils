@@ -35,7 +35,11 @@ namespace futils::wrap {
                 auto self = static_cast<std::ostream*>(ctx);
                 for (size_t i = 0; i < times; i++) {
                     self->write(reinterpret_cast<const char*>(r.data()), r.size());
-                } },
+                    if(self->fail()) {
+                        return false;
+                    }
+                } 
+                return true; },
         };
     };
 }  // namespace futils::wrap
