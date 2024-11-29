@@ -13,23 +13,36 @@
 #include <binary/flags.h>
 #if __has_include(<stdfloat>) && __cplusplus >= 202302L
 #include <stdfloat>
-#define FUTILS_BINARY_SUPPORT_STDFLOAT 1
 #endif
 
 namespace futils {
     namespace binary {
-#ifdef FUTILS_BINARY_SUPPORT_STDFLOAT
-        using bfloat16_t = std::bfloat16_t;
+
+#if defined(__STDCPP_FLOAT16_T__)
         using float16_t = std::float16_t;
+#else
+        using float16_t = void;
+#endif
+#if defined(__STDCPP_BFLOAT16_T__)
+        using bfloat16_t = void;
+#else
+        using bfloat16_t = void;
+#endif
+#if defined(__STDCPP_FLOAT32_T__)
         using float32_t = std::float32_t;
+#else
+        using float32_t = float;
+#endif
+
+#if defined(__STDCPP_FLOAT64_T__)
         using float64_t = std::float64_t;
+#else
+        using float64_t = double;
+#endif
+
+#if defined(__STDCPP_FLOAT128_T__)
         using float128_t = std::float128_t;
 #else
-
-        using bfloat16_t = void;
-        using float16_t = void;
-        using float32_t = float;
-        using float64_t = double;
         using float128_t = void;
 #endif
 

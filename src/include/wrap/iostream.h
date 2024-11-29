@@ -17,7 +17,7 @@ namespace futils::wrap {
         static constexpr binary::ReadStreamHandler<C> r_handler{
             .empty = [](void* ctx, size_t offset) -> bool {
                 auto self = static_cast<std::istream*>(ctx);
-                return self->eof();
+                return self->eof() || self->fail();
             },
             .direct_read = [](void* ctx, view::basic_wvec<C> w, size_t expected) -> size_t {
                 auto self = static_cast<std::istream*>(ctx);
@@ -29,7 +29,7 @@ namespace futils::wrap {
         static constexpr binary::WriteStreamHandler<C> w_handler{
             .full = [](void* ctx, size_t offset) -> bool {
                 auto self = static_cast<std::ostream*>(ctx);
-                return false;
+                return self->fail();
             },
             .direct_write = [](void* ctx, view::basic_rvec<C> r, size_t times) {
                 auto self = static_cast<std::ostream*>(ctx);
