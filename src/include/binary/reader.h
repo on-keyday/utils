@@ -40,6 +40,11 @@ namespace futils {
             void (*clone)(void* ctx, view::basic_rvec<C> buf, void*& new_ctx, view::basic_rvec<C>& new_buf) = nullptr;
         };
 
+        template <class C, class T>
+        struct ReadStreamHandlerT : public ReadStreamHandler<C> {
+            using contract_type = T;
+        };
+
         template <class C>
         struct basic_reader {
            private:
@@ -161,6 +166,12 @@ namespace futils {
                 : r(r) {}
 
             constexpr basic_reader(const ReadStreamHandler<C>* handler, void* ctx, view::basic_rvec<C> r = {})
+                : r(r), handler(handler), ctx(ctx) {
+                init();
+            }
+
+            template <class T>
+            constexpr basic_reader(const ReadStreamHandlerT<C, T>* handler, typename ReadStreamHandlerT<C, T>::contract_type* ctx, view::basic_rvec<C> r = {})
                 : r(r), handler(handler), ctx(ctx) {
                 init();
             }

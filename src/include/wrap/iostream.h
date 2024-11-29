@@ -14,7 +14,7 @@
 namespace futils::wrap {
     template <class C>
     struct iostream_adapter {
-        static constexpr binary::ReadStreamHandler<C> r_handler{
+        static constexpr binary::ReadStreamHandlerT<C, std::istream> in{
             .empty = [](void* ctx, size_t offset) -> bool {
                 auto self = static_cast<std::istream*>(ctx);
                 return self->eof() || self->fail();
@@ -26,7 +26,7 @@ namespace futils::wrap {
             },
         };
 
-        static constexpr binary::WriteStreamHandler<C> w_handler{
+        static constexpr binary::WriteStreamHandlerT<C, std::ostream> out{
             .full = [](void* ctx, size_t offset) -> bool {
                 auto self = static_cast<std::ostream*>(ctx);
                 return self->fail();

@@ -36,6 +36,11 @@ namespace futils {
             void (*clone)(void* ctx, view::basic_wvec<C> w, void*& new_ctx, view::basic_wvec<C>& new_w) = nullptr;
         };
 
+        template <class C, class T>
+        struct WriteStreamHandlerT : public WriteStreamHandler<C> {
+            using contract_type = T;
+        };
+
         template <class C>
         struct basic_writer {
            private:
@@ -142,6 +147,12 @@ namespace futils {
                 : w(w) {}
 
             constexpr basic_writer(const WriteStreamHandler<C>* handler, void* ctx, view::basic_wvec<C> w = {})
+                : handler(handler), ctx(ctx), w(w) {
+                init();
+            }
+
+            template <class T>
+            constexpr basic_writer(const WriteStreamHandlerT<C, T>* handler, typename WriteStreamHandlerT<C, T>::contract_type* ctx, view::basic_wvec<C> w = {})
                 : handler(handler), ctx(ctx), w(w) {
                 init();
             }
