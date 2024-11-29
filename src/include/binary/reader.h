@@ -118,19 +118,19 @@ namespace futils {
                 return {data, ok};
             }
 
-            constexpr std::pair<bool, bool> direct_read(view::basic_wvec<C> w, bool is_best) {
+            constexpr std::pair<bool, size_t> direct_read(view::basic_wvec<C> w, bool is_best) {
                 if (handler && handler->direct_read) {
-                    return {true, handler->direct_read(ctx, w, w.size()) == w.size()};
+                    return {true, handler->direct_read(ctx, w, w.size())};
                 }
                 if (handler && handler->direct_read_view) {
                     view::basic_rvec<C> tmp;
                     handler->direct_read_view(ctx, tmp, w.size());
                     if (!is_best && tmp.size() != w.size()) {
-                        return {true, false};
+                        return {true, 0};
                     }
                     constexpr auto copy = view::make_copy_fn<C>();
                     copy(w, tmp);
-                    return {true, tmp.size() == w.size()};
+                    return {true, tmp.size() <= w.size() ? tmp.size() : w.size()};
                 }
                 return {false, false};
             }
@@ -305,7 +305,8 @@ namespace futils {
 
             // read_best() reads maximum buf.size() bytes and returns true if read exactly buf.size() bytes
             constexpr bool read_best(view::basic_wvec<C> buf) noexcept {
-                if (auto [called, ok] = direct_read(buf, true); called) {
+                if (auto [called, read_size] = direct_read(buf, true); called) {
+                    offset_internal(read_size);
                     return ok;
                 }
                 constexpr auto copy_ = view::make_copy_fn<C>();
@@ -376,8 +377,11 @@ namespace futils {
             // read() reads buf.size() bytes strictly or doesn't read if not enough remaining data.
             // if read, copy data to buf
             constexpr bool read(view::basic_wvec<C> buf) noexcept {
-                if (auto [called, ok] = direct_read(buf, false); called) {
-                    return ok;
+                if (auto [called, read_size] = direct_read(buf, false); called) {
+                    if (read_size == buf.size()) {
+                        offset_internal(read_size);
+                    }
+                    return read_size == buf.size();
                 }
                 auto [data, ok] = read_internal(buf.size());
                 if (!ok) {
