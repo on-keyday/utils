@@ -41,7 +41,8 @@ namespace futils {
         };
 
         template <class C, class T>
-        struct ReadStreamHandlerT : public ReadStreamHandler<C> {
+        struct ReadStreamHandlerT {
+            ReadStreamHandler<C> base;
             using contract_type = T;
         };
 
@@ -172,7 +173,7 @@ namespace futils {
 
             template <class T>
             constexpr basic_reader(const ReadStreamHandlerT<C, T>* handler, typename ReadStreamHandlerT<C, T>::contract_type* ctx, view::basic_rvec<C> r = {})
-                : r(r), handler(handler), ctx(ctx) {
+                : r(r), handler(&handler->base), ctx(ctx) {
                 init();
             }
 
@@ -318,7 +319,7 @@ namespace futils {
             constexpr bool read_best(view::basic_wvec<C> buf) noexcept {
                 if (auto [called, read_size] = direct_read(buf, true); called) {
                     offset_internal(read_size);
-                    return ok;
+                    return read_size == buf.size();
                 }
                 constexpr auto copy_ = view::make_copy_fn<C>();
                 return copy_(buf, read_best_internal(buf.size())) == 0;

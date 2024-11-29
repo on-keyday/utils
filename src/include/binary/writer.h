@@ -37,7 +37,8 @@ namespace futils {
         };
 
         template <class C, class T>
-        struct WriteStreamHandlerT : public WriteStreamHandler<C> {
+        struct WriteStreamHandlerT {
+            WriteStreamHandler<C> base;
             using contract_type = T;
         };
 
@@ -153,7 +154,7 @@ namespace futils {
 
             template <class T>
             constexpr basic_writer(const WriteStreamHandlerT<C, T>* handler, typename WriteStreamHandlerT<C, T>::contract_type* ctx, view::basic_wvec<C> w = {})
-                : handler(handler), ctx(ctx), w(w) {
+                : handler(&handler->base), ctx(ctx), w(w) {
                 init();
             }
 
