@@ -1,0 +1,41 @@
+/*
+    futils - utility library
+    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
+    Released under the MIT license
+    https://opensource.org/licenses/mit-license.php
+*/
+
+#pragma once
+#include <binary/reader.h>
+#include <binary/writer.h>
+#include <istream>
+#include <ostream>
+
+namespace futils::wrap {
+    template <class C>
+    struct iostream_adapter {
+        static constexpr binary::ReadStreamHandler<C> r_handler{
+            .empty = [](void* ctx, size_t offset) -> bool {
+                auto self = static_cast<std::istream*>(ctx);
+                return self->eof();
+            },
+            .direct_read = [](void* ctx, view::basic_wvec<C> w, size_t expected) -> size_t {
+                auto self = static_cast<std::istream*>(ctx);
+                self->read(reinterpret_cast<char*>(w.data()), w.size());
+                return self->gcount();
+            },
+        };
+
+        static constexpr binary::WriteStreamHandler<C> w_handler{
+            .full = [](void* ctx, size_t offset) -> bool {
+                auto self = static_cast<std::ostream*>(ctx);
+                return false;
+            },
+            .direct_write = [](void* ctx, view::basic_rvec<C> r, size_t times) {
+                auto self = static_cast<std::ostream*>(ctx);
+                for (size_t i = 0; i < times; i++) {
+                    self->write(reinterpret_cast<const char*>(r.data()), r.size());
+                } },
+        };
+    };
+}  // namespace futils::wrap
