@@ -327,6 +327,14 @@ namespace futils {
 
             template <internal::ResizableBuffer<C> B>
             constexpr bool read_best(B& buf, size_t n) noexcept(noexcept(buf.resize(0))) {
+                if (is_direct_stream() && !is_direct_stream_view() && !handler->direct_buffer) {
+                    if (!internal::resize_buffer(buf, n)) {
+                        return false;
+                    }
+                    auto [called, read_size] = direct_read(view::basic_wvec<C>(buf), true);
+                    offset_internal(read_size);
+                    return read_size == n;
+                }
                 if constexpr (internal::has_max_size<B>) {
                     if (buf.max_size() < r.size() - index) {
                         return false;
@@ -405,6 +413,17 @@ namespace futils {
 
             template <internal::ResizableBuffer<C> B>
             constexpr bool read(B& buf, size_t n) noexcept(noexcept(buf.resize(0))) {
+                if (is_direct_stream() && !is_direct_stream_view() && !handler->direct_buffer) {
+                    if (!internal::resize_buffer(buf, n)) {
+                        return false;
+                    }
+                    auto [called, read_size] = direct_read(view::basic_wvec<C>(buf), false);
+                    if (called && read_size == n) {
+                        offset_internal(read_size);
+                        return true;
+                    }
+                    return false;
+                }
                 if constexpr (internal::has_max_size<B>) {
                     if (n > buf.max_size()) {
                         return false;
