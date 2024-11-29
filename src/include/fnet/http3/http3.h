@@ -60,6 +60,7 @@ namespace futils::fnet::http3 {
                             // key must be lower case
                             auto lower_key = view::make_transform(key, [](auto&& c) { return strutil::to_lower(c); });
                             set_header(lower_key, std::forward<decltype(value)>(value));
+                            return http1::header::HeaderError::none;
                         });
                 });
             if (err != H3Error::H3_NO_ERROR) {
@@ -172,7 +173,7 @@ namespace futils::fnet::http3 {
             handler->read_header([&](qpack::DecodeField<flex_storage>& field) {
                 if (strutil::equal(field.key, ":status", strutil::ignore_case())) {
                     auto seq = make_ref_seq(field.value);
-                    http1::range_to_string_or_call(seq, status, {.begin = 0, .end = seq.size()});
+                    http1::range_to_string_or_call(seq, status, {.start = 0, .end = seq.size()});
                 }
                 else {
                     http1::apply_call_or_emplace(header, std::move(field.key), std::move(field.value));

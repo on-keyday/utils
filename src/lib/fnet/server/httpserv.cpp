@@ -10,6 +10,7 @@
 #include <fnet/server/state.h>
 #include <fnet/server/httpserv.h>
 #include <wrap/cout.h>
+#include <fnet/sockutil.h>
 
 namespace futils {
     namespace fnet {
@@ -101,7 +102,7 @@ namespace futils {
 
             void handle_http2_streams(std::shared_ptr<Transport>&& req, StateContext as, std::shared_ptr<http2::FrameHandler>&& h) {
                 slib::set<std::shared_ptr<http2::stream::Stream>> streams;
-                auto err = h->add_data(req->read_buf, [&](auto&& s) {
+                auto err = h->add_data_and_read_frames(req->read_buf, [&](auto&& s) {
                     streams.emplace(s);
                 });
                 if (err) {
@@ -125,7 +126,7 @@ namespace futils {
                 req->flush(as, std::move(h->get_write_buffer().take_buffer()));
             }
 
-            void do_read(HTTPServ* serv, std::shared_ptr<Transport>&& req, StateContext&& s);
+            void do_read(HTTPServ* serv, std::shared_ptr<Transport> req, StateContext s);
 
             void may_init_version_specific(HTTPServ* serv, std::shared_ptr<Transport>& req, StateContext& as) {
                 if (!req->version_specific) {
@@ -251,10 +252,28 @@ namespace futils {
                 }
             }
 
-            void do_read(HTTPServ* serv, std::shared_ptr<Transport>&& req, StateContext&& s) {
+            void do_read(HTTPServ* serv, std::shared_ptr<Transport> req, StateContext s) {
                 s.log(log_level::debug, "start reading", req->client.addr);
-                byte buf[1024];
-                if (auto result = req->client.sock.read_until_block(buf, [&](view::wvec r) {
+
+                // bool done = false;
+                socket_read_common(
+                    std::move(req->client.sock),
+                    [req, s](view::rvec r) { req->add_data(r, s); },
+                    [&](Socket&& sock, auto&& add_data, auto&& then, auto&& error) {
+                        call_read_async(serv, req, s);
+                    },
+                    [req, s](Socket&& sock) {
+                        auto tmp = req;
+                        http_handler_impl(req->internal_, std::move(tmp), s);
+                    },
+                    [req, s](error::Error err) {
+                        req->client.sock.shutdown();
+                        auto ss = s;
+                        ss.log(log_level::warn, &req->client.addr, err);
+                    });
+
+                /*
+                if (auto result = req->client.sock.read_until_block([&](view::wvec r) {
                         req->add_data(r, s);
                     });
                     !result) {
@@ -270,12 +289,14 @@ namespace futils {
                     }
                 }
                 http_handler_impl(serv, std::move(req), std::move(s));
+                */
             }
 
             fnetserv_dll_internal(void) http_handler(void* v, Client&& cl, StateContext s) {
                 s.log(log_level::perf, start_timing, cl.addr);
                 auto serv = static_cast<HTTPServ*>(v);
                 auto req = std::allocate_shared<Transport>(glheap_allocator<Transport>());
+                req->internal_ = serv;
                 req->client = std::move(cl);
                 auto addr = req->client.sock.get_local_addr();
                 if (!addr) {

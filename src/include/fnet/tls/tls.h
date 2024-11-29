@@ -83,11 +83,60 @@ namespace futils {
                 // return (read,err)
                 expected<view::wvec> receive_tls_data(view::wvec data);
 
+                // this returns error except block,
+                // so we don't have to check error with isTLSBlock
+                expected<size_t> receive_tls_data_until_block(auto&& callback, view::wvec buffer = {}) {
+                    auto do_receive = [&]() -> expected<size_t> {
+                        size_t size = 0;
+                        while (true) {
+                            auto res = receive_tls_data(buffer);
+                            if (!res) {
+                                if (isTLSBlock(res.error())) {
+                                    return size;
+                                }
+                                return res.transform([&](view::wvec) { return size; });
+                            }
+                            callback(*res);
+                        }
+                    };
+                    if (buffer.empty()) {
+                        byte buf[1024];
+                        buffer = view::wvec(buf, 1024);
+                        return do_receive();
+                    }
+                    return do_receive();
+                }
+
                 // TLS connection methods
                 // call setup_ssl before call these methods
 
                 expected<view::rvec> write(view::rvec data);
                 expected<view::wvec> read(view::wvec data);
+
+                // this returns error except block,
+                // so we don't have to check error with isTLSBlock
+                expected<size_t> read_until_block(auto&& callback, view::wvec buffer = {}) {
+                    auto do_read = [&]() -> expected<size_t> {
+                        size_t size = 0;
+                        while (true) {
+                            auto res = read(buffer);
+                            if (!res) {
+                                if (isTLSBlock(res.error())) {
+                                    return size;
+                                }
+                                return res.transform([&](view::wvec) { return size; });
+                            }
+                            size += res->size();
+                            callback(*res);
+                        }
+                    };
+                    if (buffer.empty()) {
+                        byte buf[1024];
+                        buffer = view::wvec(buf, 1024);
+                        return do_read();
+                    }
+                    return do_read();
+                }
 
                 expected<void> shutdown();
 

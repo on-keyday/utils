@@ -167,6 +167,9 @@ namespace futils {
             if (view::rvec(name) == "WSARecvMsg") {
                 return get_fn(WSAID_WSARECVMSG, LPFN_WSARECVMSG{});
             }
+            if (view::rvec(name) == "GetAcceptExSockaddrs") {
+                return get_fn(WSAID_GETACCEPTEXSOCKADDRS, LPFN_GETACCEPTEXSOCKADDRS{});
+            }
             return {nullptr, false};
         }
 

@@ -120,6 +120,41 @@ namespace futils::fnet {
         notify(std::move(sock), NetAddrPort(), user, std::move(result));
     }
 
+    void call_accept(void (*notify_base)(), void* user, IOTableHeader* base, NotifyResult&& result) {
+        auto hdr = static_cast<EpollIOTableHeader*>(base);
+        auto sock = make_socket(hdr->base);
+        hdr->l.unlock();  // release, so can do next IO
+        auto notify = reinterpret_cast<accept_notify_t>(notify_base);
+        auto accept_ok = sock.accept();
+        if (!accept_ok) {
+            notify(std::move(sock), Socket(), NetAddrPort(), user, unexpect(accept_ok.error()));
+        }
+        else {
+            auto [accepted, addr] = std::move(*accept_ok);
+            notify(std::move(sock), std::move(accepted), std::move(addr), user, std::move(result));
+        }
+    }
+
+    void call_connect(void (*notify_base)(), void* user, IOTableHeader* base, NotifyResult&& result) {
+        auto hdr = static_cast<EpollIOTableHeader*>(base);
+        auto sock = make_socket(hdr->base);
+        hdr->l.unlock();  // release, so can do next IO
+        socklen_t err = 0;
+        auto res = sock.get_option(SOL_SOCKET, SO_ERROR, err);
+        auto notify = reinterpret_cast<stream_notify_t>(notify_base);
+        if (!res) {
+            notify(std::move(sock), user, unexpect(res.error()));
+        }
+        else {
+            if (err != 0) {
+                notify(std::move(sock), user, unexpect(error::Error(err, error::Category::os)));
+            }
+            else {
+                notify(std::move(sock), user, std::move(result));
+            }
+        }
+    }
+
     AsyncResult on_success(EpollTable* t, std::uint64_t code, bool w, size_t bytes) {
         // skip callback call, so should decrement reference count and release lock here
         auto dec = t->decr();
@@ -144,7 +179,8 @@ namespace futils::fnet {
             return on_success(t, cancel_code, is_write, result);
         }
         if (get_error() != EWOULDBLOCK &&
-            get_error() != EAGAIN) {
+            get_error() != EAGAIN &&
+            get_error() != EINPROGRESS) {
             auto dec = t->decr();
             assert(dec != 0);
             const auto d = helper::defer([&] { io.l.unlock(); });
@@ -154,7 +190,8 @@ namespace futils::fnet {
         return AsyncResult{make_canceler(cancel_code, is_write, t), NotifyState::wait, 0};
     }
 
-    expected<AsyncResult> async_stream_operation(EpollTable* t, view::rvec buffer, std::uint32_t flag, void* c, stream_notify_t notify, bool is_write) {
+    expected<AsyncResult> async_stream_operation(EpollTable* t, view::rvec buffer, std::uint32_t flag, void* c,
+                                                 stream_notify_t notify, bool is_write, NotifyCallback::call_t call, auto&& do_io) {
         EpollIOTableHeader& io = is_write ? static_cast<EpollIOTableHeader&>(t->w) : t->r;
         auto& cb = io.cb;
 
@@ -163,10 +200,9 @@ namespace futils::fnet {
                 io.base = t;
                 io.epoll_lock = true;
                 const auto d = helper::defer([&] { io.epoll_lock = false; });  // anyway, release finally
-                cb.set_notify(c, notify, call_stream);
+                cb.set_notify(c, notify, call);
                 t->incr();  // increment, released by Socket passed to notify() or on_success()
-                auto result = is_write ? lazy::send_(t->sock, buffer.as_char(), buffer.size(), flag)
-                                       : lazy::recv_(t->sock, (char*)buffer.as_char(), buffer.size(), flag);
+                auto result = do_io(t->sock, buffer, flag);
 
                 return handle_result(result, t, io, cancel_code, is_write);
             });
@@ -174,7 +210,7 @@ namespace futils::fnet {
 
     expected<AsyncResult> async_packet_operation(EpollTable* t, view::rvec buffer, std::uint32_t flag, void* c, auto notify,
                                                  auto&& get_addr,
-                                                 bool is_write) {
+                                                 bool is_write, NotifyCallback::call_t call, auto&& do_io) {
         EpollIOTableHeader& io = is_write ? static_cast<EpollIOTableHeader&>(t->w) : t->r;
         auto& cb = io.cb;
 
@@ -188,17 +224,10 @@ namespace futils::fnet {
                 }
                 io.epoll_lock = true;
                 const auto d = helper::defer([&] { io.epoll_lock = false; });  // anyway, release finally
-                if (is_write) {
-                    cb.set_notify(c, notify, call_stream);
-                }
-                else {
-                    cb.set_notify(c, notify, call_recvfrom);  // special handling
-                }
+                cb.set_notify(c, notify, call);
                 t->incr();  // increment, released by Socket passed to notify() or on_success()
 
-                auto result = is_write
-                                  ? lazy::sendto_(t->sock, buffer.as_char(), buffer.size(), flag, addr, *len)
-                                  : lazy::recvfrom_(t->sock, (char*)buffer.as_char(), buffer.size(), flag, addr, len);
+                auto result = do_io(t->sock, buffer, flag, addr, len);
 
                 return handle_result(result, t, io, cancel_code, is_write);
             });
@@ -213,13 +242,17 @@ namespace futils::fnet {
 
     expected<AsyncResult> Socket::read_async(view::wvec buffer, void* c, stream_notify_t notify, std::uint32_t flag) {
         return get_tbl(ctx).and_then([&](EpollTable* t) {
-            return async_stream_operation(t, buffer, flag, c, notify, false);
+            return async_stream_operation(t, buffer, flag, c, notify, false, call_stream, [](auto sock, auto buffer, auto flag) {
+                return lazy::recv_(sock, (char*)buffer.as_char(), buffer.size(), flag);
+            });
         });
     }
 
     expected<AsyncResult> Socket::write_async(view::rvec buffer, void* c, stream_notify_t notify, std::uint32_t flag) {
         return get_tbl(ctx).and_then([&](EpollTable* t) {
-            return async_stream_operation(t, buffer, flag, c, notify, true);
+            return async_stream_operation(t, buffer, flag, c, notify, true, call_stream, [](auto sock, auto buffer, auto flag) {
+                return lazy::send_(sock, (const char*)buffer.as_char(), buffer.size(), flag);
+            });
         });
     }
 
@@ -228,10 +261,9 @@ namespace futils::fnet {
             sockaddr_storage storage;
             socklen_t size = sizeof(storage);
             return async_packet_operation(
-                       t, buffer, flag, c, notify, [&](EpollIOTableHeader& hdr) -> std::pair<sockaddr*, socklen_t*> {
-                           return std::make_pair((sockaddr*)&storage, &size);
-                       },
-                       false)
+                       t, buffer, flag, c, notify,
+                       [&](EpollIOTableHeader& hdr) -> std::pair<sockaddr*, socklen_t*> { return std::make_pair((sockaddr*)&storage, &size); },
+                       false, call_recvfrom, [](auto sock, auto buffer, auto flag, auto addr, auto len) { return lazy::recvfrom_(sock, (char*)buffer.as_char(), buffer.size(), flag, addr, len); })
                 .and_then([&](AsyncResult&& r) -> expected<AsyncResult> {
                     if (r.state == NotifyState::done) {
                         addr = sockaddr_to_NetAddrPort((sockaddr*)&storage, size);
@@ -246,12 +278,70 @@ namespace futils::fnet {
             sockaddr_storage storage;
             socklen_t size = sizeof(storage);
             return async_packet_operation(
-                t, buffer, flag, c, notify, [&](EpollIOTableHeader& hdr) -> std::pair<sockaddr*, socklen_t*> {
+                t, buffer, flag, c, notify,
+                [&](EpollIOTableHeader& hdr) -> std::pair<sockaddr*, socklen_t*> {
                     auto [ptr, len] = NetAddrPort_to_sockaddr(&storage, addr);
                     size = len;
                     return std::make_pair(ptr, &size);
                 },
-                true);
+                true, call_stream,
+                [](auto sock, auto buffer, auto flag, auto addr, auto len) {
+                    return lazy::sendto_(sock, (const char*)buffer.as_char(), buffer.size(), flag, addr, *len);
+                });
+        });
+    }
+
+    expected<AcceptAsyncResult<Socket>> Socket::accept_async(NetAddrPort& addr, void* c, accept_notify_t notify, std::uint32_t flag) {
+        return get_tbl(ctx).and_then([&](EpollTable* t) -> expected<AcceptAsyncResult<Socket>> {
+            sockaddr_storage storage;
+            auto r = async_packet_operation(
+                t, view::rvec(), flag, c, notify,
+                [&](EpollIOTableHeader& hdr) -> std::pair<sockaddr*, socklen_t*> {
+                    socklen_t size = sizeof(storage);
+                    return std::make_pair((sockaddr*)&storage, &size);
+                },
+                false, call_accept,
+                [](auto sock, auto buffer, auto flag, auto addr, auto len) {
+                    return lazy::accept_(sock, addr, len);
+                });
+            if (!r) {
+                return unexpect(r.error());
+            }
+            AcceptAsyncResult<Socket> result;
+            result.cancel = std::move(r->cancel);
+            result.state = r->state;
+            if (result.state == NotifyState::done) {
+                auto sock = r->processed_bytes;
+                auto r = setup_socket(sock, t->event);
+                if (!r) {
+                    return unexpect(r.error());
+                }
+                result.socket = std::move(*r);
+                addr = sockaddr_to_NetAddrPort((sockaddr*)&storage, sizeof(storage));
+            }
+            return result;
+        });
+    }
+
+    expected<void> Socket::connect_ex_loopback_optimize(const NetAddrPort& addr) {
+        return unexpect(error::Error("not supported on linux", error::Category::lib, error::fnet_usage_error));
+    }
+
+    expected<AsyncResult> Socket::connect_async(const NetAddrPort& addr, void* c, stream_notify_t notify, std::uint32_t flag) {
+        return get_tbl(ctx).and_then([&](EpollTable* t) {
+            socklen_t tmp = 0;
+            sockaddr_storage storage;
+            return async_packet_operation(
+                t, view::rvec(), flag, c, notify,
+                [&](EpollIOTableHeader& hdr) -> std::pair<sockaddr*, socklen_t*> {
+                    auto [ptr, len] = NetAddrPort_to_sockaddr(&storage, addr);
+                    tmp = len;
+                    return std::make_pair(ptr, &tmp);
+                },
+                true, call_connect,
+                [](auto sock, auto buffer, auto flag, auto addr, auto len) {
+                    return lazy::connect_(sock, addr, *len);
+                });
         });
     }
 

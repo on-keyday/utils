@@ -142,7 +142,7 @@ namespace futils::fnet {
         using call_t = void (*)(void (*notify)(), void* user, IOTableHeader*, NotifyResult&&);
         std::atomic<call_t> call;
 
-        void set_notify(void* u, auto f, auto c) {
+        void set_notify(void* u, auto f, call_t c) {
             user = u;
             notify = reinterpret_cast<void (*)()>(f);
             call = c;
@@ -158,22 +158,36 @@ namespace futils::fnet {
         WinSockTable* base;
         NotifyCallback cb;
         CancelableLock l;
-        WSABUF buf1;
-        WSABUF* bufs;
+        WSABUF bufs[1];
+        // WSABUF* bufs;
 
         void set_buffer(view::rvec buf) {
-            buf1.buf = (CHAR*)buf.as_char();
-            buf1.len = buf.size();
-            bufs = &buf1;
+            bufs[0].buf = (CHAR*)buf.as_char();
+            bufs[0].len = buf.size();
+            // bufs = &buf1;
         }
     };
 
     static_assert(offsetof(WinSockIOTableHeader, ol) == 0, "ol must be the first member of WinSockIOTableHeader");
+    constexpr auto sizeof_sockaddr_storage = sizeof(sockaddr_storage);
+
+    static_assert(sizeof_sockaddr_storage > sizeof(std::uintptr_t), "sockaddr_storage size is too small");
 
     struct WinSockReadTable : WinSockIOTableHeader {
-        sockaddr_storage from;
+        union {
+            struct {
+                byte storage[sizeof_sockaddr_storage - sizeof(std::uintptr_t)];
+                std::uintptr_t accept_sock;
+            };
+            sockaddr_storage from;
+        };
         int from_len;
     };
+
+    constexpr auto acceptex_least_size_one = (std::max)(sizeof(sockaddr_in) + 17, sizeof(sockaddr_in6) + 17);
+    constexpr auto acceptex_least_size = acceptex_least_size_one * 2;
+
+    static_assert(sizeof_sockaddr_storage > acceptex_least_size + sizeof(std::uintptr_t), "sockaddr_storage size is too small");
 
     struct WinSockWriteTable : WinSockIOTableHeader {
         sockaddr_storage to;
@@ -184,6 +198,8 @@ namespace futils::fnet {
         WinSockWriteTable w;
         bool skip_notif = false;
     };
+
+    constexpr auto sizeof_WinSockTable = sizeof(WinSockTable);
 #elif defined(FUTILS_PLATFORM_LINUX)
     struct EpollTable;
     struct EpollIOTableHeader : IOTableHeader {
@@ -206,5 +222,7 @@ namespace futils::fnet {
     NetAddrPort sockaddr_to_NetAddrPort(sockaddr* addr, size_t len);
 
     std::pair<sockaddr*, int> NetAddrPort_to_sockaddr(sockaddr_storage* addr, const NetAddrPort&);
+    expected<std::uintptr_t> socket_platform(SockAttr attr);
+    expected<Socket> setup_socket(std::uintptr_t sock, event::IOEvent* event);
 
 }  // namespace futils::fnet

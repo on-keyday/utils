@@ -26,6 +26,10 @@ namespace futils {
             // pre contract: `index < buf.size() && (request >= buf.size() - index)`
             // post contract: `(buf.size() - index) >= request` if return true. `buf.size() >= prev buf.size()`
             void (*read)(void* ctx, ReadContract<C> c) = nullptr;
+            // direct_read is optional. when use this, buffer will not be used
+            void (*direct_buffer)(void* ctx, view::basic_rvec<C>& buf, size_t expected) = nullptr;
+            size_t (*direct_read)(void* ctx, view::basic_wvec<C> w, size_t expected) = nullptr;
+            void (*direct_read_view)(void* ctx, view::basic_rvec<C>& w, size_t expected) = nullptr;
             // maybe null
             void (*discard)(void* ctx, DiscardContract<C> c) = nullptr;
             // maybe null
@@ -88,8 +92,12 @@ namespace futils {
             }
 
             constexpr view::basic_rvec<C> read_best_internal(size_t n) noexcept {
+                view::basic_rvec<C> result;
+                if (auto [called, _] = direct_read_view(result, n); called) {
+                    return result;
+                }
                 stream_read(n);
-                auto result = r.substr(index, n);
+                result = r.substr(index, n);
                 offset_internal(n);
                 return result;
             }
@@ -108,6 +116,44 @@ namespace futils {
                 view::basic_rvec<C> data;
                 bool ok = read_internal(data, n);
                 return {data, ok};
+            }
+
+            constexpr std::pair<bool, bool> direct_read(view::basic_wvec<C> w, bool is_best) {
+                if (handler && handler->direct_read) {
+                    return {true, handler->direct_read(ctx, w, w.size()) == w.size()};
+                }
+                if (handler && handler->direct_read_view) {
+                    view::basic_rvec<C> tmp;
+                    handler->direct_read_view(ctx, tmp, w.size());
+                    if (!is_best && tmp.size() != w.size()) {
+                        return {true, false};
+                    }
+                    constexpr auto copy = view::make_copy_fn<C>();
+                    copy(w, tmp);
+                    return {true, tmp.size() == w.size()};
+                }
+                return {false, false};
+            }
+
+            constexpr std::pair<bool, bool> direct_read_view(view::basic_rvec<C>& w, size_t n) {
+                if (handler && handler->direct_read_view) {
+                    handler->direct_read_view(ctx, w, n);
+                    return {true, w.size() == n};
+                }
+                if (handler && handler->direct_read) {
+                    if (!handler->direct_buffer) {
+                        return {true, false};
+                    }
+                    view::basic_wvec<C> tmp;
+                    handler->direct_buffer(ctx, tmp, n);
+                    if (tmp.size() != n) {
+                        return {true, false};
+                    }
+                    auto read_size = handler->direct_read(ctx, tmp, n);
+                    w = tmp;
+                    return {true, read_size == n};
+                }
+                return {false, false};
             }
 
            public:
@@ -259,6 +305,9 @@ namespace futils {
 
             // read_best() reads maximum buf.size() bytes and returns true if read exactly buf.size() bytes
             constexpr bool read_best(view::basic_wvec<C> buf) noexcept {
+                if (auto [called, ok] = direct_read(buf, true); called) {
+                    return ok;
+                }
                 constexpr auto copy_ = view::make_copy_fn<C>();
                 return copy_(buf, read_best_internal(buf.size())) == 0;
             }
@@ -282,6 +331,14 @@ namespace futils {
 
             constexpr bool is_stream() const noexcept {
                 return handler != nullptr;
+            }
+
+            constexpr bool is_direct_stream() const noexcept {
+                return handler && handler->direct_read;
+            }
+
+            constexpr bool is_direct_stream_view() const noexcept {
+                return handler && handler->direct_read_view;
             }
 
             // read() reads n bytes strictly or doesn't read if not enough remaining data
@@ -319,6 +376,9 @@ namespace futils {
             // read() reads buf.size() bytes strictly or doesn't read if not enough remaining data.
             // if read, copy data to buf
             constexpr bool read(view::basic_wvec<C> buf) noexcept {
+                if (auto [called, ok] = direct_read(buf, false); called) {
+                    return ok;
+                }
                 auto [data, ok] = read_internal(buf.size());
                 if (!ok) {
                     return false;
@@ -495,5 +555,5 @@ namespace futils {
             // static_assert(test_stream());
 
         }  // namespace test
-    }      // namespace binary
+    }  // namespace binary
 }  // namespace futils

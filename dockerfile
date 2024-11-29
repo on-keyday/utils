@@ -18,11 +18,6 @@ RUN apt-get update && \
 
 RUN apt-get update && \
     apt-get  install -y\
-    clang-15\
-    libc++-15-dev\
-    lldb-15\
-    liblldb-15-dev\
-    lld\
     g++-11
 
 RUN apt-get update && \
@@ -43,11 +38,31 @@ RUN apt-get update && \
     apt-get install -y\
     zlib1g
 
-RUN ln -s /lib/llvm-15/bin/clang++ /bin/clang++
-RUN ln -s /lib/llvm-15/bin/clang /bin/clang
-RUN ln -s /bin/lldb-15 /bin/lldb
-RUN ln -s /lib/llvm-15/lib/libc++abi.so.1.0 /lib/llvm-15/lib/libc++abi.so
-RUN ln -s /usr/bin/lldb-server-15 /usr/bin/lldb-server-15.0.7
+RUN apt install -y lsb-release wget software-properties-common gnupg
+RUN apt-get -qq update && \
+    curl -o /tmp/llvm.sh https://apt.llvm.org/llvm.sh && \
+    chmod +x /tmp/llvm.sh && \
+    /tmp/llvm.sh 18 all&& \
+    for f in /usr/lib/llvm-*/bin/*; do ln -sf "$f" /usr/bin; done && \
+    ln -sf clang /usr/bin/cc && \
+    ln -sf clang /usr/bin/c89 && \
+    ln -sf clang /usr/bin/c99 && \
+    ln -sf clang++ /usr/bin/c++ 
+
+RUN apt install -y\
+    lldb-18\
+    liblldb-18-dev\
+    lld\
+    zlib1g-dev
+
+RUN apt install -y\
+    libzstd-dev
+
+# RUN ln -s /lib/llvm-15/bin/clang++ /bin/clang++
+#RUN ln -s /lib/llvm-15/bin/clang /bin/clang
+#RUN ln -s /bin/lldb-18 /bin/lldb
+RUN ln -s /lib/llvm-18/lib/libc++abi.so.1.0 /lib/llvm-15/lib/libc++abi.so
+RUN ln -s /usr/bin/lldb-server-18 /usr/bin/lldb-server-18.0.0
 RUN ln -s /bin/g++-11 /bin/g++
 RUN unlink /usr/bin/ld
 RUN ln -s /usr/bin/ld.lld /usr/bin/ld
@@ -62,7 +77,7 @@ RUN (cd /usr/futilsdev/lldb-mi-main;cmake -G Ninja .)
 RUN (cd /usr/futilsdev/lldb-mi-main;cmake --build .)
 RUN cp /usr/futilsdev/lldb-mi-main/src/lldb-mi /bin/lldb-mi
 
-
+ENV LLDB_DEBUGSERVER_PATH=/usr/bin/lldb-server
 
 #COPY ./src/ /usr/futilsdev/workspace/src/
 #COPY ./build /usr/futilsdev/workspace/build

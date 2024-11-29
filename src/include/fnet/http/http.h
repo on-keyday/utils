@@ -319,4 +319,145 @@ namespace futils::fnet::http {
         }
     };
 
+    struct RequestWriter {
+       private:
+        HTTP* http;
+        bool fin = false;
+        error::Error capture;
+
+       public:
+        RequestWriter() = default;
+        RequestWriter(HTTP& h)
+            : http(&h) {}
+
+        void reset(HTTP& h) {
+            http = &h;
+            fin = false;
+            capture = error::none;
+        }
+
+        error::Error get_error() const {
+            return capture;
+        }
+
+        bool is_fin() const {
+            return fin;
+        }
+
+        template <class Method, class Path, class Header>
+        error::Error write_request(Method&& method, Path&& path, Header&& header, view::rvec body = {}, bool fin = true) {
+            if (!http) {
+                return error::Error("http is not set", futils::error::Category::lib);
+            }
+            if (this->fin) {
+                return error::Error("write_request after fin", futils::error::Category::lib);
+            }
+            if (capture) {
+                return capture;
+            }
+            auto err = http->write_request(std::forward<Method>(method), std::forward<Path>(path), std::forward<Header>(header), body, fin);
+            if (err) {
+                capture = err;
+                return err;
+            }
+            this->fin = fin;
+            return error::none;
+        }
+
+        template <class Body>
+        error::Error write_body(Body&& body, bool fin = true) {
+            if (!http) {
+                return error::Error("http is not set", futils::error::Category::lib);
+            }
+            if (this->fin) {
+                return error::Error("write_body after fin", futils::error::Category::lib);
+            }
+            if (capture) {
+                return capture;
+            }
+            auto err = http->write_body(std::forward<Body>(body), fin);
+            if (err) {
+                capture = err;
+                return err;
+            }
+            this->fin = fin;
+            return error::none;
+        }
+    };
+
+    struct ResponseReader {
+       private:
+        HTTP* http;
+        error::Error capture;
+        bool resumable = false;
+        bool called = false;
+
+       public:
+        ResponseReader() = default;
+        ResponseReader(HTTP& h)
+            : http(&h) {}
+
+        void reset(HTTP& h) {
+            http = &h;
+            capture = error::none;
+            resumable = false;
+            called = false;
+        }
+
+        http1::HTTPState state() const {
+            if (!http) {
+                return http1::HTTPState::end;
+            }
+            return http->state();
+        }
+
+        error::Error get_error() const {
+            return capture;
+        }
+
+        bool is_resumable() const {
+            return resumable;
+        }
+
+        bool is_called() const {
+            return called;
+        }
+
+        template <class Status, class Header>
+        error::Error read_response(Status&& status, Header&& header) {
+            if (!http) {
+                return error::Error("http is not set", futils::error::Category::lib);
+            }
+            if (capture) {
+                return capture;
+            }
+            auto err = http->read_response(std::forward<Status>(status), std::forward<Header>(header));
+            called = true;
+            if (err) {
+                capture = err;
+                resumable = http::is_resumable(err);
+                return err;
+            }
+            return error::none;
+        }
+
+        template <class Body>
+        error::Error read_body(Body&& body) {
+            if (!http) {
+                return error::Error("http is not set", futils::error::Category::lib);
+            }
+            if (capture) {
+                return capture;
+            }
+            auto err = http->read_body(std::forward<Body>(body));
+            called = true;
+            if (err) {
+                capture = err;
+                resumable = http::is_resumable(err);
+                return err;
+            }
+            return error::none;
+        }
+    };
+
 }  // namespace futils::fnet::http

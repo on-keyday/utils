@@ -359,5 +359,36 @@ namespace futils {
             return unexpect(error::Error("IPV6_RECVTCLASS is not supported", error::Category::lib, error::fnet_usage_error));
 #endif
         }
+
+        expected<KeepAliveParameter> Socket::get_tcp_keep_alive() {
+            KeepAliveParameter param{};
+            int enable = 0;
+            return get_option(SOL_SOCKET, SO_KEEPALIVE, enable)
+                .and_then([&] {
+                    param.enable = enable != 0;
+                    return get_option(IPPROTO_TCP, TCP_KEEPIDLE, param.idle);
+                })
+                .and_then([&] {
+                    return get_option(IPPROTO_TCP, TCP_KEEPINTVL, param.interval);
+                })
+                .and_then([&] {
+                    return get_option(IPPROTO_TCP, TCP_KEEPCNT, param.count);
+                })
+                .transform([&] { return param; });
+        }
+
+        expected<void> Socket::set_tcp_keep_alive(const KeepAliveParameter& param) {
+            int enable = param.enable ? 1 : 0;
+            return set_option(SOL_SOCKET, SO_KEEPALIVE, enable)
+                .and_then([&] {
+                    return set_option(IPPROTO_TCP, TCP_KEEPIDLE, param.idle);
+                })
+                .and_then([&] {
+                    return set_option(IPPROTO_TCP, TCP_KEEPINTVL, param.interval);
+                })
+                .and_then([&] {
+                    return set_option(IPPROTO_TCP, TCP_KEEPCNT, param.count);
+                });
+        }
     }  // namespace fnet
 }  // namespace futils

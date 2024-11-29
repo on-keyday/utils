@@ -65,26 +65,35 @@ namespace futils::fnet {
         size_t processed_bytes;
     };
 
+    template <class Soc>
+    struct AcceptAsyncResult {
+        Canceler cancel;
+        NotifyState state;
+        Soc socket;
+    };
+
     template <typename T>
     struct BufferManager {
         T buffer;
-        NetAddrPort address;
+        // NetAddrPort address;
 
         BufferManager() = default;
+        BufferManager(const BufferManager&) = default;
+        BufferManager(BufferManager&& i) = default;
 
-        explicit BufferManager(T&& buf)
-            : buffer(std::move(buf)) {}
-
-        BufferManager(T&& buf, NetAddrPort&& addr)
-            : buffer(std::move(buf)), address(std::move(addr)) {}
+        template <typename V, helper_disable_self(BufferManager, V)>
+        explicit BufferManager(V&& buf)
+            : buffer(std::forward<V>(buf)) {}
 
         T& get_buffer() {
             return buffer;
         }
 
+        /*
         NetAddrPort& get_address() {
             return address;
         }
+        */
     };
 
     struct DeferredCallback {
@@ -112,6 +121,10 @@ namespace futils::fnet {
 
         constexpr explicit operator bool() const {
             return call != nullptr;
+        }
+
+        constexpr void operator()() {
+            invoke();
         }
 
         constexpr void invoke() {
@@ -149,7 +162,7 @@ namespace futils::fnet {
     template <typename T>
     concept AsyncBufferType = requires(T t) {
         { t.get_buffer() } -> std::convertible_to<view::wvec>;
-        { t.get_address() } -> std::convertible_to<NetAddrPort&>;
+        //{ t.get_address() } -> std::convertible_to<NetAddrPort&>;
     };
 
     using NotifyResult_v = expected<std::optional<size_t>>;
@@ -220,18 +233,24 @@ namespace futils::fnet {
     // means async continuation data
     // this is used to notify async operation result
     // pooling this object or of it storage is recommended if you use async operation frequently
-    template <class Fn, class Buf, class Del>
+    template <class Fn, class Del>
     struct AsyncContData : helper::omit_empty<Del> {
         Fn fn;
-        Buf buffer_mgr;
 
-        constexpr AsyncContData(auto&& f, auto&& buf, auto&& del)
-            : helper::omit_empty<Del>(std::forward<decltype(del)>(del)), fn(std::forward<decltype(f)>(f)), buffer_mgr(std::forward<decltype(buf)>(buf)) {}
+        constexpr AsyncContData(auto&& f, auto&& del)
+            : helper::omit_empty<Del>(std::forward<decltype(del)>(del)), fn(std::forward<decltype(f)>(f)) {}
 
         void del(auto p) {
-            auto a = this->om_value();
-            a(p);
+            this->om_value()(p);
         }
+    };
+
+    template <class Buf, class Base>
+    struct AsyncContDataWithBuffer : Base {
+        Buf buffer_mgr;
+
+        constexpr AsyncContDataWithBuffer(auto&& fn, auto&& buf, auto&& del)
+            : buffer_mgr(std::forward<decltype(buf)>(buf)), Base(std::forward<decltype(fn)>(fn), std::forward<decltype(del)>(del)) {}
     };
 
     // AsyncContDataWithAddress is used for async operation when result has address
@@ -241,11 +260,8 @@ namespace futils::fnet {
     struct AsyncContDataWithAddress : Base {
         NetAddrPort address;
 
-        constexpr AsyncContDataWithAddress(auto&& fn, auto&& buf, auto&& del)
-            : Base(std::forward<decltype(fn)>(fn), std::forward<decltype(buf)>(buf), std::forward<decltype(del)>(del)) {}
-
-        constexpr AsyncContDataWithAddress(auto&& fn, auto&& buf, auto&& del, auto&& notify)
-            : Base(std::forward<decltype(fn)>(fn), std::forward<decltype(buf)>(buf), std::forward<decltype(del)>(del), std::forward<decltype(notify)>(notify)) {}
+        constexpr AsyncContDataWithAddress(auto&&... args)
+            : Base(std::forward<decltype(args)>(args)...) {}
     };
 
     struct Socket;
@@ -256,51 +272,135 @@ namespace futils::fnet {
         SockTy socket;
         NotifyResult result;
 
-        constexpr AsyncContDataWithNotify(auto&& fn, auto&& buf, auto&& del, auto&& notify)
-            : Base(std::forward<decltype(fn)>(fn), std::forward<decltype(buf)>(buf), std::forward<decltype(del)>(del)), notify(std::forward<decltype(notify)>(notify)) {}
+        constexpr AsyncContDataWithNotify(auto&& notify, auto&&... args)
+            : Base(std::forward<decltype(args)>(args)...), notify(std::forward<decltype(notify)>(notify)) {}
     };
+
+    template <class Notify, class Base, class SockTy = Socket>
+    struct AsyncContDataWithNotifyAccept : Base {
+        Notify notify;
+        SockTy socket;
+        SockTy accepted;
+        NotifyResult result;
+
+        constexpr AsyncContDataWithNotifyAccept(auto&& notify, auto&&... args)
+            : Base(std::forward<decltype(args)>(args)...), notify(std::forward<decltype(notify)>(notify)) {}
+    };
+
+    template <class Fn, class Buf, class Del>
+    using AsyncContBufData = AsyncContDataWithBuffer<Buf, AsyncContData<Fn, Del>>;
+
+    template <class Fn, class Buf, class Del, class Notify>
+    using AsyncContNotifyBufData = AsyncContDataWithNotify<Notify, AsyncContBufData<Fn, Buf, Del>>;
+
+    template <class Fn, class Buf, class Del>
+    using AsyncContBufAddrData = AsyncContDataWithAddress<AsyncContBufData<Fn, Buf, Del>>;
+
+    template <class Fn, class Buf, class Del, class Notify>
+    using AsyncContNotifyBufAddrData = AsyncContDataWithNotify<Notify, AsyncContBufAddrData<Fn, Buf, Del>>;
+
+    template <class Fn, class Del>
+    using AsyncContAddrData = AsyncContDataWithAddress<AsyncContData<Fn, Del>>;
+
+    template <class Fn, class Del, class Notify>
+    using AsyncContNotifyAddrData = AsyncContDataWithNotify<Notify, AsyncContAddrData<Fn, Del>>;
+
+    template <class Fn, class Del, class Notify>
+    using AsyncContNotifyAddrDataAccept = AsyncContDataWithNotifyAccept<Notify, AsyncContAddrData<Fn, Del>>;
+
+    namespace internal {
+        template <class T>
+        T* alloc_and_construct(auto&&... args) {
+            auto ptr = alloc_normal(sizeof(T), alignof(T), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T), alignof(T)));
+            if (!ptr) {
+                return (T*)nullptr;
+            }
+            auto safe = helper::defer([&] { free_normal(ptr, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T), alignof(T))); });
+            auto p = new (ptr) T{std::forward<decltype(args)>(args)...};
+            safe.cancel();
+            return p;
+        }
+    }  // namespace internal
+
+    DeferredCallback alloc_deferred_callback(auto&& lambda) {
+        using Lambda = std::decay_t<decltype(lambda)>;
+        return make_deferred_callback(
+            internal::alloc_and_construct<Lambda>(std::forward<decltype(lambda)>(lambda)),
+            +[](void* ptr, bool del_only) {
+                auto p = static_cast<Lambda*>(ptr);
+                auto d = helper::defer([=] {
+                    internal::Delete{}(p);
+                });
+
+                if (!del_only) {
+                    (*p)();
+                }
+            });
+    }
 
     // async_then creates AsyncContData object
     // this is wrapper for AsyncContData creator
-    template <class Fn, class BufMgr, class Base = AsyncContData<std::decay_t<Fn>, std::decay_t<BufMgr>, internal::Delete>>
-    auto async_then(BufMgr&& buffer_mgr, Fn&& fn) {
-        using T = Base;
-        auto ptr = alloc_normal(sizeof(T), alignof(T), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T), alignof(T)));
-        if (!ptr) {
-            return (T*)nullptr;
-        }
-        auto safe = helper::defer([&] { free_normal(ptr, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T), alignof(T))); });
-        auto p = new (ptr) T{std::forward<decltype(fn)>(fn), std::forward<decltype(buffer_mgr)>(buffer_mgr), internal::Delete{}};
-        safe.cancel();
-        return p;
+    template <class Fn, class BufMgr, class Base = AsyncContBufData<std::decay_t<Fn>, std::decay_t<BufMgr>, internal::Delete>>
+    Base* async_then(BufMgr&& buffer_mgr, Fn&& fn) {
+        return internal::alloc_and_construct<Base>(std::forward<decltype(fn)>(fn), std::forward<decltype(buffer_mgr)>(buffer_mgr), internal::Delete{});
     }
 
     template <class Fn, class BufMgr>
-    auto async_addr_then(BufMgr&& buffer_mgr, Fn&& fn) {
-        using WithAddr = AsyncContDataWithAddress<AsyncContData<std::decay_t<decltype(fn)>, std::decay_t<decltype(buffer_mgr)>, internal::Delete>>;
-        return async_then<decltype(fn), decltype(buffer_mgr), WithAddr>(std::forward<decltype(buffer_mgr)>(buffer_mgr), std::forward<decltype(fn)>(fn));
-    }
-
-    template <class Fn, class Buf, class Base = AsyncContData<std::decay_t<Fn>, std::decay_t<Buf>, internal::Delete>>
-    auto async_notify_then(Buf&& buffer_mgr, auto&& notify, Fn&& fn) {
-        using T = AsyncContDataWithNotify<std::decay_t<decltype(notify)>, Base>;
-        auto ptr = alloc_normal(sizeof(T), alignof(T), DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T), alignof(T)));
-        if (!ptr) {
-            return (T*)nullptr;
+    AsyncContBufAddrData<std::decay_t<Fn>, std::decay_t<BufMgr>, internal::Delete>* async_addr_then(BufMgr&& buffer_mgr, Fn&& fn, const NetAddrPort& addr = {}) {
+        using WithAddr = AsyncContBufAddrData<std::decay_t<Fn>, std::decay_t<BufMgr>, internal::Delete>;
+        auto p = async_then<Fn, BufMgr, WithAddr>(std::forward<BufMgr>(buffer_mgr), std::forward<Fn>(fn));
+        if (p) {
+            p->address = addr;
         }
-        auto safe = helper::defer([&] { free_normal(ptr, DNET_DEBUG_MEMORY_LOCINFO(true, sizeof(T), alignof(T))); });
-        auto p = new (ptr) T{std::forward<decltype(fn)>(fn), std::forward<decltype(buffer_mgr)>(buffer_mgr), internal::Delete{}, std::forward<decltype(notify)>(notify)};
-        safe.cancel();
         return p;
     }
 
-    template <class Fn, class Buf>
-    auto async_notify_addr_then(Buf&& buffer_mgr, auto&& notify, Fn&& fn) {
-        using WithAddr = AsyncContDataWithAddress<AsyncContData<std::decay_t<Fn>, std::decay_t<Buf>, internal::Delete>>;
-        return async_notify_then<Fn, Buf, WithAddr>(std::forward<decltype(buffer_mgr)>(buffer_mgr), std::forward<decltype(notify)>(notify), std::forward<decltype(fn)>(fn));
+    template <class Fn, class Buf, class Notify, class Base = AsyncContNotifyBufData<std::decay_t<Fn>, std::decay_t<Buf>, internal::Delete, Notify>>
+    Base* async_notify_then(Buf&& buffer_mgr, Notify&& notify, Fn&& fn) {
+        return internal::alloc_and_construct<Base>(std::forward<decltype(notify)>(notify), std::forward<decltype(fn)>(fn), std::forward<decltype(buffer_mgr)>(buffer_mgr), internal::Delete{});
+    }
+
+    template <class Fn, class Buf, class Notify>
+    AsyncContNotifyBufAddrData<std::decay_t<Fn>, std::decay_t<Buf>, internal::Delete, std::decay_t<Notify>>* async_notify_addr_then(Buf&& buffer_mgr, Notify&& notify, Fn&& fn, const NetAddrPort& addr = {}) {
+        using WithAddr = AsyncContNotifyBufAddrData<std::decay_t<Fn>, std::decay_t<Buf>, internal::Delete, std::decay_t<Notify>>;
+        auto p = async_notify_then<Fn, Buf, Notify, WithAddr>(std::forward<Buf>(buffer_mgr), std::forward<Notify>(notify), std::forward<Fn>(fn));
+        if (p) {
+            p->address = addr;
+        }
+        return p;
+    }
+
+    template <class Fn, class Base = AsyncContAddrData<std::decay_t<Fn>, internal::Delete>>
+    Base* async_accept_then(Fn&& fn, const NetAddrPort& addr = {}) {
+        auto p = internal::alloc_and_construct<Base>(std::forward<decltype(fn)>(fn), internal::Delete{});
+        if (p) {
+            p->address = addr;
+        }
+        return p;
+    }
+
+    template <class Fn, class Notify, class Base = AsyncContNotifyAddrDataAccept<std::decay_t<Fn>, internal::Delete, std::decay_t<Notify>>>
+    Base* async_accept_notify_then(Notify&& notify, Fn&& fn, const NetAddrPort& addr = {}) {
+        auto p = internal::alloc_and_construct<Base>(std::forward<decltype(notify)>(notify), std::forward<decltype(fn)>(fn), internal::Delete{});
+        if (p) {
+            p->address = addr;
+        }
+        return p;
+    }
+
+    template <class Fn>
+    AsyncContAddrData<std::decay_t<Fn>, internal::Delete>* async_connect_then(const NetAddrPort& addr, Fn&& fn) {
+        return async_accept_then(std::forward<decltype(fn)>(fn), addr);
+    }
+
+    template <class Fn, class Notify>
+    AsyncContNotifyAddrData<std::decay_t<Fn>, internal::Delete, std::decay_t<Notify>>* async_connect_notify_then(const NetAddrPort& addr, Notify&& notify, Fn&& fn) {
+        using Connect = AsyncContNotifyAddrData<std::decay_t<Fn>, internal::Delete, std::decay_t<Notify>>;
+        return async_accept_notify_then<Fn, Notify, Connect>(std::forward<decltype(notify)>(notify), std::forward<decltype(fn)>(fn), addr);
     }
 
     using stream_notify_t = void (*)(Socket&&, void*, NotifyResult&& err);
     using recvfrom_notify_t = void (*)(Socket&&, NetAddrPort&&, void*, NotifyResult&& err);
+    using accept_notify_t = void (*)(Socket&& listener, Socket&& accepted, NetAddrPort&&, void*, NotifyResult&& err);
 
 }  // namespace futils::fnet

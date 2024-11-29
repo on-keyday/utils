@@ -85,7 +85,7 @@ namespace futils {
         namespace http1 {
             // HTTP1 provides Hyper Text Transfer Protocol version 1 writer and reader implementation
             // by default, read consistency is managed by ReadContext
-            // and write consistency is not managed
+            // and write consistency is managed by WriteContext
             // remote user data -> input
             // local user data <- output
             struct HTTP1 {
@@ -102,6 +102,7 @@ namespace futils {
 
                public:
                 WriteContext write_ctx;
+                ReadContext read_ctx;
 
                 HTTPWriteError write_request_line(WriteContext& ctx, auto&& method, auto&& path, auto&& version) {
                     if (auto res = header::render_request_line(ctx, output, method, path, version);
@@ -227,8 +228,6 @@ namespace futils {
                 void add_input(view::rvec data) {
                     strutil::append(input, data);
                 }
-
-                ReadContext read_ctx;
 
                 template <class Version = decltype(helper::nop)&, class Reason = decltype(helper::nop)&>
                 HTTPReadError read_response(auto&& status, auto&& header, Reason&& reason = helper::nop, Version&& version = helper::nop) {

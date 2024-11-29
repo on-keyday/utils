@@ -58,17 +58,12 @@ namespace futils {
                 }
 
                 void write_tls_data(StateContext& as) {
-                    while (true) {
-                        byte buf[1024];
-                        auto data = tls.receive_tls_data(buf);
-                        if (!data) {
-                            if (!tls::isTLSBlock(data.error())) {
-                                as.log(log_level::err, &client.addr, data.error());
-                                // cannot shutdown, because this is fatal
-                            }
-                            return;
-                        }
-                        write_buf.append(*data);
+                    auto res = tls.receive_tls_data_until_block([&](auto&& d) {
+                        write_buf.append(d);
+                    });
+                    if (!res) {
+                        as.log(log_level::err, &client.addr, res.error());
+                        return;
                     }
                 }
 
@@ -88,21 +83,13 @@ namespace futils {
                             }
                             return;
                         }
-                        while (true) {
-                            byte buf[1024];
-                            auto res = tls.read(buf);
-                            if (!res) {
-                                if (!tls::isTLSBlock(res.error())) {
-                                    as.log(log_level::err, &client.addr, res.error());
-                                    may_shutdown_tls(as);
-                                }
-                                else {
-                                    write_tls_data(as);
-                                }
-                                return;
-                            }
-                            add_to_buffer(res.value());
+                        auto res = tls.read_until_block([&](auto&& d) { add_to_buffer(d); });
+                        if (!res) {
+                            as.log(log_level::err, &client.addr, res.error());
+                            may_shutdown_tls(as);
+                            return;
                         }
+                        write_tls_data(as);
                     }
                     else {
                         add_to_buffer(d);

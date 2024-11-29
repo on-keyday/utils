@@ -101,21 +101,21 @@ void test_fnet_http() {
 void test_uri_parse() {
     constexpr auto test_parse1 = futils::uri::fixed("file:///C:/user/pc/workspace/yes.json");
     constexpr auto test_ok1 =
-        futils::strutil::equal(test_parse1.scheme, "file:") &&
+        futils::strutil::equal(test_parse1.scheme, "file") &&
         futils::strutil::equal(test_parse1.authority, "") &&
         futils::strutil::equal(test_parse1.path, "/C:/user/pc/workspace/yes.json");
     constexpr auto test_parse2 = futils::uri::fixed(u8"https://Go言語.com:443/man?q=fmt.Printf#");
     constexpr auto test_ok2 =
-        futils::strutil::equal(test_parse2.scheme, "https:") &&
+        futils::strutil::equal(test_parse2.scheme, "https") &&
         futils::strutil::equal(test_parse2.authority, u8"Go言語.com:443") &&
         futils::strutil::equal(test_parse2.hostname, u8"Go言語.com") &&
-        futils::strutil::equal(test_parse2.port, ":443") &&
+        futils::strutil::equal(test_parse2.port, "443") &&
         futils::strutil::equal(test_parse2.path, "/man") &&
         futils::strutil::equal(test_parse2.query, "?q=fmt.Printf") &&
         futils::strutil::equal(test_parse2.fragment, "#");
     constexpr auto test_parse3 = futils::uri::fixed(R"a(javascript:alert("function"))a");
     constexpr auto test_ok3 =
-        futils::strutil::equal(test_parse3.scheme, "javascript:") &&
+        futils::strutil::equal(test_parse3.scheme, "javascript") &&
         futils::strutil::equal(test_parse3.path, R"(alert("function"))");
     static_assert(test_ok1 && test_ok2 && test_ok3);
 }

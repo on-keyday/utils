@@ -136,8 +136,12 @@ namespace futils {
                 return no_error;
             }
 
-            Error add_data(view::rvec data, auto&& stream_callback) {
+            void add_data(view::rvec data) {
                 recv_buffer.append(data);
+            }
+
+            Error add_data_and_read_frames(view::rvec data, auto&& stream_callback) {
+                add_data(data);
                 return read_frames(stream_callback);
             }
 

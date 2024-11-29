@@ -66,6 +66,7 @@ namespace futils {
         LAZY(WSAEnumProtocolsW)
         LAZY(WSASendMsg)
         inline Func<std::remove_pointer_t<LPFN_WSARECVMSG>> WSARecvMsg_(ws2_32, "WSARecvMsg");
+        inline Func<std::remove_pointer_t<LPFN_GETACCEPTEXSOCKADDRS>> GetAcceptExSockaddrs_(ws2_32, "GetAcceptExSockaddrs");
 #undef LAZY
 #define LAZY(func) inline Func<decltype(func)> func##_(kernel32, #func);
 

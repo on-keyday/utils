@@ -89,6 +89,7 @@ namespace futils::fnet::http1::body {
                         range_to_string_or_call(seq, body, {seq.rptr, seq.rptr + seq.remain()});
                         seq.rptr = base_pos + remain_input;
                         ctx.save_remain_content_length(remain_content - remain_input);
+                        save_pos();
                         return BodyResult::incomplete;
                     }
                     range_to_string_or_call(seq, body, {seq.rptr, seq.rptr + remain_content});
@@ -110,8 +111,8 @@ namespace futils::fnet::http1::body {
                     auto size_read = ctx.remain_chunk_size();
                     while (true) {
                         if (seq.eos()) {
-                            save_pos();
                             ctx.save_remain_chunk_size(size_read);
+                            save_pos();
                             return BodyResult::incomplete;
                         }
                         if (!number::is_in_byte_range(seq.current()) || !number::is_hex(seq.current())) {
@@ -215,6 +216,7 @@ namespace futils::fnet::http1::body {
                         if (ctx.body_type() == BodyType::chunked_content_length) {
                             ctx.save_remain_content_length(ctx.remain_content_length() - remain_input);
                         }
+                        save_pos();
                         return BodyResult::incomplete;
                     }
                     range_to_string_or_call(seq, body, {seq.rptr, seq.rptr + remain_chunk});
@@ -225,6 +227,7 @@ namespace futils::fnet::http1::body {
                     }
                     change_state(ReadState::body_chunked_data_eol_one_byte);
                     if (ctx.is_flag(ReadFlag::suspend_on_chunked)) {
+                        save_pos();
                         return BodyResult::incomplete;
                     }
                     [[fallthrough]];  // fallthrough

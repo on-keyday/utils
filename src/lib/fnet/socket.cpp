@@ -357,6 +357,18 @@ namespace futils {
             return make_socket(tbl);
         }
 
+        expected<std::uintptr_t> socket_platform(SockAttr attr) {
+#ifdef FUTILS_PLATFORM_WINDOWS
+            auto sock = lazy::WSASocketW_(attr.address_family, attr.socket_type, attr.protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
+#else
+            auto sock = lazy::socket_(attr.address_family, attr.socket_type, attr.protocol);
+#endif
+            if (sock == -1) {
+                return unexpect(error::Errno());
+            }
+            return sock;
+        }
+
         expected<std::pair<Socket, NetAddrPort>> Socket::accept() {
             return get_raw().and_then([&](std::uintptr_t sock) -> expected<std::pair<Socket, NetAddrPort>> {
                 sockaddr_storage st{};
@@ -401,15 +413,9 @@ namespace futils {
                 }
                 event = events.value_ptr();
             }
-#ifdef FUTILS_PLATFORM_WINDOWS
-            auto sock = lazy::WSASocketW_(attr.address_family, attr.socket_type, attr.protocol, nullptr, 0, WSA_FLAG_OVERLAPPED);
-#else
-            auto sock = lazy::socket_(attr.address_family, attr.socket_type, attr.protocol);
-#endif
-            if (sock == -1) {
-                return unexpect(error::Errno());
-            }
-            return setup_socket(sock, event);
+            return socket_platform(attr).and_then([&](std::uintptr_t sock) {
+                return setup_socket(sock, event);
+            });
         }
 
     }  // namespace fnet

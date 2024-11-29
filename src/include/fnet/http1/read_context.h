@@ -62,6 +62,8 @@ namespace futils::fnet::http1 {
         not_strict_trailer = 0x20000,  // Trailer header not required strictly for parsing trailer
 
         delete_method_has_body = 0x40000,  // delete method has body (for compatibility with some client)
+
+        allow_no_host = 0x80000,  // allow no host header (for compatibility with some client)
     };
 
     DEFINE_ENUM_FLAGOP(ReadFlag);
@@ -177,7 +179,7 @@ namespace futils::fnet::http1 {
         size_t header_key_end_or_remain_chunk_size_ = 0;
         size_t content_length_ = 0;
         ReadFlag flag = ReadFlag::none;
-        binary::flags_t<std::uint16_t, 1, 1, 1, 4, 4, 1, 1, 1> flag_;
+        binary::flags_t<std::uint16_t, 1, 1, 1, 4, 4, 1, 1, 1, 1> flag_;
         bits_flag_alias_method(flag_, 0, resumable);
         bits_flag_alias_method(flag_, 1, has_keep_alive_);
         bits_flag_alias_method(flag_, 2, has_close_);
@@ -186,10 +188,15 @@ namespace futils::fnet::http1 {
         bits_flag_alias_method(flag_, 5, has_host_);
         bits_flag_alias_method(flag_, 6, require_no_body_);
         bits_flag_alias_method(flag_, 7, has_trailer_);
+        bits_flag_alias_method(flag_, 8, scan_request_);
         ReadState state_ = ReadState::uninit;
         BodyType body_type_ = BodyType::no_info;
 
        public:
+        constexpr bool scanning_request() const noexcept {
+            return scan_request_();
+        }
+
         // uninit state but positions are not reset
         // use reset() to reset all
         constexpr void uninit() {
@@ -210,6 +217,10 @@ namespace futils::fnet::http1 {
 
         constexpr bool has_host() const noexcept {
             return has_host_();
+        }
+
+        constexpr bool require_host() const noexcept {
+            return http_major_version() == 1 && http_minor_version() == 1 && scan_request_();
         }
 
         constexpr bool has_trailer() const noexcept {
@@ -390,12 +401,14 @@ namespace futils::fnet::http1 {
                 }
             }
             seq.rptr = save;
+            scan_request_(true);
         }
 
         constexpr void scan_status_code(std::uint16_t code) {
             if (code >= 100 && code < 200 || code == 204 || code == 304) {
                 require_no_body_(true);
             }
+            scan_request_(false);
         }
 
         template <class T>

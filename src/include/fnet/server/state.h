@@ -283,9 +283,11 @@ namespace futils {
                                     context.add_data(view::wvec(base_buffer).substr(0, *size), {th});
                                 }
                                 if (!size || *size == base_buffer.size()) {
-                                    result = s.read_until_block(base_buffer, [&](view::rvec s) {
-                                        context.add_data(s, {th});
-                                    });
+                                    result = s.read_until_block(
+                                        [&](view::rvec s) {
+                                            context.add_data(s, {th});
+                                        },
+                                        base_buffer);
                                 }
                             }
                             if (!result) {

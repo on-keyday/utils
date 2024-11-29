@@ -33,6 +33,8 @@ namespace futils::fnet::http1 {
         allow_no_length_even_if_keep_alive = 0x800,  // this is for experimental use. not recommended
 
         delete_method_has_body = 0x1000,  // this is for experimental use. not recommended
+
+        allow_no_host = 0x2000,  // this is for experimental use. not recommended
     };
 
     DEFINE_ENUM_FLAGOP(WriteFlag);
@@ -42,7 +44,7 @@ namespace futils::fnet::http1 {
         size_t content_length_ = 0;
         WriteFlag write_flag_ = WriteFlag::none;
         WriteState state_ = WriteState::uninit;
-        futils::binary::flags_t<std::uint16_t, 1, 1, 1, 1, 1, 1, 1, 1, 4, 4> flag_;
+        futils::binary::flags_t<std::uint32_t, 1, 1, 1, 1, 1, 1, 1, 1, 4, 4, 1> flag_;
         bits_flag_alias_method(flag_, 0, has_chunked_);
         bits_flag_alias_method(flag_, 1, has_content_length_);
         bits_flag_alias_method(flag_, 2, has_trailer_);
@@ -52,9 +54,14 @@ namespace futils::fnet::http1 {
         bits_flag_alias_method(flag_, 7, has_keep_alive_);
         bits_flag_alias_method(flag_, 8, http_major_version_);
         bits_flag_alias_method(flag_, 9, http_minor_version_);
+        bits_flag_alias_method(flag_, 10, has_host_);
 
        public:
         bits_flag_alias_method(flag_, 5, is_server);
+
+        constexpr bool require_host() const noexcept {
+            return !is_server() && http_major_version() == 1 && http_minor_version() == 1;
+        }
 
         // reset except WriteFlag
         constexpr void reset() {
@@ -105,6 +112,10 @@ namespace futils::fnet::http1 {
 
         constexpr bool has_trailer() const noexcept {
             return has_trailer_();
+        }
+
+        constexpr bool has_host() const noexcept {
+            return has_host_();
         }
 
         constexpr size_t remain_content_length() const noexcept {
@@ -217,6 +228,11 @@ namespace futils::fnet::http1 {
                     }
                     seq2.consume();
                 }
+                return;
+            }
+            seq.rptr = 0;
+            if (seq.seek_if("Host", strutil::ignore_case()) && seq.eos()) {
+                has_host_(true);
                 return;
             }
         }

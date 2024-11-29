@@ -13,6 +13,7 @@
 #include <MSWSock.h>
 #include <WS2tcpip.h>
 #include <afunix.h>
+#include <mstcpip.h>
 #elif defined(FUTILS_PLATFORM_WASI)
 #include <stub/network.h>
 #elif defined(FUTILS_PLATFORM_UNIX)

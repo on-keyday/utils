@@ -24,16 +24,7 @@
 namespace futils {
     namespace fnet {
 
-        // wait_event waits io completion until time passed
-        // if event is processed function returns number of event
-        // otherwise returns 0
-        // this call GetQueuedCompletionStatusEx on windows
-        // or call epoll_wait on linux
-        // this is based on default IOEvent
-        // so if you uses custom IOEvent, use it's wait method instead
-        fnet_dll_export(expected<size_t>) wait_io_event(std::uint32_t time);
-
-        enum MTUConfig {
+                enum MTUConfig {
             mtu_default,  // same as IP_PMTUDISC_WANT
             mtu_enable,   // same as IP_PMTUDISC_DO, DF flag set on ip layer
             mtu_disable,  // same as IP_PMTUDISC_DONT
@@ -66,9 +57,9 @@ namespace futils {
         };
 
         namespace internal {
-            template <class Heap>
+            template <class A = AsyncResult, class Heap>
             auto async_error_chain(Heap& data_ptr, bool& no_del_if_error) {
-                return [&](error::Error&& err) -> expected<AsyncResult> {
+                return [&](error::Error&& err) -> expected<A> {
                     const auto d = helper::defer([&] {
                         if (!no_del_if_error) {
                             data_ptr->del(data_ptr);
@@ -92,7 +83,17 @@ namespace futils {
             auto done_run_with_addr_chain(Soc* self, Heap& data_ptr, auto& lambda) {
                 return [&, self](AsyncResult&& r) -> expected<AsyncResult> {
                     if (r.state == NotifyState::done) {
-                        lambda(self->clone(), std::move(data_ptr->buffer_mgr.get_address()), data_ptr, r.processed_bytes);
+                        lambda(self->clone(), std::move(data_ptr->address), data_ptr, r.processed_bytes);
+                    }
+                    return std::move(r);
+                };
+            }
+
+            template <class Heap, class Soc>
+            auto done_run_chain_accept(Soc* self, Heap& data_ptr, auto& lambda) {
+                return [&, self](AcceptAsyncResult<Soc>&& r) -> expected<AcceptAsyncResult<Soc>> {
+                    if (r.state == NotifyState::done) {
+                        lambda(self->clone(), std::move(r.socket), std::move(data_ptr->address), data_ptr, std::nullopt);
                     }
                     return std::move(r);
                 };
@@ -158,7 +159,76 @@ namespace futils {
                     data_ptr->notify(make_deferred_callback(data_ptr, deferred));
                 };
             }
+
+            template <class Soc, class HeapData>
+            auto callback_lambda_connect() {
+                return +[](Soc&& socket, void* c, NotifyResult&& result) {
+                    auto data_ptr = static_cast<HeapData*>(c);
+                    const auto d = helper::defer([&] {
+                        data_ptr->del(data_ptr);
+                    });
+                    (data_ptr->fn)(std::move(socket), std::move(result));
+                };
+            }
+
+            template <class Soc, class HeapData>
+            auto deferred_callback_lambda_connect() {
+                return +[](Soc&& socket, void* c, NotifyResult&& result) {
+                    auto data_ptr = static_cast<HeapData*>(c);
+                    const auto deferred = +[](void* ptr, bool del_only) {
+                        auto data_ptr = static_cast<HeapData*>(ptr);
+                        const auto d = helper::defer([&] {
+                            data_ptr->del(data_ptr);
+                        });
+                        if (!del_only) {
+                            (data_ptr->fn)(std::move(data_ptr->socket), std::move(data_ptr->result));
+                        }
+                    };
+                    data_ptr->socket = std::move(socket);
+                    data_ptr->result = std::move(result);
+                    data_ptr->notify(make_deferred_callback(data_ptr, deferred));
+                };
+            }
+
+            template <class Soc, class HeapData>
+            auto callback_lambda_accept() {
+                return +[](Soc&& listener, Soc&& accepted, NetAddrPort&& addr, void* c, NotifyResult&& result) {
+                    auto data_ptr = static_cast<HeapData*>(c);
+                    const auto d = helper::defer([&] {
+                        data_ptr->del(data_ptr);
+                    });
+                    (data_ptr->fn)(std::move(listener), std::move(accepted), std::move(addr), std::move(result));
+                };
+            }
+
+            template <class Soc, class HeapData>
+            auto deferred_callback_lambda_accept() {
+                return +[](Soc&& listener, Soc&& accepted, NetAddrPort&& addr, void* c, NotifyResult&& result) {
+                    auto data_ptr = static_cast<HeapData*>(c);
+                    const auto deferred = [](void* ptr, bool del_only) {
+                        auto* data_ptr = static_cast<HeapData*>(ptr);
+                        const auto d = helper::defer([&] {
+                            data_ptr->del(data_ptr);
+                        });
+                        if (!del_only) {
+                            (data_ptr->fn)(std::move(data_ptr->socket), std::move(data_ptr->accepted), std::move(data_ptr->address), std::move(data_ptr->result));
+                        }
+                    };
+                    data_ptr->socket = std::move(listener);
+                    data_ptr->accepted = std::move(accepted);
+                    data_ptr->result = std::move(result);
+                    data_ptr->address = std::move(addr);
+                    data_ptr->notify(make_deferred_callback(data_ptr, deferred));
+                };
+            }
         }  // namespace internal
+
+        struct KeepAliveParameter {
+            bool enable = false;
+            std::uint32_t idle = 0;
+            std::uint32_t interval = 0;
+            std::uint32_t count = 0;
+        };
 
         // Socket is wrapper class of native socket
         struct fnet_class_export Socket {
@@ -243,30 +313,46 @@ namespace futils {
             // wait_readable waits socket until to be writable using select function or until timeout
             expected<void> wait_writable(std::uint32_t sec, std::uint32_t usec);
 
-            // read_until_block calls read function until read returns false
-            // callback is void(view::rvec)
-            // if something is read, red would be true
-            // otherwise false
-            // read_until_block returns block() function result
-            expected<size_t> read_until_block(view::wvec data, auto&& callback) {
-                bool red = false;
-                error::Error err;
-                size_t size = 0;
-                while (true) {
-                    auto recv = read(data);
-                    if (!recv) {
-                        if (isSysBlock(recv.error())) {
-                            if (!red) {
-                                return recv.transform([&](view::wvec) { return size; });
+            // The read_until_block function repeatedly calls the read function
+            // until it encounters a blocking condition (e.g., EAGAIN or EWOULDBLOCK).
+            // If it encounters EOF (End Of File), it treats it as an error and returns it.
+            //
+            // Parameters:
+            // - callback: A function of type void(view::rvec) that processes the received data.
+            // - data: Optional; a writable buffer (view::wvec) for receiving data. If empty,
+            //         an internal buffer of 1024 bytes is used.
+            //
+            // Return value:
+            // - Returns the total size of data successfully read, or an error (e.g., error::eof).
+            // - If it returns 0, it indicates no data was available to read,
+            //   and waiting for an IO event (e.g., with epoll_wait) is appropriate.
+            //
+            // Error handling:
+            // - If the `read` function encounters EOF (End Of File), it returns an error,
+            //   which is treated as an error condition in `read_until_block`.
+            // - If the socket is non-blocking and `read` returns EAGAIN or EWOULDBLOCK,
+            //   the function will return the size of data read so far and allow waiting for further events.
+            expected<size_t> read_until_block(auto&& callback, view::wvec data = {}) {
+                auto do_read = [&]() -> expected<size_t> {
+                    size_t size = 0;
+                    while (true) {
+                        auto recv = read(data);
+                        if (!recv) {
+                            if (isSysBlock(recv.error())) {
+                                return size;  // as no error
                             }
-                            return size;  // as no error
+                            return recv.transform([&](view::wvec) { return size; });
                         }
-                        return recv.transform([&](view::wvec) { return size; });
+                        size += recv->size();
+                        callback(*recv);
                     }
-                    size += recv->size();
-                    callback(*recv);
-                    red = true;
+                };
+                if (data.empty()) {
+                    byte buf[1024];
+                    data = view::wvec(buf, 1024);
+                    return do_read();
                 }
+                return do_read();
             }
 
             expected<size_t> readfrom_until_block(view::wvec data, auto&& callback) {
@@ -277,9 +363,6 @@ namespace futils {
                     auto recv = readfrom(data);
                     if (!recv) {
                         if (isSysBlock(recv.error())) {
-                            if (!red) {
-                                return recv.transform([&](std::pair<view::wvec, NetAddrPort>) { return size; });
-                            }
                             return size;  // as no error
                         }
                         return recv.transform([&](std::pair<view::wvec, NetAddrPort>) { return size; });
@@ -393,6 +476,10 @@ namespace futils {
             // if buffer is always over 1500, this may work on UDP
             expected<void> set_skipnotify(bool skip_notif, bool skip_event = true);
 
+            // tcp keep alive
+            expected<KeepAliveParameter> get_tcp_keep_alive();
+            expected<void> set_tcp_keep_alive(const KeepAliveParameter& param);
+
             // async I/O methods
             // caller is responsible for buffer management until completion
 
@@ -401,16 +488,22 @@ namespace futils {
             expected<AsyncResult> readfrom_async(view::wvec buffer, NetAddrPort& addr, void* c, recvfrom_notify_t notify, std::uint32_t flag = 0);
             expected<AsyncResult> writeto_async(view::rvec buffer, const NetAddrPort& addr, void* c, stream_notify_t notify, std::uint32_t flag = 0);
 
+            expected<AsyncResult> connect_async(const NetAddrPort& addr, void* c, stream_notify_t notify, std::uint32_t flag = 0);
+            // connect_ex_loopback_optimize is optimization of connect_async for loopback address
+            // this works on windows, and this is nop on linux
+            expected<void> connect_ex_loopback_optimize(const NetAddrPort& addr);
+            expected<AcceptAsyncResult<Socket>> accept_async(NetAddrPort& addr, void* c, accept_notify_t notify, std::uint32_t flag = 0);
+
             // async I/O methods with lambda
             // these are wrappers of above
 
             template <class Fn, class BufMgr, class Del>
-            expected<AsyncResult> read_async(AsyncContData<Fn, BufMgr, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+            expected<AsyncResult> read_async(AsyncContBufData<Fn, BufMgr, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
                 if (!data_ptr) {
                     return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                using HeapData = AsyncContData<Fn, BufMgr, Del>;
+                using HeapData = AsyncContBufData<Fn, BufMgr, Del>;
 
                 static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
 
@@ -422,12 +515,12 @@ namespace futils {
             }
 
             template <class Notify, class Fn, class BufMgr, class Del>
-            expected<AsyncResult> read_async_deferred(AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+            expected<AsyncResult> read_async_deferred(AsyncContNotifyBufData<Fn, BufMgr, Del, Notify>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
                 if (!data_ptr) {
                     return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                using HeapData = AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>;
+                using HeapData = AsyncContNotifyBufData<Fn, BufMgr, Del, Notify>;
 
                 static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
 
@@ -439,12 +532,12 @@ namespace futils {
             }
 
             template <class Fn, class BufMgr, class Del>
-            expected<AsyncResult> write_async(AsyncContData<Fn, BufMgr, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+            expected<AsyncResult> write_async(AsyncContBufData<Fn, BufMgr, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
                 if (!data_ptr) {
                     return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                using HeapData = AsyncContData<Fn, BufMgr, Del>;
+                using HeapData = AsyncContBufData<Fn, BufMgr, Del>;
 
                 static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
 
@@ -456,12 +549,12 @@ namespace futils {
             }
 
             template <class Notify, class Fn, class BufMgr, class Del>
-            expected<AsyncResult> write_async_deferred(AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+            expected<AsyncResult> write_async_deferred(AsyncContNotifyBufData<Fn, BufMgr, Del, Notify>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
                 if (!data_ptr) {
                     return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                using HeapData = AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>;
+                using HeapData = AsyncContNotifyBufData<Fn, BufMgr, Del, Notify>;
 
                 static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
 
@@ -473,69 +566,129 @@ namespace futils {
             }
 
             template <class Fn, class BufMgr, class Del>
-            expected<AsyncResult> readfrom_async(AsyncContData<Fn, BufMgr, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+            expected<AsyncResult> readfrom_async(AsyncContBufAddrData<Fn, BufMgr, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
                 if (!data_ptr) {
                     return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                using HeapData = AsyncContData<Fn, BufMgr, Del>;
+                using HeapData = AsyncContBufAddrData<Fn, BufMgr, Del>;
 
                 static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
 
                 auto lambda = internal::callback_lambda_with_addr<Socket, HeapData>();
 
-                return readfrom_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
+                return readfrom_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->address, data_ptr, +lambda, flag)
                     .and_then(internal::done_run_with_addr_chain(this, data_ptr, lambda))
                     .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
             }
 
             template <class Notify, class Fn, class BufMgr, class Del>
-            expected<AsyncResult> readfrom_async_deferred(AsyncContDataWithNotify<Notify, AsyncContDataWithAddress<AsyncContData<Fn, BufMgr, Del>>>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+            expected<AsyncResult> readfrom_async_deferred(AsyncContNotifyBufAddrData<Fn, BufMgr, Del, Notify>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
                 if (!data_ptr) {
                     return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                using HeapData = AsyncContDataWithNotify<Notify, AsyncContDataWithAddress<AsyncContData<Fn, BufMgr, Del>>>;
+                using HeapData = AsyncContNotifyBufAddrData<Fn, BufMgr, Del, Notify>;
 
                 static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
 
                 auto lambda = internal::deferred_callback_lambda_with_addr<Socket, HeapData>();
 
-                return readfrom_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
+                return readfrom_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->address, data_ptr, +lambda, flag)
                     .and_then(internal::done_run_with_addr_chain(this, data_ptr, lambda))
                     .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
             }
 
             template <class Fn, class BufMgr, class Del>
-            expected<AsyncResult> writeto_async(AsyncContData<Fn, BufMgr, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+            expected<AsyncResult> writeto_async(AsyncContBufAddrData<Fn, BufMgr, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
                 if (!data_ptr) {
                     return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                using HeapData = AsyncContData<Fn, BufMgr, Del>;
+                using HeapData = AsyncContBufAddrData<Fn, BufMgr, Del>;
 
                 static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
 
                 auto lambda = internal::callback_lambda<Socket, HeapData>();
 
-                return writeto_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
+                return writeto_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->address, data_ptr, +lambda, flag)
                     .and_then(internal::done_run_chain(this, data_ptr, lambda))
                     .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
             }
 
             template <class Notify, class Fn, class BufMgr, class Del>
-            expected<AsyncResult> writeto_async_deferred(AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+            expected<AsyncResult> writeto_async_deferred(AsyncContNotifyBufAddrData<Fn, BufMgr, Del, Notify>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
                 if (!data_ptr) {
                     return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
                 }
 
-                using HeapData = AsyncContDataWithNotify<Notify, AsyncContData<Fn, BufMgr, Del>>;
+                using HeapData = AsyncContNotifyBufData<Fn, BufMgr, Del, Notify>;
 
                 static_assert(std::is_same_v<HeapData, std::decay_t<decltype(*data_ptr)>>);
 
                 auto lambda = internal::deferred_callback_lambda<Socket, HeapData>();
 
-                return writeto_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->buffer_mgr.get_address(), data_ptr, +lambda, flag)
+                return writeto_async(data_ptr->buffer_mgr.get_buffer(), data_ptr->address, data_ptr, +lambda, flag)
+                    .and_then(internal::done_run_chain(this, data_ptr, lambda))
+                    .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
+            }
+
+            template <class Fn, class Del>
+            expected<AcceptAsyncResult<Socket>> accept_async(AsyncContAddrData<Fn, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+                if (!data_ptr) {
+                    return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
+                }
+
+                using HeapData = AsyncContAddrData<Fn, Del>;
+
+                auto lambda = internal::callback_lambda_accept<Socket, HeapData>();
+
+                return accept_async(data_ptr->address, data_ptr, lambda, flag)
+                    .and_then(internal::done_run_chain_accept(this, data_ptr, lambda))
+                    .or_else(internal::async_error_chain<AcceptAsyncResult<Socket>>(data_ptr, no_del_if_error));
+            }
+
+            template <class Notify, class Fn, class Del>
+            expected<AcceptAsyncResult<Socket>> accept_async_deferred(AsyncContNotifyAddrDataAccept<Fn, Del, Notify>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+                if (!data_ptr) {
+                    return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
+                }
+
+                using HeapData = AsyncContNotifyAddrDataAccept<Fn, Del, Notify>;
+
+                auto lambda = internal::deferred_callback_lambda_accept<Socket, HeapData>();
+
+                return accept_async(data_ptr->address, data_ptr, lambda, flag)
+                    .and_then(internal::done_run_chain_accept(this, data_ptr, lambda))
+                    .or_else(internal::async_error_chain<AcceptAsyncResult<Socket>>(data_ptr, no_del_if_error));
+            }
+
+            template <class Fn, class Del>
+            expected<AsyncResult> connect_async(AsyncContAddrData<Fn, Del>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+                if (!data_ptr) {
+                    return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
+                }
+
+                using HeapData = AsyncContAddrData<Fn, Del>;
+
+                auto lambda = internal::callback_lambda_connect<Socket, HeapData>();
+
+                return connect_async(data_ptr->address, data_ptr, lambda, flag)
+                    .and_then(internal::done_run_chain(this, data_ptr, lambda))
+                    .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
+            }
+
+            template <class Notify, class Fn, class Del>
+            expected<AsyncResult> connect_async_deferred(AsyncContNotifyAddrData<Fn, Del, Notify>* data_ptr, bool no_del_if_error = false, std::uint32_t flag = 0) {
+                if (!data_ptr) {
+                    return unexpect("data_ptr must not be null", error::Category::lib, error::fnet_usage_error);
+                }
+
+                using HeapData = AsyncContNotifyAddrData<Fn, Del, Notify>;
+
+                auto lambda = internal::deferred_callback_lambda_connect<Socket, HeapData>();
+
+                return connect_async(data_ptr->address, data_ptr, lambda, flag)
                     .and_then(internal::done_run_chain(this, data_ptr, lambda))
                     .or_else(internal::async_error_chain(data_ptr, no_del_if_error));
             }

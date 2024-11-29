@@ -236,6 +236,9 @@ namespace futils::fnet::http1::header {
                         if (!read_eol_with_flag(ctx, seq, ReadState::header_last_eol_one_byte, ReadState::header_last_eol_two_byte, ReadState::body_init)) {
                             return HeaderError::not_end_of_line;
                         }
+                        if (ctx.state() == ReadState::body_init && ctx.require_host() && !ctx.has_host() && !ctx.is_flag(ReadFlag::allow_no_host)) {
+                            return HeaderError::no_host;
+                        }
                     }
                     else {
                         if (!read_eol_with_flag(ctx, seq, ReadState::trailer_last_eol_one_byte, ReadState::trailer_last_eol_two_byte, ReadState::body_end)) {
@@ -691,6 +694,9 @@ namespace futils::fnet::http1::header {
             return validation_error;
         }
         strutil::append(str, "\r\n");
+        if (ctx.require_host() && !ctx.has_host() && !ctx.is_flag(WriteFlag::allow_no_host)) {
+            return HeaderError::no_host;
+        }
         if (ctx.is_invalid_content_length() && !ctx.is_flag(WriteFlag::allow_invalid_content_length)) {
             return HeaderError::invalid_content_length;
         }
@@ -1015,12 +1021,18 @@ namespace futils::fnet::http1::header {
         }
 
         constexpr bool test_http_parse() {
-            auto test_request = [](HeaderError expected_result, ReadState expect_state, bool suspended, const char* expect_method, const char* expect_path, const char* expect_version, listT header_list, const char* text) {
+            auto test_request = [](HeaderError expected_result, ReadState expect_state, bool suspended, const char* expect_method, const char* expect_path, const char* expect_version, listT header_list, const char* text, bool no_host = true) {
                 ReadContext ctx;
+                if (no_host) {
+                    ctx.set_flag(ReadFlag::allow_no_host);
+                }
                 test::test_request(ctx, expect_state, suspended, expected_result, expect_method, expect_path, expect_version, header_list, text);
             };
-            auto test_response = [](HeaderError expected_result, ReadState expect_state, bool suspended, const char* expect_version, size_t expect_status, const char* expect_phrase, listT header_list, const char* text) {
+            auto test_response = [](HeaderError expected_result, ReadState expect_state, bool suspended, const char* expect_version, size_t expect_status, const char* expect_phrase, listT header_list, const char* text, bool no_host = true) {
                 ReadContext ctx;
+                if (no_host) {
+                    ctx.set_flag(ReadFlag::allow_no_host);
+                }
                 test::test_response(ctx, expect_state, suspended, expected_result, expect_version, expect_status, expect_phrase, header_list, text);
             };
             // test request
@@ -1029,6 +1041,7 @@ namespace futils::fnet::http1::header {
             test_request(HeaderError::none, ReadState::body_init, false, "GET", "/", "HTTP/1.1", listT{{{"key", "value"}}, 1}, "GET / HTTP/1.1\r\nkey: value\r\n\r\n");
             test_request(HeaderError::none, ReadState::body_init, false, "GET", "/", "HTTP/1.1", listT{{{"key", "value"}, {"key2", "value2"}}, 2}, "GET / HTTP/1.1\r\nkey: value\r\nkey2: value2\r\n\r\n");
             test_request(HeaderError::none, ReadState::body_init, false, "GET", "/", "HTTP/1.2", listT{}, "GET / HTTP/1.2\r\n\r\n");
+            test_request(HeaderError::none, ReadState::body_init, false, "GET", "/", "HTTP/1.1", listT{{{"Host", "example.com"}}, 1}, "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n");
             // fail pattern of request
             test_request(HeaderError::invalid_method, ReadState::method, false, "", "/", "HTTP/1.1", listT{}, " / HTTP/1.1\r\n\r\n");
             test_request(HeaderError::invalid_path, ReadState::path, false, "GET", " ", "HTTP/1.1", listT{}, "GET  HTTP/1.1\r\n\r\n");
@@ -1037,6 +1050,8 @@ namespace futils::fnet::http1::header {
             test_request(HeaderError::invalid_header_key, ReadState::header_key, false, "GET", "/", "HTTP/1.1", listT{}, "GET / HTTP/1.1\r\n: key\r\n\r\n");
             test_request(HeaderError::not_colon, ReadState::header_colon, false, "GET", "/", "HTTP/1.1", listT{{{"key", "value"}}, 1}, "GET / HTTP/1.1\r\nkey: value\r\nkey2\r\n\r\n");
             test_request(HeaderError::invalid_header_value, ReadState::header_value, true, "GET", "/", "HTTP/1.1", listT{}, "GET / HTTP/1.1\r\nkey: value");
+            test_request(HeaderError::no_host, ReadState::body_init, false, "GET", "/", "HTTP/1.1", listT{}, "GET / HTTP/1.1\r\n\r\n", false);
+
             // test response
             // success pattern of response
             test_response(HeaderError::none, ReadState::body_init, false, "HTTP/1.1", 200, "OK", listT{}, "HTTP/1.1 200 OK\r\n\r\n");
@@ -1050,14 +1065,18 @@ namespace futils::fnet::http1::header {
             test_response(HeaderError::not_colon, ReadState::header_colon, false, "HTTP/1.1", 200, "OK", listT{{{"key", "value"}}, 1}, "HTTP/1.1 200 OK\r\nkey: value\r\nkey2\r\n\r\n");
             test_response(HeaderError::invalid_header_value, ReadState::header_value, true, "HTTP/1.1", 200, "OK", listT{}, "HTTP/1.1 200 OK\r\nkey: value");
             test_response(HeaderError::invalid_header_value, ReadState::header_value, false, "HTTP/1.1", 200, "OK", listT{}, "HTTP/1.1 200 OK\r\nkey: \r\n\r\n");
+
             return true;
         }
 
         static_assert(test_http_parse());
 
         constexpr bool test_suspend() {
-            auto suspend_request_test = [](const char* first, size_t delta, const char* next, ReadState expect_state) {
+            auto suspend_request_test = [](const char* first, size_t delta, const char* next, ReadState expect_state, bool no_host = true) {
                 ReadContext ctx;
+                if (no_host) {
+                    ctx.set_flag(ReadFlag::allow_no_host);
+                }
                 auto seq = make_ref_seq(first);
                 parse_request(ctx, seq, helper::nop, helper::nop, helper::nop, [](auto&&, auto&&) {});
                 if (!ctx.is_resumable()) {
@@ -1143,6 +1162,7 @@ namespace futils::fnet::http1::header {
             };
             auto request = [&](auto&& method, auto&& path, auto&& header, auto&& expected, WriteState state) {
                 WriteContext ctx;
+                ctx.set_flag(WriteFlag::allow_no_host);
                 futils::number::Array<char, 100> str{};
                 if (auto err = render_request(ctx, str, method, path, header); !err) {
                     report("render error", err, ctx, str);

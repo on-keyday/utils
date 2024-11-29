@@ -16,8 +16,9 @@
 #include <wrap/light/string.h>
 #include <unicode/utf/view.h>
 #include <limits>
-#include <cstring>
 #include <view/slice.h>
+#include <number/array.h>
+#include <strutil/equal.h>
 
 namespace futils {
 
@@ -104,10 +105,24 @@ namespace futils {
                 }
                 return ~0;
             }
+
+            template <class C>
+            constexpr void memmove(C* dst, C* src, size_t len) {
+                if (dst < src) {
+                    for (size_t i = 0; i < len; i++) {
+                        dst[i] = src[i];
+                    }
+                }
+                else {
+                    for (size_t i = len; i > 0; i--) {
+                        dst[i - 1] = src[i - 1];
+                    }
+                }
+            }
         }  // namespace internal
 
-        template <class Out, class T>
-        number::NumErr encode(Sequencer<T>& seq, Out& result) {
+        template <class String = wrap::string, class Out, class T>
+        constexpr number::NumErr encode(Sequencer<T>& seq, Out& result) {
             static_assert(sizeof(typename Sequencer<T>::char_type) == 4, "need UTF-32 string");
             if (seq.eos()) {
                 return number::NumError::invalid;
@@ -117,7 +132,7 @@ namespace futils {
             size_t delta, bias;
             size_t m, n;
             size_t si = 0, di = 0;
-            wrap::string tmp;
+            String tmp{};
             if (!strutil::append_if(tmp, helper::nop, seq, [&](auto&& v) {
                     if (number::is_in_ascii_range(v)) {
                         di++;
@@ -178,15 +193,15 @@ namespace futils {
             return true;
         }
 
-        template <class In, class Out>
-        number::NumErr encode(In&& in, Out& result) {
+        template <class String = wrap::string, class In, class Out>
+        constexpr number::NumErr encode(In&& in, Out& result) {
             utf::U32View<buffer_t<In&>> view(in);
             auto seq = make_ref_seq(view);
             return encode(seq, result);
         }
 
-        template <class Out, class T>
-        number::NumErr decode(Sequencer<T>& seq, Out& result) {
+        template <class U32String = wrap::u32string, class Out, class T>
+        constexpr number::NumErr decode(Sequencer<T>& seq, Out& result) {
             if (seq.eos()) {
                 return true;
             }
@@ -195,7 +210,7 @@ namespace futils {
             size_t bias = initial_bias;
             size_t i = 0, out = 0;
             size_t b = 0, j = 0;
-            wrap::u32string tmp;
+            U32String tmp{};
             while (!seq.eos()) {
                 auto c = seq.current();
                 if (!number::is_in_ascii_range(c)) {
@@ -259,7 +274,7 @@ namespace futils {
                 }
                 n += i / (out + 1);
                 i %= (out + 1);
-                ::memmove(tmp.data() + i + 1, tmp.data() + i, (out - i) * sizeof(std::uint32_t));
+                internal::memmove(tmp.data() + i + 1, tmp.data() + i, (out - i) * sizeof(std::uint32_t));
                 tmp[i] = n;
                 i++;
                 out++;
@@ -269,14 +284,14 @@ namespace futils {
             return true;
         }
 
-        template <class In, class Out>
-        number::NumErr decode(In&& in, Out& result) {
+        template <class U32String = wrap::u32string, class In, class Out>
+        constexpr number::NumErr decode(In&& in, Out& result) {
             auto seq = make_ref_seq(in);
-            return decode(seq, result);
+            return decode<U32String>(seq, result);
         }
 
-        template <class In, class Out>
-        number::NumErr encode_host(In&& in, Out& result) {
+        template <class String = wrap::string, class In, class Out>
+        constexpr number::NumErr encode_host(In&& in, Out& result) {
             auto seq = make_ref_seq(in);
             while (true) {
                 auto inipos = seq.rptr;
@@ -297,7 +312,7 @@ namespace futils {
                 else {
                     strutil::append(result, "xn--");
                     auto slice = view::make_ref_slice(in, inipos, seq.rptr);
-                    auto e = encode(slice, result);
+                    auto e = encode<String>(slice, result);
                     if (!e) {
                         return e;
                     }
@@ -312,8 +327,8 @@ namespace futils {
             return true;
         }
 
-        template <class In, class Out>
-        number::NumErr decode_host(In&& in, Out& result) {
+        template <class U32String = wrap::u32string, class In, class Out>
+        constexpr number::NumErr decode_host(In&& in, Out& result) {
             auto seq = make_ref_seq(in);
             while (true) {
                 bool is_ascii = true;
@@ -331,7 +346,7 @@ namespace futils {
                 }
                 if (is_international) {
                     auto slice = view::make_ref_slice(in, inipos, seq.rptr);
-                    auto e = decode(slice, result);
+                    auto e = decode<U32String>(slice, result);
                     if (!e) {
                         return e;
                     }
@@ -352,6 +367,46 @@ namespace futils {
             }
             return true;
         }
+
+        namespace test {
+            constexpr bool test_punycode() {
+                auto test_encode_decode = [](auto input, auto expected_encoded) {
+                    futils::helper::FixedPushBacker<char[50], 49> buf;
+                    futils::helper::FixedPushBacker<char8_t[50], 49> buf2;
+                    futils::punycode::encode<number::Array<char, 100>>(input, buf);
+                    if (!futils::strutil::equal(buf.buf, expected_encoded)) {
+                        return false;
+                    }
+                    futils::punycode::decode<number::Array<char32_t, 100>>(buf.buf, buf2);
+                    if (!futils::strutil::equal(buf2.buf, input)) {
+                        return false;
+                    }
+                    return true;
+                };
+
+                auto test_encode_decode_host = [](auto input, auto expected_encoded) {
+                    futils::helper::FixedPushBacker<char[50], 49> buf;
+                    futils::helper::FixedPushBacker<char8_t[50], 49> buf2;
+                    futils::punycode::encode_host<number::Array<char, 100>>(input, buf);
+                    if (!futils::strutil::equal(buf.buf, expected_encoded, futils::strutil::ignore_case())) {
+                        return false;
+                    }
+                    futils::punycode::decode_host<number::Array<char32_t, 100>>(buf.buf, buf2);
+                    if (!futils::strutil::equal(buf2.buf, input, futils::strutil::ignore_case())) {
+                        return false;
+                    }
+                    return true;
+                };
+
+                return test_encode_decode(u8"ウィキペディア", "cckbak0byl6e") &&
+                       test_encode_decode(u8"bücher", "bcher-kva") &&
+                       test_encode_decode_host(u8"Go言語.com", u8"xn--go-hh0g6u.com") &&
+                       test_encode_decode_host(u8"太郎.com", "xn--sssu80k.com") &&
+                       test_encode_decode_host(u8"ドメイン名例.jp", "xn--eckwd4c7cu47r2wf.jp");
+            }
+
+            static_assert(test_punycode(), "punycode test failed");
+        }  // namespace test
 
     }  // namespace punycode
 }  // namespace futils

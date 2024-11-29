@@ -16,11 +16,20 @@ namespace futils {
     namespace binary {
         template <class T, class C>
         constexpr bool read_num(basic_reader<C>& r, T& val, bool be = true) {
-            auto [data, ok] = r.read_direct(sizeof(T));
-            if (!ok) {
-                return false;
+            if (r.is_direct_stream() && !r.is_direct_stream_view()) {
+                byte data[sizeof(T)];
+                if (!r.read(data)) {
+                    return false;
+                }
+                binary::read_from(val, data, be);
             }
-            binary::read_from(val, data, be);
+            else {
+                auto [data, ok] = r.read_direct(sizeof(T));
+                if (!ok) {
+                    return false;
+                }
+                binary::read_from(val, data, be);
+            }
             return true;
         }
 
@@ -48,17 +57,30 @@ namespace futils {
         template <class... T, class C>
         constexpr bool read_num_bulk(basic_reader<C>& r, bool be, T&... val) {
             constexpr size_t size = (... + sizeof(val));
-            view::basic_rvec<C> data;
-            if (!r.read_direct(data, size)) {
-                return false;
-            }
-            constexpr auto b = internal::bulk_array<T...>();
-            size_t i = 0;
-            auto bulk = [&](auto& v, size_t idx) {
-                read_from(v, data.data() + b.index[idx], be);
-                i++;
+            auto bulk_from = [&](auto data) {
+                constexpr auto b = internal::bulk_array<T...>();
+                size_t i = 0;
+                auto bulk = [&](auto& v, size_t idx) {
+                    read_from(v, data + b.index[idx], be);
+                    i++;
+                };
+                (..., bulk(val, i));
             };
-            (..., bulk(val, i));
+            if (r.is_direct_stream() && !r.is_direct_stream_view()) {
+                byte data[size];
+                if (!r.read(data)) {
+                    return false;
+                }
+                bulk_from(data);
+                return true;
+            }
+            else {
+                view::basic_rvec<C> data;
+                if (!r.read_direct(data, size)) {
+                    return false;
+                }
+                bulk_from(data.data());
+            }
             return true;
         }
 

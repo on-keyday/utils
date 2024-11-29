@@ -137,5 +137,21 @@ namespace futils {
             return helper::either::unexpected<error::Error>(std::in_place, std::forward<decltype(a)>(a)...);
         }
 
+        constexpr auto callback_with_error(auto&& f, auto&&... args) {
+            if constexpr (std::is_void_v<decltype(f(std::forward<decltype(args)>(args)...))>) {
+                f(std::forward<decltype(args)>(args)...);
+                return expected<void>();
+            }
+            else if constexpr (helper::is_template_instance_of<decltype(f(std::forward<decltype(args)>(args)...)), helper::either::expected>) {
+                return f(std::forward<decltype(args)>(args)...);
+            }
+            else if constexpr (std::is_convertible_v<decltype(f(std::forward<decltype(args)>(args)...)), error::Error>) {
+                if (auto err = f(std::forward<decltype(args)>(args)...)) {
+                    return expected<void>(unexpect(err));
+                }
+                return expected<void>();
+            }
+        }
+
     }  // namespace fnet
 }  // namespace futils

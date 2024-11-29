@@ -54,6 +54,7 @@ namespace futils::fnet::http2 {
                             }
                             auto lower_key = view::make_transform(key, [](auto&& c) { return strutil::to_lower(c); });
                             set_header(lower_key, std::forward<decltype(value)>(value));
+                            return http1::header::HeaderError::none;
                         });
                 },
                 body.size() == 0 && fin);
@@ -165,7 +166,7 @@ namespace futils::fnet::http2 {
             auto ok = handler->receive_header([&](auto&& key, auto&& value) {
                 if (strutil::equal(key, ":status", strutil::ignore_case())) {
                     auto seq = make_ref_seq(value);
-                    http1::range_to_string_or_call(seq, status, {.start = 0, .start = seq.size()});
+                    http1::range_to_string_or_call(seq, status, http1::Range{.start = 0, .end = seq.size()});
                 }
                 else {
                     auto view = view::make_concat<flex_storage&, flex_storage&>(key, value);
@@ -213,7 +214,7 @@ namespace futils::fnet::http2 {
                 return Error{H2Error::internal, false, "handler is not set"};
             }
             auto ok = handler->receive_data(std::forward<decltype(body)>(body));
-            if (!ok) {
+            if (ok != http1::body::BodyResult::full) {
                 return Error{
                     .code = H2Error::internal,
                     .stream = true,

@@ -39,25 +39,25 @@ namespace futils {
         ENUM_STRING_MSG(NormalizeError::encode_decode_query, "failed to encode/decode error")
         END_ENUM_STRING_MSG(nullptr)
 
-        template <class URI, class String = decltype(std::declval<URI>().host), class UrlEnc = decltype(urlenc::pathUnescape())>
+        template <class URI, class String = decltype(std::declval<URI>().hostname), class UrlEnc = decltype(urlenc::pathUnescape())>
         NormalizeError normalize_uri(URI& uri, NormalizeFlag flag = NormalizeFlag::none, UrlEnc&& enc = urlenc::pathUnescape()) {
             if (any(flag & NormalizeFlag::host)) {
                 String encoded;
-                if (strutil::validate(uri.host, true, number::is_in_ascii_range<std::uint8_t>) &&
-                    strutil::contains(uri.host, "xn--")) {
+                if (strutil::validate(uri.hostname, true, number::is_in_ascii_range<std::uint8_t>) &&
+                    strutil::contains(uri.hostname, "xn--")) {
                     if (any(flag & NormalizeFlag::human_friendly)) {
-                        if (!punycode::decode_host(uri.host, encoded)) {
+                        if (!punycode::decode_host(uri.hostname, encoded)) {
                             return NormalizeError::decode_host;
                         }
-                        uri.host = std::move(encoded);
+                        uri.hostname = std::move(encoded);
                     }
                 }
                 else {
                     if (!any(flag & NormalizeFlag::human_friendly)) {
-                        if (!punycode::encode_host(uri.host, encoded)) {
+                        if (!punycode::encode_host(uri.hostname, encoded)) {
                             return NormalizeError::encode_host;
                         }
-                        uri.host = std::move(encoded);
+                        uri.hostname = std::move(encoded);
                     }
                 }
             }
@@ -66,7 +66,7 @@ namespace futils {
                 if (strutil::validate(input, true, number::is_in_ascii_range<std::uint8_t>) &&
                     strutil::contains(input, "%")) {
                     if (any(flag & NormalizeFlag::human_friendly)) {
-                        if (net::urlenc::decode(input, encoded)) {
+                        if (urlenc::decode(input, encoded)) {
                             input = std::move(encoded);
                             return true;
                         }

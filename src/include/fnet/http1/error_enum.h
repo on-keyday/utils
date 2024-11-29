@@ -30,6 +30,7 @@ namespace futils::fnet::http1 {
             no_data,
 
             invalid_content_length,
+            no_host,
         };
 
         constexpr const char* to_string(HeaderError e) {
@@ -66,6 +67,8 @@ namespace futils::fnet::http1 {
                     return "no_data";
                 case HeaderError::invalid_content_length:
                     return "invalid_content_length";
+                case HeaderError::no_host:
+                    return "no_host";
             }
             return "unknown";
         }

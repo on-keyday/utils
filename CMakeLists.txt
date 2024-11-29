@@ -2,7 +2,7 @@
 #    Copyright (c) 2021-2024 on-keyday (https://github.com/on-keyday)
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
-cmake_minimum_required(VERSION 3.26)
+cmake_minimum_required(VERSION 3.25)
 project(futils)
 include_directories("src/include")
 
@@ -155,6 +155,9 @@ add_executable(fnet_telnet "src/test/fnet/test_fnet_telnet.cpp")
 add_executable(fnetquic_http3 "src/test/fnetquic/test_fnetquic_http3.cpp")
 add_executable(fnet_cancel "src/test/fnet/test_fnet_cancel.cpp")
 add_executable(fnetquic_h3_local "src/test/fnetquic/test_fnetquic_h3_local.cpp")
+add_executable(fnet_async_connect_accept "src/test/fnet/test_fnet_async_connect_accept.cpp")
+add_executable(fnet_punycode "src/test/fnet_util/test_punycode.cpp")
+add_executable(fnet_http_client "src/test/fnet/test_fnet_http_client.cpp")
 
 #tests(low)
 add_executable(callstack "src/test/low/test_callstack.cpp")
@@ -252,20 +255,13 @@ endif()
 # libfutils
 target_sources(futils
   PRIVATE
-  # "src/lib/file/platform.cpp"
-  # "src/lib/file/file_view.cpp"
   "src/lib/wrap/argv.cpp"
   "src/lib/wrap/cout.cpp"
   "src/lib/json/json_object.cpp"
-  # "src/lib/wrap/iocommon.cpp"
   "src/lib/wrap/cin.cpp"
   "src/lib/testutil/alloc_hook.cpp"
   "src/lib/wrap/input.cpp"
   "src/lib/wrap/exepath.cpp"
-  # "src/lib/deprecated/syntax/default_syntaxc.cpp" # deprecated but dependency uses
-  # "src/lib/async/worker.cpp"
-  # "src/lib/async/light/native_context.cpp"
-  # "src/lib/async/light/native_stack.cpp"
   "src/lib/env/env_sys.cpp"
   "src/lib/wrap/admin.cpp"
   "src/lib/wrap/trace.cpp"
@@ -289,7 +285,6 @@ target_sources(fnet PRIVATE
   "src/lib/fnet/addrinfo.cpp"
   "src/lib/fnet/tls.cpp"
   "src/lib/fnet/tlsopt.cpp"
-  #"src/lib/fnet/http2.cpp"
   "src/lib/fnet/heaps.cpp"
   "src/lib/fnet/address.cpp"
   "src/lib/fnet/sockopt.cpp"
@@ -321,6 +316,7 @@ target_sources(fnetserv PRIVATE
   "src/lib/fnet/server/state.cpp"
   "src/lib/fnet/server/httpserv.cpp"
   "src/lib/fnet/server/quic_serve.cpp"
+  "src/lib/fnet/http/client.cpp"
 )
 
 # coro
@@ -399,9 +395,11 @@ target_link_libraries(fnet_telnet fnet)
 target_link_libraries(fnetquic_http3 fnet futils)
 target_link_libraries(fnet_cancel fnet futils)
 target_link_libraries(fnetquic_h3_local fnet futils)
+target_link_libraries(fnet_async_connect_accept fnet futils)
 
 # test(libfnetserv)
 target_link_libraries(fnetserv fnet)
+target_link_libraries(fnet_http_client fnet fnetserv futils)
 
 # test(libcoro)
 target_link_libraries(quic_coro coro fnet futils)

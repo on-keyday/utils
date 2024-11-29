@@ -227,6 +227,20 @@ namespace futils {
                 to_string(str, detect_ipv4_mapped, ipv4mapped_as_ipv4);
                 return str;
             }
+
+            constexpr bool is_loopback() const {
+                switch (type_) {
+                    case NetAddrType::ipv4:
+                        return bdata[0] == 127;
+                    case NetAddrType::ipv6:
+                        return bdata[0] == 0 && bdata[1] == 0 && bdata[2] == 0 && bdata[3] == 0 &&
+                               bdata[4] == 0 && bdata[5] == 0 && bdata[6] == 0 && bdata[7] == 0 &&
+                               bdata[8] == 0 && bdata[9] == 0 && bdata[10] == 0 && bdata[11] == 0 &&
+                               bdata[12] == 0 && bdata[13] == 0 && bdata[14] == 0 && bdata[15] == 1;
+                    default:
+                        return false;
+                }
+            }
         };
 
         constexpr auto sizeof_NetAddr = sizeof(NetAddr);
@@ -354,12 +368,12 @@ namespace futils {
             return ipv4(d.first.addr, port);
         }
 
-        constexpr expected<NetAddrPort> to_ipv6(auto&& addr, std::uint16_t port) {
-            auto d = ipaddr::to_ipv6(addr);
+        constexpr expected<NetAddrPort> to_ipv6(auto&& addr, std::uint16_t port, bool ipv4map = false) {
+            auto d = ipaddr::to_ipv6(addr, ipv4map);
             if (!d.second) {
                 return unexpect("not valid IPv6 address", error::Category::lib, error::fnet_address_error);
             }
-            return ipv6(d.first.addr);
+            return ipv6(d.first.addr, port);
         }
 
         constexpr NetAddrPort link_layer(LinkLayerInfo&& info) {
@@ -367,6 +381,9 @@ namespace futils {
             naddr.addr = internal::make_netaddr(NetAddrType::link_layer, static_cast<LinkLayerInfo&&>(info));
             return naddr;
         }
+
+        constexpr auto ipv4_any = ipv4(0, 0, 0, 0, 0);
+        constexpr auto ipv6_any = ipv6(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
         // SockAttr is basic attributes to make socket or search address
         struct SockAttr {
