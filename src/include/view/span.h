@@ -36,8 +36,9 @@ namespace futils {
            public:
             constexpr rspan() noexcept = default;
 
-            template <class V = T, std::enable_if_t<!std::is_same_v<T, size_t>, int> = 0>
+            template <class V = T>
             explicit constexpr rspan(const T* p, V&& term = V()) noexcept
+                requires(!std::is_same_v<V, size_t>)
                 : data_(p) {
                 if (!p) {
                     return;
@@ -531,5 +532,5 @@ namespace futils {
 
             static_assert(check_span());
         }  // namespace test
-    }      // namespace view
+    }  // namespace view
 }  // namespace futils
