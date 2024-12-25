@@ -117,7 +117,7 @@ namespace futils::error {
             reflector_t reflector = nullptr;
 
             constexpr WrapperBase(reflector_t r)
-                : reflector(r){};
+                : reflector(r) {};
 
            public:
             void error(helper::IPushBacker<> pb) {
@@ -716,6 +716,8 @@ namespace futils::error {
         // as() is a reflection function like Golang's type assertion.
         // It returns pointer to T if T is the same type as the internal pointer.
         // Otherwise, it returns nullptr.
+        // NOTE: this is working when caller and object is in same executable.
+        //       when cross-dll, it may not work.
         template <class T>
         constexpr T* as() {
             if (type_ != ErrorType::ptr) {
