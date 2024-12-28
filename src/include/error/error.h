@@ -573,11 +573,11 @@ namespace futils::error {
             if (!wrapper) {
                 return;
             }
-            fallback.cancel();
             auto safe = helper::defer([&] {
                 wrapper_traits_t::deallocate(alloc, wrapper, 1);
             });
             wrapper_traits_t::construct(alloc, wrapper, alloc, std::forward<T>(t));
+            fallback.cancel();
             safe.cancel();
             ptr = wrapper;
             auto tr = ptr->traits();
