@@ -61,6 +61,10 @@ namespace futils::helper {
             }
         }
 
+        constexpr explicit operator bool() const {
+            return ptr && fn;
+        }
+
         constexpr ~DynDefer() {
             execute();
         }
