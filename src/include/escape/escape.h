@@ -107,6 +107,16 @@ namespace futils {
             };
         }
 
+        constexpr auto escape_all() {
+            return [](auto&& c) {
+                return true;
+            };
+        }
+
+        constexpr auto no_escape_set() {
+            return escape_set<0>{};
+        }
+
         template <class In, class Out, class Escape = decltype(default_set()), class Range = decltype(default_should_escape())>
         constexpr number::NumErr escape_str(Sequencer<In>& seq, Out& out, EscapeFlag flag = EscapeFlag::none,
                                             Escape&& esc = default_set(), Range&& should_escape = default_should_escape()) {
