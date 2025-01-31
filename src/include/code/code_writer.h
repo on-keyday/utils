@@ -137,16 +137,17 @@ namespace futils {
                         }
                         auto sub = cur.substr(0, target);
                         apply(sub);
-                        if (cur.starts_with("\r\n")) {
-                            cur = cur.substr(target + 2);
+                        auto next = cur.substr(target);
+                        if (next.starts_with("\r\n")) {
+                            cur = next.substr(2);
                             add_line();
                         }
-                        else if (cur.starts_with("\r") || cur.starts_with("\n")) {
-                            cur = cur.substr(target + 1);
+                        else if (next.starts_with("\r") || next.starts_with("\n")) {
+                            cur = next.substr(1);
                             add_line();
                         }
                         else {
-                            cur = cur.substr(target);
+                            cur = next.substr(target);
                         }
                     }
                 };
