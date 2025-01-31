@@ -19,6 +19,11 @@ namespace futils {
                 { t.args };
             };
 
+            template <class T>
+            concept has_arg_desc = requires(T t) {
+                { t.arg_desc };
+            };
+
             // void show(string usage_or_err)
             // int then(Option opt,option::Context ctx)
             // opt.bind(ctx) is used
@@ -35,10 +40,20 @@ namespace futils {
                 }
                 if (perfect_parsed(err) && opt.help) {
                     if constexpr (has_args<decltype(opt)>) {
-                        show(ctx.Usage<String>(option::ParseFlag::assignable_mode, argv[0], "[option] args..."), false);
+                        if constexpr (has_arg_desc<decltype(opt)>) {
+                            show(ctx.Usage<String>(option::ParseFlag::assignable_mode, argv[0], opt.arg_desc), false);
+                        }
+                        else {
+                            show(ctx.Usage<String>(option::ParseFlag::assignable_mode, argv[0], "[option] args..."), false);
+                        }
                     }
                     else {
-                        show(ctx.Usage<String>(option::ParseFlag::assignable_mode, argv[0]), false);
+                        if constexpr (has_arg_desc<decltype(opt)>) {
+                            show(ctx.Usage<String>(option::ParseFlag::assignable_mode, argv[0], opt.arg_desc), false);
+                        }
+                        else {
+                            show(ctx.Usage<String>(option::ParseFlag::assignable_mode, argv[0]), false);
+                        }
                     }
                     return 1;
                 }
@@ -54,5 +69,5 @@ namespace futils {
                 return then(opt, ctx);
             }
         }  // namespace templ
-    }      // namespace cmdline
+    }  // namespace cmdline
 }  // namespace futils
