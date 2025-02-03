@@ -44,6 +44,8 @@ namespace futils {
 
         template <class C>
         struct basic_writer {
+            using value_type = C;
+
            private:
             view::basic_wvec<C> w;
             size_t index = 0;

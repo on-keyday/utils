@@ -147,7 +147,7 @@ namespace futils {
                             add_line();
                         }
                         else {
-                            cur = next.substr(target);
+                            cur = next;
                         }
                     }
                 };
