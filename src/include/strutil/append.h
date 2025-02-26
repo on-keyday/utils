@@ -48,5 +48,12 @@ namespace futils {
             append(t, f);
             appends(t, std::forward<Args>(args)...);
         }
+
+        template <class T, class... Args>
+        constexpr T concat(Args&&... args) {
+            T t;
+            appends(t, std::forward<Args>(args)...);
+            return t;
+        }
     }  // namespace strutil
 }  // namespace futils
