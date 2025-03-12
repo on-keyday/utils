@@ -63,6 +63,7 @@ namespace futils {
            protected:
             Object& buffer;
             bool comma = false;
+            bool ended = false;
             size_t index = 0;
 
             constexpr FieldBase(Object& buf)
@@ -93,8 +94,16 @@ namespace futils {
                 });
             }
 
-            constexpr ~ObjectField() {
+            constexpr void close() {
+                if (this->ended) {
+                    return;
+                }
                 this->buffer.end_block("}", this->comma);
+                this->ended = true;
+            }
+
+            constexpr ~ObjectField() {
+                close();
             }
         };
 
@@ -109,8 +118,16 @@ namespace futils {
                 });
             }
 
-            constexpr ~ArrayField() {
+            constexpr void close() {
+                if (this->ended) {
+                    return;
+                }
                 this->buffer.end_block("]", this->comma);
+                this->ended = true;
+            }
+
+            constexpr ~ArrayField() {
+                close();
             }
         };
 
@@ -630,5 +647,5 @@ true,
 
             static_assert(check_stringer());
         }  // namespace test
-    }      // namespace json
+    }  // namespace json
 }  // namespace futils

@@ -132,6 +132,7 @@ add_executable(hexfilter "src/test/number/test_hexfilter.cpp")
 add_executable(arbnum "src/test/binary/test_arbnum.cpp")
 add_executable(jit_coroutine "src/test/jit/test_jit_coroutine.cpp")
 add_executable(console_window "src/test/console/test_window.cpp")
+add_executable(variant "src/test/helper/test_variant.cpp")
 
 # tests(fnet)
 add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")
