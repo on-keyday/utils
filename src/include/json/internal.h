@@ -158,25 +158,25 @@ namespace futils {
                 constexpr JSONHolder(array_t&& n)
                     : kind_(JSONKind::array), a(std::move(n)) {}
 
-                constexpr object_t* init_as_object() {
+                constexpr object_t& init_as_object() {
                     this->destroy();
                     std::construct_at(std::addressof(o));
                     kind_ = JSONKind::object;
-                    return std::addressof(o);
+                    return o;
                 }
 
-                constexpr array_t* init_as_array() {
+                constexpr array_t& init_as_array() {
                     this->destroy();
                     std::construct_at(std::addressof(a));
                     kind_ = JSONKind::array;
-                    return std::addressof(a);
+                    return a;
                 }
 
-                constexpr string_t* init_as_string() {
+                constexpr string_t& init_as_string() {
                     this->destroy();
                     std::construct_at(std::addressof(s));
                     kind_ = JSONKind::string;
-                    return std::addressof(s);
+                    return s;
                 }
 
                 constexpr JSONHolder(JSONHolder&& n)

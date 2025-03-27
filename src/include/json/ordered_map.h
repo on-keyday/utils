@@ -41,6 +41,13 @@ namespace futils {
                 });
             }
 
+            template <class T>
+            auto find(T&& t) {
+                return std::find_if(obj.begin(), obj.end(), [&](auto& kv) {
+                    return strutil::equal(get<0>(kv), t);
+                });
+            }
+
             auto begin() {
                 return obj.begin();
             }

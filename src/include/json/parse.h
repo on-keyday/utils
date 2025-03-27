@@ -30,15 +30,12 @@ namespace futils {
                 using object_t = typename JSONBase<String, Vec, Object>::object_t;
                 using array_t = typename JSONBase<String, Vec, Object>::array_t;
 
-                auto consume_space = [&] {
-                    while (strutil::parse_space<true>(seq, true)) {
-                    }
-                };
 #define DETECT_EOF() \
     if (seq.eos())   \
     return JSONError::unexpected_eof
-#define CONSUME_EOF() \
-    consume_space();  \
+#define CONSUME_EOF()                               \
+    while (strutil::parse_space<true>(seq, true)) { \
+    }                                               \
     DETECT_EOF()
 
                 auto read_strs = [&](size_t& beg, size_t& en) -> JSONErr {
@@ -50,7 +47,7 @@ namespace futils {
                                 break;
                             }
                         }
-                        seq.consume();
+                        seq.rptr += 1;
                     }
                     en = seq.rptr;
                     seq.consume();
@@ -64,137 +61,177 @@ namespace futils {
                     return true;
                 };
                 CONSUME_EOF();
-                if (seq.seek_if("true")) {
-                    json = true;
-                }
-                else if (seq.seek_if("false")) {
-                    json = false;
-                }
-                else if (seq.seek_if("null")) {
-                    json = nullptr;
-                }
-                else if (seq.consume_if('\"')) {
-                    size_t be, en;
-                    auto e = read_strs(be, en);
-                    if (!e) {
-                        return e;
+                auto c = seq.current();
+                switch (c) {
+                    case 't': {
+                        if (!seq.seek_if("true")) {
+                            return JSONError::not_json;
+                        }
+                        json = true;
+                        break;
                     }
-                    auto& s = *json.get_holder().init_as_string();
-                    if (auto e = unescape(s, be, en); !e) {
-                        return e;
+                    case 'f': {
+                        if (!seq.seek_if("false")) {
+                            return JSONError::not_json;
+                        }
+                        json = false;
+                        break;
                     }
-                }
-                else if (seq.consume_if('[')) {
-                    auto& s = *json.get_holder().init_as_array();
-                    bool first = true;
-                    while (true) {
-                        CONSUME_EOF();
-                        if (!first) {
-                            if (!seq.consume_if(',') && seq.current() != ']') {
-                                return JSONError::need_comma_on_array;
-                            }
-                            CONSUME_EOF();
+                    case 'n': {
+                        if (!seq.seek_if("null")) {
+                            return JSONError::not_json;
                         }
-                        if (seq.consume_if(']')) {
-                            break;
-                        }
-                        DETECT_EOF();
-                        if constexpr (has_resize<array_t>) {
-                            s.resize(s.size() + 1);
-                            auto e = parse_impl(seq, s.back());
-                            if (!e) {
-                                return e;
-                            }
-                        }
-                        else {
-                            self_t tmp;
-                            auto e = parse_impl(seq, tmp);
-                            if (!e) {
-                                return e;
-                            }
-                            s.push_back(std::move(tmp));
-                        }
-                        first = false;
+                        json = nullptr;
+                        break;
                     }
-                }
-                else if (seq.consume_if('{')) {
-                    auto& s = *json.get_holder().init_as_object();
-                    bool first = true;
-                    while (true) {
-                        CONSUME_EOF();
-                        if (!first) {
-                            if (!seq.consume_if(',') && seq.current() != '}') {
-                                return JSONError::need_comma_on_object;
-                            }
-                            CONSUME_EOF();
-                        }
-                        if (seq.consume_if('}')) {
-                            break;
-                        }
-                        if (!seq.consume_if('\"')) {
-                            return JSONError::need_key_name;
-                        }
+                    case '\"': {
+                        seq.rptr += 1;
                         size_t be, en;
                         auto e = read_strs(be, en);
                         if (!e) {
                             return e;
                         }
-                        String key;
-                        if (auto e = unescape(key, be, en); !e) {
+                        auto& s = json.get_holder().init_as_string();
+                        if (auto e = unescape(s, be, en); !e) {
                             return e;
                         }
-                        CONSUME_EOF();
-                        if (!seq.consume_if(':')) {
-                            return JSONError::need_colon;
-                        }
-                        CONSUME_EOF();
-                        self_t value;
-                        auto err = parse_impl(seq, value);
-                        if (!err) {
-                            return err;
-                        }
-                        auto res = s.emplace(std::move(key), std::move(value));
-                        if (!get<1>(res)) {
-                            return JSONError::emplace_error;
-                        }
-                        first = false;
+                        break;
                     }
-                }
-                else if (number::is_digit(seq.current()) || seq.current() == '-') {
-                    auto inipos = seq.rptr;
-                    bool sign = seq.current() == '-';
-                    std::int64_t v;
-                    auto e = number::parse_integer(seq, v);
-                    if (seq.current() == '.' || seq.current() == 'e' || seq.current() == 'E') {
-                        double d;
-                        seq.rptr = inipos;
-                        auto e = number::parse_float(seq, d);
-                        if (!e) {
+                    case '[': {
+                        seq.rptr += 1;
+                        auto& s = json.get_holder().init_as_array();
+                        bool first = true;
+                        while (true) {
+                            CONSUME_EOF();
+                            if (!first) {
+                                if (!seq.consume_if(',') && seq.current() != ']') {
+                                    return JSONError::need_comma_on_array;
+                                }
+                                CONSUME_EOF();
+                            }
+                            if (seq.consume_if(']')) {
+                                break;
+                            }
+                            DETECT_EOF();
+                            if constexpr (has_resize<array_t>) {
+                                s.resize(s.size() + 1);
+                                auto e = parse_impl(seq, s.back());
+                                if (!e) {
+                                    return e;
+                                }
+                            }
+                            else {
+                                self_t tmp;
+                                auto e = parse_impl(seq, tmp);
+                                if (!e) {
+                                    return e;
+                                }
+                                s.push_back(std::move(tmp));
+                            }
+                            first = false;
+                        }
+                        break;
+                    }
+                    case '{': {
+                        seq.rptr += 1;
+                        auto& s = json.get_holder().init_as_object();
+                        bool first = true;
+                        while (true) {
+                            CONSUME_EOF();
+                            if (!first) {
+                                if (!seq.consume_if(',') && seq.current() != '}') {
+                                    return JSONError::need_comma_on_object;
+                                }
+                                CONSUME_EOF();
+                            }
+                            if (seq.consume_if('}')) {
+                                break;
+                            }
+                            if (!seq.consume_if('\"')) {
+                                return JSONError::need_key_name;
+                            }
+                            size_t be, en;
+                            auto e = read_strs(be, en);
+                            if (!e) {
+                                return e;
+                            }
+                            String key;
+                            if (auto e = unescape(key, be, en); !e) {
+                                return e;
+                            }
+                            CONSUME_EOF();
+                            if (!seq.consume_if(':')) {
+                                return JSONError::need_colon;
+                            }
+                            CONSUME_EOF();
+                            auto res = s.emplace(std::move(key), self_t{});
+                            if (!get<1>(res)) {
+                                return JSONError::emplace_error;
+                            }
+                            self_t& val = get<1>(*get<0>(res));
+                            auto err = parse_impl(seq, val);
+                            if (!err) {
+                                return err;
+                            }
+                            first = false;
+                        }
+                        break;
+                    }
+                    case '0':
+                        [[fallthrough]];
+                    case '1':
+                        [[fallthrough]];
+                    case '2':
+                        [[fallthrough]];
+                    case '3':
+                        [[fallthrough]];
+                    case '4':
+                        [[fallthrough]];
+                    case '5':
+                        [[fallthrough]];
+                    case '6':
+                        [[fallthrough]];
+                    case '7':
+                        [[fallthrough]];
+                    case '8':
+                        [[fallthrough]];
+                    case '9':
+                        [[fallthrough]];
+                    case '-': {
+                        auto inipos = seq.rptr;
+                        bool sign = seq.current() == '-';
+                        std::int64_t v;
+                        auto e = number::parse_integer(seq, v);
+                        if (seq.current() == '.' || seq.current() == 'e' || seq.current() == 'E') {
+                            double d;
+                            seq.rptr = inipos;
+                            auto e = number::parse_float(seq, d);
+                            if (!e) {
+                                return JSONError::invalid_number;
+                            }
+                            json = d;
+                        }
+                        else if (!sign && e == number::NumError::overflow) {
+                            std::uint64_t u;
+                            seq.rptr = inipos;
+                            auto e = number::parse_integer(seq, u);
+                            if (!e) {
+                                return JSONError::invalid_number;
+                            }
+                            json = u;
+                        }
+                        else if (!e) {
                             return JSONError::invalid_number;
                         }
-                        json = d;
-                    }
-                    else if (!sign && e == number::NumError::overflow) {
-                        std::uint64_t u;
-                        seq.rptr = inipos;
-                        auto e = number::parse_integer(seq, u);
-                        if (!e) {
-                            return JSONError::invalid_number;
+                        else {
+                            json = v;
                         }
-                        json = u;
+                        break;
                     }
-                    else if (!e) {
-                        return JSONError::invalid_number;
-                    }
-                    else {
-                        json = v;
-                    }
+                    default:
+                        return JSONError::not_json;
                 }
-                else {
-                    return JSONError::not_json;
-                }
-
-                return true;
+                return JSONError::none;
             }
 #undef DETECT_EOF
 #undef CONSUME_EOF
