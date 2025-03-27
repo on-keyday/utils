@@ -20,7 +20,10 @@ namespace futils {
     namespace json {
 
         namespace internal {
-
+            template <class T>
+            concept has_resize = requires(T t) {
+                { t.resize(size_t{}) };
+            };
             template <class T, class String, template <class...> class Vec, template <class...> class Object>
             JSONErr parse_impl(Sequencer<T>& seq, JSONBase<String, Vec, Object>& json) {
                 using self_t = JSONBase<String, Vec, Object>;
@@ -76,19 +79,13 @@ namespace futils {
                     if (!e) {
                         return e;
                     }
-                    auto& s = json.get_holder();
-                    s = new String{};
-                    auto ptr = const_cast<String*>(s.as_str());
-                    assert(ptr);
-                    if (auto e = unescape(*ptr, be, en); !e) {
+                    auto& s = *json.get_holder().init_as_string();
+                    if (auto e = unescape(s, be, en); !e) {
                         return e;
                     }
                 }
                 else if (seq.consume_if('[')) {
-                    auto& s = json.get_holder();
-                    s = new array_t{};
-                    auto ptr = const_cast<array_t*>(s.as_arr());
-                    assert(ptr);
+                    auto& s = *json.get_holder().init_as_array();
                     bool first = true;
                     while (true) {
                         CONSUME_EOF();
@@ -102,20 +99,26 @@ namespace futils {
                             break;
                         }
                         DETECT_EOF();
-                        self_t tmp;
-                        auto e = parse_impl(seq, tmp);
-                        if (!e) {
-                            return e;
+                        if constexpr (has_resize<array_t>) {
+                            s.resize(s.size() + 1);
+                            auto e = parse_impl(seq, s.back());
+                            if (!e) {
+                                return e;
+                            }
                         }
-                        ptr->push_back(std::move(tmp));
+                        else {
+                            self_t tmp;
+                            auto e = parse_impl(seq, tmp);
+                            if (!e) {
+                                return e;
+                            }
+                            s.push_back(std::move(tmp));
+                        }
                         first = false;
                     }
                 }
                 else if (seq.consume_if('{')) {
-                    auto& s = json.get_holder();
-                    s = new object_t{};
-                    auto ptr = const_cast<object_t*>(s.as_obj());
-                    assert(ptr);
+                    auto& s = *json.get_holder().init_as_object();
                     bool first = true;
                     while (true) {
                         CONSUME_EOF();
@@ -150,7 +153,7 @@ namespace futils {
                         if (!err) {
                             return err;
                         }
-                        auto res = ptr->emplace(std::move(key), std::move(value));
+                        auto res = s.emplace(std::move(key), std::move(value));
                         if (!get<1>(res)) {
                             return JSONError::emplace_error;
                         }

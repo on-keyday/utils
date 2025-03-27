@@ -13,6 +13,8 @@
 #include <cstddef>
 #include <utility>
 #include <limits>
+#include <memory>
+#include <core/byte.h>
 
 namespace futils {
 
@@ -58,6 +60,7 @@ namespace futils {
         struct JSONBase;
 
         namespace internal {
+
             template <class String, template <class...> class Vec, template <class...> class Object>
             struct JSONHolder {
                 using self_t = JSONBase<String, Vec, Object>;
@@ -66,37 +69,72 @@ namespace futils {
                 using string_t = String;
 
                private:
+                static constexpr size_t storage_size = (std::max)({sizeof(bool), sizeof(std::int64_t), sizeof(std::uint64_t), sizeof(double), sizeof(String), sizeof(object_t), sizeof(array_t)});
+
                 union {
+                    byte storage[storage_size];
                     bool b;
                     std::int64_t i;
                     std::uint64_t u;
                     double f;
-                    String* s;
-                    object_t* o;
-                    array_t* a;
-                    void* p = nullptr;
+                    String s;
+                    object_t o;
+                    array_t a;
                 };
                 JSONKind kind_ = JSONKind::undefined;
 
-                void copy(const JSONHolder& n) {
+                constexpr void move(JSONHolder&& n) {
                     if (kind_ == JSONKind::array) {
-                        a = new array_t(*n.a);
+                        std::construct_at(std::addressof(a), std::move(n.a));
                     }
                     else if (kind_ == JSONKind::object) {
-                        o = new object_t(*n.o);
+                        std::construct_at(std::addressof(o), std::move(n.o));
                     }
                     else if (kind_ == JSONKind::string) {
-                        s = new String(*n.s);
+                        std::construct_at(std::addressof(s), std::move(n.s));
                     }
-                    else {
-                        p = n.p;
+                    else if (kind_ == JSONKind::number_f) {
+                        f = n.f;
+                    }
+                    else if (kind_ == JSONKind::number_i) {
+                        i = n.i;
+                    }
+                    else if (kind_ == JSONKind::number_u) {
+                        u = n.u;
+                    }
+                    else if (kind_ == JSONKind::boolean) {
+                        b = n.b;
+                    }
+                }
+
+                constexpr void copy(const JSONHolder& n) {
+                    if (kind_ == JSONKind::array) {
+                        std::construct_at(std::addressof(a), n.a);
+                    }
+                    else if (kind_ == JSONKind::object) {
+                        std::construct_at(std::addressof(o), n.o);
+                    }
+                    else if (kind_ == JSONKind::string) {
+                        std::construct_at(std::addressof(s), n.s);
+                    }
+                    else if (kind_ == JSONKind::number_f) {
+                        f = n.f;
+                    }
+                    else if (kind_ == JSONKind::number_i) {
+                        i = n.i;
+                    }
+                    else if (kind_ == JSONKind::number_u) {
+                        u = n.u;
+                    }
+                    else if (kind_ == JSONKind::boolean) {
+                        b = n.b;
                     }
                 }
 
                public:
                 constexpr JSONHolder() {}
                 constexpr JSONHolder(std::nullptr_t)
-                    : kind_(JSONKind::null), p(nullptr) {}
+                    : kind_(JSONKind::null) {}
                 constexpr JSONHolder(bool n)
                     : kind_(JSONKind::boolean), b(n) {}
                 constexpr JSONHolder(int n)
@@ -107,90 +145,100 @@ namespace futils {
                     : kind_(JSONKind::number_u), u(n) {}
                 constexpr JSONHolder(double n)
                     : kind_(JSONKind::number_f), f(n) {}
-                JSONHolder(const String& n)
-                    : kind_(JSONKind::string), s(new String(n)) {}
-                JSONHolder(String&& n)
-                    : kind_(JSONKind::string), s(new String(std::move(n))) {}
-                JSONHolder(const object_t& n)
-                    : kind_(JSONKind::object), o(new object_t(n)) {}
-                JSONHolder(object_t&& n)
-                    : kind_(JSONKind::object), o(new object_t(std::move(n))) {}
-                JSONHolder(const array_t& n)
-                    : kind_(JSONKind::array), a(new array_t(n)) {}
-                JSONHolder(array_t&& n)
-                    : kind_(JSONKind::array), a(new array_t(std::move(n))) {}
+                constexpr JSONHolder(const String& n)
+                    : kind_(JSONKind::string), s(n) {}
+                constexpr JSONHolder(String&& n)
+                    : kind_(JSONKind::string), s(std::move(n)) {}
+                constexpr JSONHolder(const object_t& n)
+                    : kind_(JSONKind::object), o(n) {}
+                constexpr JSONHolder(object_t&& n)
+                    : kind_(JSONKind::object), o(std::move(n)) {}
+                constexpr JSONHolder(const array_t& n)
+                    : kind_(JSONKind::array), a(n) {}
+                constexpr JSONHolder(array_t&& n)
+                    : kind_(JSONKind::array), a(std::move(n)) {}
 
-                constexpr JSONHolder(String* n)
-                    : kind_(JSONKind::string), s(n) {
-                    assert(n);
+                constexpr object_t* init_as_object() {
+                    this->destroy();
+                    std::construct_at(std::addressof(o));
+                    kind_ = JSONKind::object;
+                    return std::addressof(o);
                 }
 
-                constexpr JSONHolder(object_t* n)
-                    : kind_(JSONKind::object), o(n) {
-                    assert(n);
+                constexpr array_t* init_as_array() {
+                    this->destroy();
+                    std::construct_at(std::addressof(a));
+                    kind_ = JSONKind::array;
+                    return std::addressof(a);
                 }
 
-                constexpr JSONHolder(array_t* n)
-                    : kind_(JSONKind::array), a(n) {
-                    assert(n);
+                constexpr string_t* init_as_string() {
+                    this->destroy();
+                    std::construct_at(std::addressof(s));
+                    kind_ = JSONKind::string;
+                    return std::addressof(s);
                 }
 
                 constexpr JSONHolder(JSONHolder&& n)
-                    : kind_(n.kind_), p(n.p) {
-                    n.p = nullptr;
-                    n.kind_ = JSONKind::undefined;
+                    : kind_(n.kind_) {
+                    move(std::move(n));
+                    n.destroy();
                 }
 
                 constexpr JSONKind kind() const {
                     return kind_;
                 }
 
-                JSONHolder& operator=(JSONHolder&& n) {
+                constexpr JSONHolder& operator=(JSONHolder&& n) {
                     if (this == &n) {
                         return *this;
                     }
-                    this->~JSONHolder();
+                    this->destroy();
                     kind_ = n.kind_;
-                    p = n.p;
-                    n.p = nullptr;
-                    n.kind_ = JSONKind::undefined;
+                    move(std::move(n));
+                    n.destroy();
                     return *this;
                 }
 
-                JSONHolder(const JSONHolder& n)
+                constexpr JSONHolder(const JSONHolder& n)
                     : kind_(n.kind_) {
                     copy(n);
                 }
 
-                JSONHolder& operator=(const JSONHolder& n) {
+                constexpr JSONHolder& operator=(const JSONHolder& n) {
                     if (this == &n) {
                         return *this;
                     }
-                    this->~JSONHolder();
+                    this->destroy();
                     kind_ = n.kind_;
                     copy(n);
                     return *this;
                 }
 
-                constexpr ~JSONHolder() {
+               private:
+                constexpr void destroy() {
                     if (kind_ == JSONKind::array) {
-                        delete a;
+                        std::destroy_at(std::addressof(a));
                     }
                     else if (kind_ == JSONKind::object) {
-                        delete o;
+                        std::destroy_at(std::addressof(o));
                     }
                     else if (kind_ == JSONKind::string) {
-                        delete s;
+                        std::destroy_at(std::addressof(s));
                     }
-                    p = nullptr;
                     kind_ = JSONKind::undefined;
                 }
 
-                bool is_undef() const {
+               public:
+                constexpr ~JSONHolder() {
+                    destroy();
+                }
+
+                constexpr bool is_undef() const {
                     return kind_ == JSONKind::undefined;
                 }
 
-                bool is_null() const {
+                constexpr bool is_null() const {
                     return kind_ == JSONKind::null;
                 }
 
@@ -215,36 +263,32 @@ namespace futils {
                     return nullptr;
                 }
 
-                const bool* as_bool() const {
+                constexpr const bool* as_bool() const {
                     if (kind_ == JSONKind::boolean) {
                         return &b;
                     }
                     return nullptr;
                 }
 
-                const String* as_str() const {
+                constexpr const String* as_str() const {
                     if (kind_ == JSONKind::string) {
-                        return s;
+                        return std::addressof(s);
                     }
                     return nullptr;
                 }
 
-                const object_t* as_obj() const {
+                constexpr const object_t* as_obj() const {
                     if (kind_ == JSONKind::object) {
-                        return o;
+                        return std::addressof(o);
                     }
                     return nullptr;
                 }
 
-                const array_t* as_arr() const {
+                constexpr const array_t* as_arr() const {
                     if (kind_ == JSONKind::array) {
-                        return a;
+                        return std::addressof(a);
                     }
                     return nullptr;
-                }
-
-                const void* as_rawp() const {
-                    return p;
                 }
             };
 
@@ -265,9 +309,16 @@ namespace futils {
                 else if (a.kind() == JSONKind::number_f) {
                     return *a.as_numf() - *b.as_numf() < std::numeric_limits<double>::epsilon();
                 }
-                else {
-                    return a.as_rawp() == b.as_rawp();
+                else if (a.kind() == JSONKind::number_i) {
+                    return *a.as_numi() == *b.as_numi();
                 }
+                else if (a.kind() == JSONKind::number_u) {
+                    return *a.as_numu() == *b.as_numu();
+                }
+                else if (a.kind() == JSONKind::boolean) {
+                    return *a.as_bool() == *b.as_bool();
+                }
+                return true;
             }
 
         }  // namespace internal

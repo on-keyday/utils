@@ -80,26 +80,26 @@ namespace futils {
                 : obj(u) {}
             constexpr JSONBase(double f)
                 : obj(f) {}
-            JSONBase(const String& s)
+            constexpr JSONBase(const String& s)
                 : obj(s) {}
-            JSONBase(String&& s)
+            constexpr JSONBase(String&& s)
                 : obj(std::move(s)) {}
-            JSONBase(const char_t* p) {
+            constexpr JSONBase(const char_t* p) {
                 if (!p) {
                     obj = nullptr;
                     return;
                 }
                 obj = String(p);
             }
-            JSONBase(const object_t& o)
+            constexpr JSONBase(const object_t& o)
                 : obj(o) {}
-            JSONBase(object_t&& o)
+            constexpr JSONBase(object_t&& o)
                 : obj(std::move(o)) {}
-            JSONBase(const array_t& a)
+            constexpr JSONBase(const array_t& a)
                 : obj(a) {}
-            JSONBase(array_t&& a)
+            constexpr JSONBase(array_t&& a)
                 : obj(std::move(a)) {}
-            JSONBase(const JSONBase& o)
+            constexpr JSONBase(const JSONBase& o)
                 : obj(o.obj) {}
             constexpr JSONBase(JSONBase&& o)
                 : obj(std::move(o.obj)) {}
