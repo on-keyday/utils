@@ -53,24 +53,24 @@ namespace futils::low {
         // set r8 as arg
         // and call Stack::call
         asm volatile(
-            "leaq .L.SUSPEND(%%rip), %%r9\n"
+            "leaq .L.SUSPEND_%=(%%rip), %%r9\n"
             "mov %%r9, 16(%%r8)\n"
             "mov %%r8, %%rcx\n"
             "call *%0\n"
             "ud2\n"  // this is not return normally
-            ".L.SUSPEND:\n"
+            ".L.SUSPEND_%=:\n"
             : : "r"(Stack::call) : "memory");
 
 #elif defined(FUTILS_PLATFORM_LINUX)
         // set r8 as arg
         // and call Stack::call
         asm volatile(
-            "leaq .L.SUSPEND(%%rip), %%r9\n"
+            "leaq .L.SUSPEND%=(%%rip), %%r9\n"
             "mov %%r9, 16(%%r8)\n"
             "mov %%r8, %%rdi\n"
             "callq *%0\n"
             "ud2\n"  // this is not return normally
-            ".L.SUSPEND:\n"
+            ".L.SUSPEND%=:\n"
             : : "r"(Stack::call) : "memory");
 #else
 #error "not implemented"
@@ -102,10 +102,10 @@ namespace futils::low {
         asm volatile(
             "mov %0, %%rax\n"
             "mov 16(%%rax), %%r9\n"
-            "leaq .L.RESUME(%%rip), %%r8\n"
+            "leaq .L.RESUME_%=(%%rip), %%r8\n"
             "mov %%r8, 16(%%rax)\n"
             "jmp *%1\n"
-            ".L.RESUME:\n"
+            ".L.RESUME_%=:\n"
             "nop\n"
             : : "r"(this), "r"(this->resume_ptr) : "memory");
         static_assert(offsetof(Stack, suspended.rsp) == 24);
@@ -140,10 +140,10 @@ namespace futils::low {
         asm volatile(
             "mov %0, %%rax\n"
             "mov 16(%%rax), %%r9\n"
-            "leaq .L.SUSPEND2(%%rip), %%r8\n"
+            "leaq SUSPEND2_%=(%%rip), %%r8\n"
             "mov %%r8, 16(%%rax)\n"
             "jmp *%1\n"
-            ".L.SUSPEND2:\n"
+            "SUSPEND2_%=:\n"
             "nop\n"
             : : "r"(this), "r"(this->resume_ptr));
         static_assert(offsetof(Stack, origin.rsp) == 0);

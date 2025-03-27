@@ -104,12 +104,18 @@ namespace futils {
             constexpr JSONBase(JSONBase&& o)
                 : obj(std::move(o.obj)) {}
 
-            JSONBase& operator=(const JSONBase& in) {
+            constexpr JSONBase& operator=(const JSONBase& in) {
+                if (this == &in) {
+                    return *this;
+                }
                 obj = in.obj;
                 return *this;
             }
 
-            JSONBase& operator=(JSONBase&& in) {
+            constexpr JSONBase& operator=(JSONBase&& in) {
+                if (this == &in) {
+                    return *this;
+                }
                 obj = std::move(in.obj);
                 return *this;
             }
@@ -190,7 +196,7 @@ namespace futils {
 
             self_t& operator[](const String& n) {
                 if (obj.is_undef()) {
-                    obj = new object_t{};
+                    obj.init_as_object();
                 }
                 const char* err = nullptr;
                 auto res = at(n, &err);
@@ -210,7 +216,7 @@ namespace futils {
 
             self_t& operator[](size_t n) {
                 if (n == 0 && obj.is_undef()) {
-                    obj = new array_t{};
+                    obj.init_as_array();
                 }
                 const char* err = nullptr;
                 auto res = at(n, &err);
@@ -265,7 +271,7 @@ namespace futils {
             template <class T>
             bool push_back(T&& n) {
                 if (obj.is_undef()) {
-                    obj = new array_t{};
+                    obj.init_as_array();
                 }
                 auto a = const_cast<array_t*>(obj.as_arr());
                 if (!a) {
@@ -276,11 +282,11 @@ namespace futils {
             }
 
             void init_obj() {
-                obj = new object_t{};
+                obj.init_as_object();
             }
 
             void init_array() {
-                obj = new array_t{};
+                obj.init_as_array();
             }
 
             constexpr JSONKind kind() const {
