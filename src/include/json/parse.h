@@ -228,8 +228,6 @@ namespace futils {
                         }
                         break;
                     }
-                    default:
-                        return JSONError::not_json;
                 }
                 return JSONError::none;
             }

@@ -69,7 +69,29 @@ namespace futils {
                 using string_t = String;
 
                private:
-                static constexpr size_t storage_size = (std::max)({sizeof(bool), sizeof(std::int64_t), sizeof(std::uint64_t), sizeof(double), sizeof(String), sizeof(object_t), sizeof(array_t)});
+                static constexpr size_t storage_size =
+                    [] {
+                        size_t size = sizeof(bool);
+                        if (size < sizeof(std::int64_t)) {
+                            size = sizeof(std::int64_t);
+                        }
+                        if (size < sizeof(std::uint64_t)) {
+                            size = sizeof(std::uint64_t);
+                        }
+                        if (size < sizeof(double)) {
+                            size = sizeof(double);
+                        }
+                        if (size < sizeof(String)) {
+                            size = sizeof(String);
+                        }
+                        if (size < sizeof(object_t)) {
+                            size = sizeof(object_t);
+                        }
+                        if (size < sizeof(array_t)) {
+                            size = sizeof(array_t);
+                        }
+                        return size;
+                    };
 
                 union {
                     byte storage[storage_size];
