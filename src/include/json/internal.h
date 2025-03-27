@@ -91,7 +91,7 @@ namespace futils {
                             size = sizeof(array_t);
                         }
                         return size;
-                    };
+                    }();
 
                 union {
                     byte storage[storage_size];
