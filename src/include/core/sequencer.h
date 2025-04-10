@@ -24,10 +24,13 @@ namespace futils {
         constexpr Sequencer(U&& args)
             : buf(std::forward<U>(args)) {}
 
-        template <class Ptr>
-            requires std::is_pointer_v<Ptr>
-        constexpr Sequencer(Ptr ptr, size_t size)
+        constexpr Sequencer(T ptr, size_t size)
+            requires std::is_pointer_v<T>
             : buf(ptr, size) {}
+
+        constexpr Sequencer(T begin, T end)
+            requires std::is_pointer_v<T>
+            : buf(begin, end - begin) {}
 
         constexpr Sequencer(Sequencer&& in)
             : buf(std::move(in.buf)), rptr(in.rptr) {}

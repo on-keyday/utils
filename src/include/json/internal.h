@@ -181,6 +181,9 @@ namespace futils {
                     : kind_(JSONKind::array), a(std::move(n)) {}
 
                 constexpr object_t& init_as_object() {
+                    if (kind_ == JSONKind::object) {
+                        return o;
+                    }
                     this->destroy();
                     std::construct_at(std::addressof(o));
                     kind_ = JSONKind::object;
@@ -188,6 +191,9 @@ namespace futils {
                 }
 
                 constexpr array_t& init_as_array() {
+                    if (kind_ == JSONKind::array) {
+                        return a;
+                    }
                     this->destroy();
                     std::construct_at(std::addressof(a));
                     kind_ = JSONKind::array;
@@ -195,6 +201,9 @@ namespace futils {
                 }
 
                 constexpr string_t& init_as_string() {
+                    if (kind_ == JSONKind::string) {
+                        return s;
+                    }
                     this->destroy();
                     std::construct_at(std::addressof(s));
                     kind_ = JSONKind::string;

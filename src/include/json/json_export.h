@@ -29,13 +29,13 @@ namespace futils {
         extern
 #endif
             template futils_DLL_EXPORT JSON
-            parse<JSON, view::CharVec<const char>>(view::CharVec<const char>&&, bool);
+            parse<JSON, view::CharVec<const char>, EmptyCustomCallback>(view::CharVec<const char>&&, bool, EmptyCustomCallback&&);
 
 #if !defined(FUTILS_JSON_NO_EXTERN_TEMPLATE)
         extern
 #endif
             template futils_DLL_EXPORT OrderedJSON
-            parse<OrderedJSON, view::CharVec<const char>>(view::CharVec<const char>&&, bool);
+            parse<OrderedJSON, view::CharVec<const char>, EmptyCustomCallback>(view::CharVec<const char>&&, bool, EmptyCustomCallback&&);
     }  // namespace json
 
 }  // namespace futils

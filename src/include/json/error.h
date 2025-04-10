@@ -26,6 +26,7 @@ namespace futils {
             not_json,
             not_eof,
             invalid_value,
+            invalid_key_name,
         };
 
         using JSONErr = wrap::EnumWrap<JSONError, JSONError::none, JSONError::unknown>;

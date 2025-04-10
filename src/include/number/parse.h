@@ -27,6 +27,7 @@ namespace futils {
             struct PushBackParserInt {
                 T result = 0;
                 bool overflow = false;
+                bool minus = false;
                 int radix = 10;
 
                 template <class C>
@@ -43,7 +44,34 @@ namespace futils {
                         result *= radix;
                     }
                     auto c = number_transform[int(in)];
+                    if (c < 0 || c >= radix) {
+                        overflow = true;
+                        return;
+                    }
                     result += c;
+                }
+
+                constexpr void set_radix_sign(int r, bool m) {
+                    radix = r;
+                    minus = m;
+                }
+
+                constexpr bool is_overflow() const {
+                    return overflow;
+                }
+
+                constexpr bool is_signed() const {
+                    return std::is_signed_v<T>;
+                }
+
+                constexpr T construct() const {
+                    if (overflow) {
+                        return 0;
+                    }
+                    if (minus) {
+                        return -result;
+                    }
+                    return result;
                 }
             };
 
@@ -59,6 +87,7 @@ namespace futils {
                 bool afterdot = false;
                 bool has_exp = false;
                 bool minus_exp = false;
+                bool minus = false;
                 template <class C>
                 constexpr void push_back(C in) {
                     if (in == '.') {
@@ -93,6 +122,44 @@ namespace futils {
                         exp *= 10;
                     }
                 }
+
+                constexpr bool is_overflow() const {
+                    return false;
+                }
+
+                constexpr void set_radix_sign(int r, bool m) {
+                    radix = r;
+                    minus = m;
+                }
+
+                constexpr bool is_signed() const {
+                    return true;
+                }
+
+                constexpr T construct() const {
+                    auto result = result1 / radix + result2 / divrad + plus;
+                    if (has_exp) {
+                        result = internal::spow(result, exp / 10);
+                        if (minus_exp) {
+                            result = 1 / result;
+                        }
+                    }
+                    if (minus) {
+                        result = -result;
+                    }
+                    return result;
+                }
+            };
+
+            template <class P1, class P2>
+            struct MultiParser {
+                P1 p1;
+                P2 p2;
+                template <class C>
+                constexpr void push_back(C in) {
+                    p1.push_back(in);
+                    p2.push_back(in);
+                }
             };
 
             struct ReadConfig {
@@ -104,6 +171,7 @@ namespace futils {
                 static constexpr size_t offset = 0;
                 static constexpr bool expect_eof = true;
                 static constexpr bool allow_zero_prefixed = true;
+                static constexpr bool allow_plus_sign = true;
             };
 
         }  // namespace internal
@@ -122,6 +190,7 @@ namespace futils {
             size_t offset = 0;
             bool expect_eof = true;
             bool allow_zero_prefixed = true;
+            bool allow_plus_sign = true;
         };
 
         template <class Ignore>
@@ -136,6 +205,7 @@ namespace futils {
             size_t offset = 0;
             static constexpr bool expect_eof = true;
             static constexpr bool allow_zero_prefixed = true;
+            static constexpr bool allow_plus_sign = true;
         };
 
         template <class Header, class T, class Config = internal::ReadConfig>
@@ -251,29 +321,60 @@ namespace futils {
             return is_number(v, radix, nullptr, config);
         }
 
-        template <class T, class U, class Config = internal::ReadConfig>
-        constexpr NumErr parse_integer(Sequencer<T>& seq, U& result, int radix = 10, Config&& config = Config{}) {
-            internal::PushBackParserInt<U> parser;
-            parser.radix = radix;
+        template <class P>
+        concept Parser = requires(P p) {
+            { p.push_back('0') };
+            { p.is_overflow() } -> std::convertible_to<bool>;
+            { p.construct() };
+            { p.set_radix_sign(10, false) };
+            { p.is_signed() } -> std::convertible_to<bool>;
+        };
+
+        template <class T, Parser P, class Config = internal::ReadConfig>
+        constexpr NumErr parse_with_parser(Sequencer<T>& seq, P& parser, int radix = 10, bool* is_float = nullptr, Config&& config = Config{}) {
             bool minus = false;
-            if (seq.current() == '+') {
+            if (config.allow_plus_sign && seq.current() == '+') {
                 seq.consume();
             }
-            else if (std::is_signed_v<U> && seq.current() == '-') {
+            else if (parser.is_signed() && seq.current() == '-') {
                 seq.consume();
                 minus = true;
             }
-            auto err = read_number(parser, seq, radix, nullptr, config);
+            parser.set_radix_sign(radix, minus);
+            auto err = read_number(parser, seq, radix, is_float, config);
             if (!err) {
                 return err;
             }
-            if (parser.overflow) {
+            if (parser.is_overflow()) {
                 return NumError::overflow;
             }
-            result = parser.result;
-            if (minus) {
-                result = -result;
+            return NumError::none;
+        }
+
+        template <class String, Parser P, class Config = internal::ReadConfig>
+        constexpr NumErr parse_with_parser(String&& v, P& parser, int radix = 10, bool* is_float = nullptr, Config config = Config{}) {
+            Sequencer<buffer_t<String&>> seq(v);
+            seq.seek(config.offset);
+            auto e = parse_integer(seq, parser, radix, config);
+            if (!e) {
+                return e;
             }
+            if (config.expect_eof) {
+                if (!seq.eos()) {
+                    return NumError::not_eof;
+                }
+            }
+            return true;
+        }
+
+        template <class T, class U, class Config = internal::ReadConfig>
+        constexpr NumErr parse_integer(Sequencer<T>& seq, U& result, int radix = 10, Config&& config = Config{}) {
+            internal::PushBackParserInt<U> parser;
+            auto err = parse_with_parser(seq, parser, radix, nullptr, config);
+            if (!err) {
+                return err;
+            }
+            result = parser.construct();
             return true;
         }
 
@@ -302,31 +403,13 @@ namespace futils {
             if (radix != 10 && radix != 16) {
                 return NumError::invalid;
             }
-            bool minus = false;
-            if (seq.current() == '+') {
-                seq.consume();
-            }
-            else if (std::is_signed_v<U> && seq.current() == '-') {
-                seq.consume();
-                minus = true;
-            }
             internal::PushBackParserFloat<U> parser;
-            parser.radix = radix;
-            bool is_flaot = false;
-            auto e = read_number(parser, seq, radix, &is_flaot, config);
+            bool is_float = false;
+            auto e = parse_with_parser(seq, parser, radix, &is_float, config);
             if (!e) {
                 return e;
             }
-            result = parser.result1 / radix + parser.result2 / parser.divrad + parser.plus;
-            if (parser.has_exp) {
-                result = internal::spow(result, parser.exp / 10);
-                if (parser.minus_exp) {
-                    result = 1 / result;
-                }
-            }
-            if (minus) {
-                result = -result;
-            }
+            result = parser.construct();
             return true;
         }
 

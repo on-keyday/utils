@@ -43,8 +43,8 @@ namespace futils {
             using char_t = std::remove_cvref_t<decltype(String{}[0])>;
 
            private:
-            template <class T, class Str, template <class...> class V, template <class...> class O>
-            friend JSONErr internal::parse_impl(Sequencer<T>& seq, JSONBase<Str, V, O>& json);
+            template <class T, class Str, template <class...> class V, template <class...> class O, class C>
+            friend JSONErr internal::parse_impl(Sequencer<T>& seq, JSONBase<Str, V, O>& json, C&& custom_cb);
             template <class S, class Str, template <class...> class V, template <class...> class O>
             friend JSONErr internal::to_string_detail(S& out, const JSONBase<Str, V, O>& json, FmtFlag flag, IntTraits traits);
 
@@ -56,6 +56,7 @@ namespace futils {
                 throw std::invalid_argument(err);
             }
 
+           public:
             constexpr const holder_t& get_holder() const {
                 return obj;
             }
@@ -63,8 +64,6 @@ namespace futils {
             constexpr holder_t& get_holder() {
                 return obj;
             }
-
-           public:
             constexpr JSONBase() {}
             constexpr JSONBase(std::nullptr_t)
                 : obj(nullptr) {}

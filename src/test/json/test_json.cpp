@@ -11,6 +11,7 @@
 #include "../../include/json/parse.h"
 #include "../../include/json/to_string.h"
 #include "../../include/wrap/cout.h"
+#include <json/parser.h>
 
 void test_json() {
     namespace utw = futils::wrap;
