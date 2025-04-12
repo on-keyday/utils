@@ -37,6 +37,11 @@ namespace futils::json {
             new (&stack[size_++]) JSON(std::move(v));
         }
 
+        constexpr void push_back(const JSON& v) {
+            assert(size_ < n);
+            new (&stack[size_++]) JSON(v);
+        }
+
         constexpr void pop_back() {
             assert(size_ > 0);
             stack[--size_].~JSON();
