@@ -59,6 +59,10 @@ namespace futils::json {
         constexpr size_t max_size() const {
             return n;
         }
+
+        constexpr bool empty() const {
+            return size_ == 0;
+        }
     };
 
     struct StackObserver {
