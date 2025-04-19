@@ -42,12 +42,21 @@ namespace futils::comb2::composite {
         return quote & *(not_(end_cond) & inner) & quote;
     }
 
-    constexpr auto c_str = make_string(lit('"'), lit('"') | eol, strlit);
-    constexpr auto char_str = make_string(lit('\''), lit('\'') | eol, strlit);
-    constexpr auto js_regex_str = make_string(lit('/'), lit('/') | eol, strlit);
-    constexpr auto go_raw_str = make_string(lit('`'), lit('`'), uany);
-    constexpr auto py_doc_str_double = make_string(lit("\"\"\""), lit("\"\"\""), uany);
-    constexpr auto py_doc_str_single = make_string(lit("'''"), lit("'''"), uany);
+    constexpr auto make_partial_string(auto quote, auto end_cond, auto inner) {
+        return quote & *(not_(end_cond) & inner) & peek(eol | eos);
+    }
+
+#define STRONG_WEAK_PARTIAL(base_name, quote, end_cond, inner)                  \
+    constexpr auto base_name = make_string(quote, end_cond, inner);             \
+    constexpr auto base_name##_weak = make_weak_string(quote, end_cond, inner); \
+    constexpr auto base_name##_partial = make_partial_string(quote, end_cond, inner);
+
+    STRONG_WEAK_PARTIAL(c_str, lit('"'), lit('"') | eol, strlit);
+    STRONG_WEAK_PARTIAL(char_str, lit('\''), lit('\'') | eol, strlit);
+    STRONG_WEAK_PARTIAL(js_regex_str, lit('/'), lit('/') | eol, strlit);
+    STRONG_WEAK_PARTIAL(go_raw_str, lit('`'), lit('`'), uany);
+    STRONG_WEAK_PARTIAL(py_doc_str_double, lit("\"\"\""), lit("\"\"\""), uany);
+    STRONG_WEAK_PARTIAL(py_doc_str_single, lit("'''"), lit("'''"), uany);
 
     constexpr auto inner_cpp_raw_str = proxy([](auto&& seq, auto&& ctx, auto&&) {
         const auto b = seq.rptr;
@@ -93,6 +102,14 @@ namespace futils::comb2::composite {
         }
 
         static_assert(check_string());
+
+        constexpr auto check_partial() {
+            auto seq = make_ref_seq(R"("partial_string
+            )");
+            return c_str_partial(seq, comb2::test::TestContext{}, 0) == Status::match;
+        }
+
+        static_assert(check_partial());
     }  // namespace test
 
 }  // namespace futils::comb2::composite
