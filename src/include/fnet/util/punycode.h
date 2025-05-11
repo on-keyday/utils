@@ -197,7 +197,7 @@ namespace futils {
         constexpr number::NumErr encode(In&& in, Out& result) {
             utf::U32View<buffer_t<In&>> view(in);
             auto seq = make_ref_seq(view);
-            return encode(seq, result);
+            return encode<String>(seq, result);
         }
 
         template <class U32String = wrap::u32string, class Out, class T>
