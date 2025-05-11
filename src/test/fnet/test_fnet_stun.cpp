@@ -11,6 +11,7 @@
 #include <string>
 #include <thread>
 #include <fnet/connect.h>
+#include <cstring>
 
 void test_fnet_stun_run(futils::binary::writer& w, futils::fnet::ip::Version version) {
     using namespace futils::fnet;
