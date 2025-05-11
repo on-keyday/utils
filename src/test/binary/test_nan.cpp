@@ -8,6 +8,7 @@
 #include <binary/float.h>
 #include <cfenv>
 #include <cfloat>
+#include <cmath>
 
 void nan() {
     constexpr futils::binary::SingleFloat f1 = 2143289344u;               // qNAN
