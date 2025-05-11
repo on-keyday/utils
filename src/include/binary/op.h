@@ -9,6 +9,8 @@
 #pragma once
 #include <type_traits>
 #include <number/array.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace futils::binary {
     template <class T = unsigned int>
