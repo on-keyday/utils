@@ -10,6 +10,7 @@
 #include <platform/windows/runtime_function.h>
 #include <string>
 #include <cstdio>
+#include <cstring>
 
 struct Destructor {
     ~Destructor() {
