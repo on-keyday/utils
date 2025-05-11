@@ -221,7 +221,11 @@ int server_main(Flags& flag, futils::cmdline::option::Context& ctx) {
         log(addr ? addr->to_string<std::string>(true, true) : "<no address>", " ",
             err.error());
     });
-    s->set_max_and_active(std::thread::hardware_concurrency() - 1, 5);
+    auto max_thread = std::thread::hardware_concurrency() - 1;
+    if (max_thread < 5) {
+        max_thread = 5;
+    }
+    s->set_max_and_active(max_thread, 5);
     s->set_reduce_skip(10);
     constexpr auto uninit = futils::fnet::error::Error("not initialized", futils::fnet::error::Category::app);
     futils::fnet::expected<std::pair<futils::fnet::Socket, futils::fnet::SockAddr>>
