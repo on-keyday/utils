@@ -441,6 +441,9 @@ else()
 message(STATUS "LLVM not found")
 endif()
 
+if(UNIX)
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+endif()
 
 
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY true)
