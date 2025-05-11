@@ -39,7 +39,7 @@ else()
   set(THREADS_PREFER_PTHREAD_FLAG ON)
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=$ENV{FUTILS_STDLIB}")
     set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
     add_compile_options("-fconstexpr-steps=10000000")
 
