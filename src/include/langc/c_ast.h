@@ -83,7 +83,7 @@ namespace futils::langc {
             Idents* belong = nullptr;
             Callee* callee = nullptr;
 
-            constexpr Ident()
+            Ident()
                 : Expr(ObjectType::ident) {}
         };
 
