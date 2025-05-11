@@ -314,7 +314,7 @@ elseif(LINUX)
   )
   target_compile_definitions(fnet PRIVATE _DEBUG=1)
 else()
-message(WARNING "fnet: unknown platform")
+message(WARNING "fnet: unknown platform ${CMAKE_SYSTEM_NAME}")
 endif()
 
 # fnetserv
