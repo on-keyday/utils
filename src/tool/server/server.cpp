@@ -21,7 +21,6 @@
 #include <fnet/debug.h>
 #include <env/env_sys.h>
 #include <chrono>
-#include <format>
 #include <timer/clock.h>
 #include <timer/to_string.h>
 #include "flags.h"
