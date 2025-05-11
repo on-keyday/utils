@@ -2,7 +2,7 @@
 #    Copyright (c) 2021-2025 on-keyday (https://github.com/on-keyday)
 #    Released under the MIT license
 #    https://opensource.org/licenses/mit-license.php
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.22)
 project(futils)
 include_directories("src/include")
 
