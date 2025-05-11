@@ -302,19 +302,12 @@ target_sources(fnet PRIVATE
   "src/lib/fnet/io_event.cpp"
 )
 
-message(STATUS "Debugging platform variables:")
-message(STATUS "  WIN32 = ${WIN32}")
-message(STATUS "  UNIX = ${UNIX}")       
-message(STATUS "  LINUX = ${LINUX}")   
-message(STATUS "  CMAKE_SYSTEM_NAME = ${CMAKE_SYSTEM_NAME}") 
-message(STATUS "--------------------------")
-
 
 if(WIN32)
   target_sources(fnet PRIVATE
     "src/lib/fnet/winsock2.cpp"
   )
-elseif(LINUX)
+elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   target_sources(fnet PRIVATE
     "src/lib/fnet/epoll2.cpp"
   )
