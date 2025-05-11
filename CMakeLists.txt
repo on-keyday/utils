@@ -313,6 +313,8 @@ elseif(LINUX)
     "src/lib/fnet/epoll2.cpp"
   )
   target_compile_definitions(fnet PRIVATE _DEBUG=1)
+else()
+message(WARNING "fnet: unknown platform")
 endif()
 
 # fnetserv
