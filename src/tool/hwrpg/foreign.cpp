@@ -18,6 +18,7 @@
 #define FOREIGN_LIBRARY_UNSUPPORTED
 #endif
 #include "foreign.h"
+#include <cstring>
 
 namespace foreign {
     using foreign_func = void (*)(ForeignCallback*);
