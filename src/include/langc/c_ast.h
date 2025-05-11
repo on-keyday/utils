@@ -268,7 +268,7 @@ namespace futils::langc {
         }
 
         struct VoidType : Type {
-            constexpr VoidType()
+            VoidType()
                 : Type(ObjectType::void_type) {}
         };
 
@@ -278,20 +278,20 @@ namespace futils::langc {
 
         struct Stmt : Object {
            protected:
-            constexpr Stmt(ObjectType t)
+            Stmt(ObjectType t)
                 : Object(t) {}
         };
 
         struct Control : Stmt {
            protected:
-            constexpr Control(ObjectType t)
+            Control(ObjectType t)
                 : Stmt(t) {}
         };
 
         struct Return : Control {
             std::unique_ptr<Expr> value;
 
-            constexpr Return()
+            Return()
                 : Control(ObjectType::return_) {
             }
         };
@@ -300,7 +300,7 @@ namespace futils::langc {
             std::unique_ptr<Expr> cond;
             std::unique_ptr<Object> then;
             std::unique_ptr<Object> els_;
-            constexpr IfStmt()
+            IfStmt()
                 : Control(ObjectType::if_) {}
         };
 
@@ -308,7 +308,7 @@ namespace futils::langc {
             std::unique_ptr<Expr> cond;
             std::unique_ptr<Object> body;
 
-            constexpr WhileStmt()
+            WhileStmt()
                 : Control(ObjectType::while_) {}
         };
 
@@ -318,7 +318,7 @@ namespace futils::langc {
             std::unique_ptr<Expr> cont;
             std::unique_ptr<Object> body;
 
-            constexpr ForStmt()
+            ForStmt()
                 : Control(ObjectType::for_) {}
         };
 
@@ -326,7 +326,7 @@ namespace futils::langc {
             std::vector<std::unique_ptr<Object>> objects;
             Pos end_pos;
 
-            constexpr Block()
+            Block()
                 : Control(ObjectType::block) {}
         };
 
