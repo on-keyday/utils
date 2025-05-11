@@ -42,7 +42,7 @@ C_COMPILER=$FUTILS_C_COMPILER
 fi
 
 # for linux, override standard library config
-STD_LIB_CONFIG=libc
+STD_LIB_CONFIG=libc++
 if [ $FUTILS_STD_LIB_CONFIG ]; then
 STD_LIB_CONFIG=$FUTILS_STD_LIB_CONFIG
 fi
