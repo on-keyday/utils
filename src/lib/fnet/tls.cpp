@@ -12,6 +12,7 @@
 #include <fnet/dll/glheap.h>
 #include <cstring>
 #include <fnet/tls/liberr.h>
+#include <limits>
 
 namespace futils {
 
