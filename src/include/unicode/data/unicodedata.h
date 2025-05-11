@@ -13,6 +13,7 @@
 #include <map>
 #include <vector>
 #include "../../strutil/strutil.h"
+#include <binary/float.h>
 
 namespace futils {
     namespace unicode::data {
@@ -73,7 +74,7 @@ namespace futils {
 
             double num() const {
                 double ret = 0;
-                if (!flag) return NAN;
+                if (!flag) return binary::quiet_nan<double>.to_float();
                 if (flag & flags::large_num) {
                     ret = (double)v3_L;
                 }
@@ -193,5 +194,5 @@ namespace futils {
             }
 
         }  // namespace internal
-    }      // namespace unicode::data
+    }  // namespace unicode::data
 }  // namespace futils
