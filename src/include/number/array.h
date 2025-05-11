@@ -8,6 +8,7 @@
 
 // array -  easy array class
 #pragma once
+#include <cstddef>
 
 namespace futils {
     namespace number {
