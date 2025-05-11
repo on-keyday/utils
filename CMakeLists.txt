@@ -40,7 +40,9 @@ else()
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=$ENV{FUTILS_STDLIB}")
-    set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
+    if("$ENV{FUTILS_STDLIB}" STREQUAL "libc++")
+      set(CMAKE_EXE_LINKER_FLAGS "-lc++abi")
+    endif()
     add_compile_options("-fconstexpr-steps=10000000")
 
     if(WASI_SDK_PREFIX)
