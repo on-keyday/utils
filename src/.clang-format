@@ -6,6 +6,8 @@ ColumnLimit: 0
 IndentWidth: 4
 NamespaceIndentation: All
 AllowShortFunctionsOnASingleLine: Empty
+DerivePointerAlignment: false
+PointerAlignment: Left
 BraceWrapping:
     AfterFunction: false
     BeforeElse:    true
@@ -19,4 +21,4 @@ BraceWrapping:
     BeforeCatch: false
     BeforeLambdaBody: false
     BeforeWhile: false
-RequiresExpressionIndentationKind: OuterScope
+RequiresExpressionIndentation: OuterScope

@@ -803,11 +803,14 @@ namespace futils::error {
     struct ErrList {
         Err err;
         Err before;
+        char sep = ',';
 
         constexpr void error(auto&& pb) {
             if (before) {
                 before.error(pb);
-                pb.push_back(',');
+                if (sep != 0) {
+                    pb.push_back(sep);
+                }
             }
             err.error(pb);
         }
