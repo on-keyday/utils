@@ -617,12 +617,14 @@ namespace futils::error {
         template <class A, class B, class C, class F, class R>
             requires(!std::is_same_v<Error, Error<A, B, C, F, R>>)
         constexpr Error(const Error<A, B, C, F, R>& other) {
+            static_assert(sizeof(Error) == sizeof(Error<A, B, C, F, R>), "Error must have same size as Error<A, B, C, F, R>");
             copy_data(other);
         }
 
         template <class A, class B, class C, class F, class R>
             requires(!std::is_same_v<Error, Error<A, B, C, F, R>>)
         constexpr Error(Error<A, B, C, F, R>&& other) {
+            static_assert(sizeof(Error) == sizeof(Error<A, B, C, F, R>), "Error must have same size as Error<A, B, C, F, R>");
             move_data(std::move(other));
         }
 
