@@ -742,6 +742,36 @@ namespace futils::error {
             return const_cast<const T*>(const_cast<Error*>(this)->template as<T>());
         }
 
+        // unwrap_as() is like errors.As() but unwraps the error until it finds the T type.
+        // returns (n + 1)th T type in the error chain.
+        template <class T>
+        constexpr T* unwrap_as(size_t n = 0) {
+            auto p = as<T>();
+            if (p) {
+                if (n == 0) {
+                    return p;
+                }
+                n--;
+            }
+            Error e = unwrap();
+            while (e.has_error() && n > 0) {
+                p = e.as<T>();
+                if (p) {
+                    if (n == 0) {
+                        return p;
+                    }
+                    n--;
+                }
+                e = e.unwrap();
+            }
+            return nullptr;
+        }
+
+        template <class T>
+        constexpr const T* unwrap_as(size_t n = 0) const {
+            return const_cast<const T*>(const_cast<Error*>(this)->unwrap_as<T>(n));
+        }
+
         constexpr void* unsafe_ptr() {
             if (type_ != ErrorType::ptr) {
                 return nullptr;
