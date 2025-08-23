@@ -30,7 +30,8 @@ namespace futils {
                 OptParser parser;
                 wrap::string help;
                 wrap::string argdesc;
-                OptMode mode;
+                OptMode mode{};
+                const char* type = nullptr;
             };
 
             bool make_cvtvec(auto& option, auto& mainname, auto& desc, auto& cvtvec) {
@@ -53,7 +54,7 @@ namespace futils {
                 wrap::map<wrap::string, wrap::shared_ptr<Option>> desc;
                 wrap::vector<wrap::shared_ptr<Option>> list;
 
-                wrap::shared_ptr<Option> set(auto& option, OptParser parser, auto&& help, auto&& argdesc, OptMode mode) {
+                wrap::shared_ptr<Option> set(auto& option, OptParser parser, auto&& help, auto&& argdesc, OptMode mode, const char* type) {
                     wrap::string mainname;
                     wrap::vector<wrap::string> cvtvec;
                     if (!make_cvtvec(option, mainname, desc, cvtvec)) {
@@ -66,6 +67,7 @@ namespace futils {
                     opt->help = utf::convert<wrap::string>(help);
                     opt->argdesc = utf::convert<wrap::string>(argdesc);
                     opt->mode = mode;
+                    opt->type = type;
                     desc[opt->mainname] = opt;
                     for (size_t i = 0; i < opt->aliases.size(); i++) {
                         desc[opt->aliases[i]] = opt;
@@ -109,8 +111,7 @@ namespace futils {
                     auto it = find(name);
                     if (!it.empty()) {
                         auto d = it.begin();
-                        for (size_t i = 0; i < index && d != it.end(); i++, d++)
-                            ;
+                        for (size_t i = 0; i < index && d != it.end(); i++, d++);
                         if (d != it.end()) {
                             return &*d;
                         }
@@ -131,8 +132,7 @@ namespace futils {
                     auto it = find(name);
                     if (!it.empty()) {
                         auto d = it.begin();
-                        for (size_t i = 0; i < index && d != it.end(); i++, d++)
-                            ;
+                        for (size_t i = 0; i < index && d != it.end(); i++, d++);
                         if (d != it.end()) {
                             Result& place = *d;
                             auto ptr = place.value.get_ptr<T>();
@@ -174,5 +174,5 @@ namespace futils {
             };
 
         }  // namespace option
-    }      // namespace cmdline
+    }  // namespace cmdline
 }  // namespace futils

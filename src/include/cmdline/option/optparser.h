@@ -12,10 +12,9 @@
 #include "../../helper/deref.h"
 #include "flag.h"
 #include "../../wrap/light/string.h"
-#include <platform/detect.h>
 
 #ifndef NOVTABLE__
-#ifdef FUTILS_PLATFORM_WINDOWS
+#ifdef _WIN32
 #define NOVTABLE__ __declspec(novtable)
 #else
 #define NOVTABLE__
@@ -57,7 +56,7 @@ namespace futils {
 
                     interface__* copy__(void* __storage_box) const override {
                         using gen_type = implements__<T__>;
-                        if constexpr (sizeof(gen_type) <= sizeof(void*) * 2 &&
+                        if constexpr (sizeof(gen_type) <= sizeof(void*) * 7 &&
                                       alignof(gen_type) <= alignof(std::max_align_t) &&
                                       std::is_nothrow_move_constructible<T__>::value) {
                             return new (__storage_box) implements__<T__>(t_holder_);
@@ -69,7 +68,7 @@ namespace futils {
 
                     interface__* move__(void* __storage_box) override {
                         using gen_type = implements__<T__>;
-                        if constexpr (sizeof(gen_type) <= sizeof(void*) * 2 &&
+                        if constexpr (sizeof(gen_type) <= sizeof(void*) * 7 &&
                                       alignof(gen_type) <= alignof(std::max_align_t) &&
                                       std::is_nothrow_move_constructible<T__>::value) {
                             return new (__storage_box) implements__<T__>(std::move(t_holder_));
@@ -81,10 +80,10 @@ namespace futils {
                 };
 
                 union {
-                    char __storage_box[sizeof(void*) * (1 + (2))]{0};
+                    char __storage_box[sizeof(void*) * (1 + (7))]{0};
                     std::max_align_t __align_of;
                     struct {
-                        void* __place_holder[2];
+                        void* __place_holder[7];
                         interface__* iface;
                     };
                 };
@@ -94,7 +93,7 @@ namespace futils {
                     interface__* p = nullptr;
                     using decay_T__ = std::decay_t<T__>;
                     using gen_type = implements__<decay_T__>;
-                    if constexpr (sizeof(gen_type) <= sizeof(void*) * 2 &&
+                    if constexpr (sizeof(gen_type) <= sizeof(void*) * 7 &&
                                   alignof(gen_type) <= alignof(std::max_align_t) &&
                                   std::is_nothrow_move_constructible<decay_T__>::value) {
                         p = new (__storage_box) gen_type(std::forward<T__>(v));
@@ -246,7 +245,7 @@ namespace futils {
 
                     interface__* move__(void* __storage_box) override {
                         using gen_type = implements__<T__>;
-                        if constexpr (sizeof(gen_type) <= sizeof(void*) * 3 &&
+                        if constexpr (sizeof(gen_type) <= sizeof(void*) * 7 &&
                                       alignof(gen_type) <= alignof(std::max_align_t) &&
                                       std::is_nothrow_move_constructible<T__>::value) {
                             return new (__storage_box) implements__<T__>(std::move(t_holder_));
@@ -258,10 +257,10 @@ namespace futils {
                 };
 
                 union {
-                    char __storage_box[sizeof(void*) * (1 + (3))]{0};
+                    char __storage_box[sizeof(void*) * (1 + (7))]{0};
                     std::max_align_t __align_of;
                     struct {
-                        void* __place_holder[3];
+                        void* __place_holder[7];
                         interface__* iface;
                     };
                 };
@@ -271,7 +270,7 @@ namespace futils {
                     interface__* p = nullptr;
                     using decay_T__ = std::decay_t<T__>;
                     using gen_type = implements__<decay_T__>;
-                    if constexpr (sizeof(gen_type) <= sizeof(void*) * 3 &&
+                    if constexpr (sizeof(gen_type) <= sizeof(void*) * 7 &&
                                   alignof(gen_type) <= alignof(std::max_align_t) &&
                                   std::is_nothrow_move_constructible<decay_T__>::value) {
                         p = new (__storage_box) gen_type(std::forward<T__>(v));
@@ -364,5 +363,5 @@ namespace futils {
             };
 
         }  // namespace option
-    }      // namespace cmdline
+    }  // namespace cmdline
 }  // namespace futils

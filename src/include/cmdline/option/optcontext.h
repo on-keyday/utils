@@ -118,13 +118,13 @@ namespace futils {
                     return result.index;
                 }
 
-                bool custom_option(auto&& option, OptParser parser, auto&& help, auto&& argdesc, OptMode mode) {
-                    return desc.set(option, std::move(parser), help, argdesc, mode) != nullptr;
+                bool custom_option(auto&& option, OptParser parser, auto&& help, auto&& argdesc, OptMode mode, const char* type) {
+                    return desc.set(option, std::move(parser), help, argdesc, mode, type) != nullptr;
                 }
 
                 template <class T>
-                std::remove_pointer_t<T>* custom_option_reserved(T val, auto&& option, OptParser parser, auto&& help, auto&& argdesc, OptMode mode) {
-                    auto opt = desc.set(option, std::move(parser), help, argdesc, mode);
+                std::remove_pointer_t<T>* custom_option_reserved(T val, auto&& option, OptParser parser, auto&& help, auto&& argdesc, OptMode mode, const char* type) {
+                    auto opt = desc.set(option, std::move(parser), help, argdesc, mode, type);
                     if (!opt) {
                         return nullptr;
                     }
@@ -140,31 +140,31 @@ namespace futils {
                 }
 
                 template <class T>
-                std::remove_pointer_t<T>* Option(auto&& option, T defaultv, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
+                std::remove_pointer_t<T>* Option(auto&& option, T defaultv, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, const char* type = "") {
                     return custom_option_reserved(
                         std::move(defaultv), option,
-                        bind_custom(std::move(ps), flag), help, argdesc, convert_flag(flag));
+                        bind_custom(std::move(ps), flag), help, argdesc, convert_flag(flag), type);
                 }
 
-                bool UnboundOption(auto&& option, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag) {
-                    return custom_option(option, bind_custom(std::move(ps), flag), help, argdesc, convert_flag(flag));
+                bool UnboundOption(auto&& option, OptParser ps, auto&& help, auto&& argdesc, CustomFlag flag, const char* type) {
+                    return custom_option(option, bind_custom(std::move(ps), flag), help, argdesc, convert_flag(flag), type);
                 }
 
                 bool UnboundBool(auto&& option, auto&& help, CustomFlag flag = CustomFlag::none, bool rough = true) {
-                    return UnboundOption(option, BoolParser{.to_set = true, .rough = rough}, help, "", flag);
+                    return UnboundOption(option, BoolParser{.to_set = true, .rough = rough}, help, "", flag, "bool");
                 }
 
                 bool UnboundInt(auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
-                    return UnboundOption(option, IntParser{.radix = radix}, help, argdesc, flag);
+                    return UnboundOption(option, IntParser{.radix = radix}, help, argdesc, flag, "int");
                 }
 
                 bool UnboundFloat(auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
-                    return UnboundOption(option, FloatParser{.radix = radix}, help, argdesc, flag);
+                    return UnboundOption(option, FloatParser{.radix = radix}, help, argdesc, flag, "float");
                 }
 
                 template <class Str = wrap::string, bool view_like = false>
                 bool UnboundString(auto&& option, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
-                    return UnboundOption(option, StringParser<Str, view_like>{}, help, argdesc, flag);
+                    return UnboundOption(option, StringParser<Str, view_like>{}, help, argdesc, flag, "string");
                 }
 
                 template <class T = std::uint64_t, template <class...> class Vec = wrap::vector>
@@ -172,7 +172,7 @@ namespace futils {
                 bool UnboundVecInt(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return UnboundOption(
                         option, VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
-                        help, argdesc, flag);
+                        help, argdesc, flag, "vector<int>");
                 }
 
                 template <class T = double, template <class...> class Vec = wrap::vector>
@@ -180,14 +180,14 @@ namespace futils {
                 bool UnboundVecFloat(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return UnboundOption(
                         option, VectorParser<T, Vec>{.parser = FloatParser{.radix = radix}, .len = len},
-                        help, argdesc, flag);
+                        help, argdesc, flag, "vector<float>");
                 }
 
                 template <class Str = wrap::string, template <class...> class Vec = wrap::vector, bool view_like = false>
                 bool UnboundVecString(auto&& option, size_t len, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return UnboundOption(
                         option, VectorParser<Str, Vec>{.parser = StringParser<Str, view_like>{}, .len = len},
-                        help, argdesc, flag);
+                        help, argdesc, flag, "vector<string>");
                 }
 
                 bool VarBool(bool* ptr, auto&& option, auto&& help, CustomFlag flag = CustomFlag::none, bool rough = true) {
@@ -196,7 +196,7 @@ namespace futils {
                     }
                     return (bool)Option(
                         option, ptr, BoolParser{.to_set = !*ptr, .rough = rough},
-                        help, "", flag);
+                        help, "", flag, "bool");
                 }
 
                 template <class T>
@@ -207,7 +207,7 @@ namespace futils {
                     }
                     return (bool)Option(
                         option, ptr, IntParser{.radix = radix},
-                        help, argdesc, flag);
+                        help, argdesc, flag, "int");
                 }
 
                 template <class T>
@@ -218,7 +218,7 @@ namespace futils {
                     }
                     return (bool)Option(
                         option, ptr, FloatParser{.radix = radix},
-                        help, argdesc, flag);
+                        help, argdesc, flag, "float");
                 }
 
                 template <bool view_like = false, class Str>
@@ -229,7 +229,7 @@ namespace futils {
                     return (bool)Option(
                         option, ptr,
                         StringParser<Str, view_like>{},
-                        help, argdesc, flag);
+                        help, argdesc, flag, "string");
                 }
 
                 template <class T, template <class...> class Vec>
@@ -242,7 +242,7 @@ namespace futils {
                         ptr->resize(len);
                     }
                     return (bool)Option(option, ptr, VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
-                                        help, argdesc, flag);
+                                        help, argdesc, flag, "vector<int>");
                 }
 
                 template <class T, template <class...> class Vec>
@@ -255,7 +255,7 @@ namespace futils {
                         ptr->resize(len);
                     }
                     return (bool)Option(option, ptr, VectorParser<T, Vec>{.parser = FloatParser{.radix = radix}, .len = len},
-                                        help, argdesc, flag);
+                                        help, argdesc, flag, "vector<float>");
                 }
 
                 template <class Str, template <class...> class Vec, bool view_like = false>
@@ -268,14 +268,14 @@ namespace futils {
                     }
                     return (bool)Option(option, ptr,
                                         VectorParser<Str, Vec>{.parser = StringParser<Str, view_like>{}, .len = len},
-                                        help, argdesc, flag);
+                                        help, argdesc, flag, "vector<string>");
                 }
 
                 bool* Bool(auto&& option, bool defaultv, auto&& help, CustomFlag flag = CustomFlag::none, bool rough = true) {
                     return Option(
                         option, defaultv,
                         BoolParser{.to_set = !defaultv, .rough = rough},
-                        help, "", flag);
+                        help, "", flag, "bool");
                 }
 
                 template <class T = std::int64_t>
@@ -283,7 +283,7 @@ namespace futils {
                 T* Int(auto&& option, T defaultv, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return Option(
                         option, defaultv,
-                        IntParser{.radix = radix}, help, argdesc, flag);
+                        IntParser{.radix = radix}, help, argdesc, flag, "int");
                 }
 
                 template <class T = double>
@@ -291,13 +291,13 @@ namespace futils {
                 T* Float(auto&& option, T defaultv, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none, int radix = 10) {
                     return Option(
                         option, defaultv,
-                        FloatParser{.radix = radix}, help, argdesc, flag);
+                        FloatParser{.radix = radix}, help, argdesc, flag, "float");
                 }
 
                 template <class Str = wrap::string, bool view_like = false>
                 Str* String(auto&& option, Str defaultv, auto&& help, auto&& argdesc, CustomFlag flag = CustomFlag::none) {
                     return Option(option, std::move(defaultv),
-                                  StringParser<Str, view_like>{}, help, argdesc, flag);
+                                  StringParser<Str, view_like>{}, help, argdesc, flag, "string");
                 }
 
                 template <class T = std::int64_t, template <class...> class Vec = wrap::vector>
@@ -308,7 +308,7 @@ namespace futils {
                     }
                     return Option(option, std::move(defaultv),
                                   VectorParser<T, Vec>{.parser = IntParser{.radix = radix}, .len = len},
-                                  help, argdesc, flag);
+                                  help, argdesc, flag, "vector<int>");
                 }
 
                 template <class T = double, template <class...> class Vec = wrap::vector>
@@ -319,7 +319,7 @@ namespace futils {
                     }
                     return Option(option, std::move(defaultv),
                                   VectorParser<T, Vec>{.parser = FloatParser{.radix = radix}, .len = len},
-                                  help, argdesc, flag);
+                                  help, argdesc, flag, "vector<float>");
                 }
 
                 template <class Str = wrap::string, template <class...> class Vec = wrap::vector, bool view_like = false>
@@ -329,7 +329,7 @@ namespace futils {
                     }
                     return Option(option, std::move(defaultv),
                                   VectorParser<Str, Vec>{.parser = StringParser<Str, view_like>{}, .len = len},
-                                  help, argdesc, flag);
+                                  help, argdesc, flag, "vector<string>");
                 }
 
                 template <class Flag>
@@ -337,7 +337,7 @@ namespace futils {
                     return Option(
                         option, std::move(defaultv),
                         FlagMaskParser<Flag>{.mask = mask, .rough = rough},
-                        help, "", flag);
+                        help, "", flag, "bool");
                 }
 
                 template <class Flag>
@@ -345,49 +345,49 @@ namespace futils {
                     return (bool)Option(
                         option, ptr,
                         FlagMaskParser<Flag>{.mask = mask, .rough = rough},
-                        help, "", flag);
+                        help, "", flag, "bool");
                 }
 
                 template <class State, class F>
                 State* Func(auto&& option, auto&& help, auto&& argdesc, State state, F&& f, CustomFlag flag = CustomFlag::none) {
                     return Option(option, std::move(state),
                                   FuncParser<std::decay_t<F>, State>{std::forward<F>(f)},
-                                  help, argdesc, flag);
+                                  help, argdesc, flag, "string");
                 }
 
                 template <class State = void, class F>
                 bool VarFunc(State* ptr, auto&& option, auto&& help, auto&& argdesc, F&& f, CustomFlag flag = CustomFlag::none) {
                     return (bool)Option(option, ptr,
                                         FuncParser<std::decay_t<F>, State>{std::forward<F>(f)},
-                                        help, argdesc, flag);
+                                        help, argdesc, flag, "string");
                 }
 
                 template <class State, class F>
                 State* BoolFunc(auto&& option, auto&& help, State state, F&& f, CustomFlag flag = CustomFlag::none, bool rough = true) {
                     return Option(option, std::move(state),
                                   BoolFuncParser<std::decay_t<F>, State>{std::forward<F>(f), rough},
-                                  help, "", flag);
+                                  help, "", flag, "bool");
                 }
 
                 template <class State = void, class F>
                 bool VarBoolFunc(State* ptr, auto&& option, auto&& help, F&& f, CustomFlag flag = CustomFlag::none, bool rough = true) {
                     return (bool)Option(option, ptr,
                                         BoolFuncParser<std::decay_t<F>, State>{std::forward<F>(f), rough},
-                                        help, "", flag);
+                                        help, "", flag, "bool");
                 }
 
                 template <class Key, class Value, template <class...> class M>
                 Value* Map(auto&& option, auto&& help, auto&& argdesc, M<Key, Value>&& mapping, CustomFlag flag = CustomFlag::none, Value&& defaultv = Value()) {
                     return Option(option, std::move(defaultv),
                                   MappingParser<Key, Value, M>{std::move(mapping)},
-                                  help, argdesc, flag);
+                                  help, argdesc, flag, "string");
                 }
 
                 template <class Key, class Value, template <class...> class M>
                 bool VarMap(Value* ptr, auto&& option, auto&& help, auto&& argdesc, M<Key, Value>&& mapping, CustomFlag flag = CustomFlag::none) {
                     return (bool)Option(option, ptr,
                                         MappingParser<Key, Value, M>{std::move(mapping)},
-                                        help, argdesc, flag);
+                                        help, argdesc, flag, "string");
                 }
 
                 auto find(auto&& optname) {
