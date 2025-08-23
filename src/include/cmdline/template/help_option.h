@@ -16,7 +16,7 @@ namespace futils {
                 bool help = false;
 
                 void bind_help(option::Context& ctx) {
-                    ctx.VarBool(&help, "h,help", "show this help");
+                    ctx.VarBool(&help, "help,h", "show this help");
                 }
 
                 void bind_help(subcmd::RunCommand& cmd) {
@@ -33,5 +33,5 @@ namespace futils {
                 }
             };
         }  // namespace templ
-    }      // namespace cmdline
+    }  // namespace cmdline
 }  // namespace futils
