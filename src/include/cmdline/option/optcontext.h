@@ -89,6 +89,10 @@ namespace futils {
                     return option::desc<Str>(flag, desc.list, indent);
                 }
 
+                const wrap::vector<wrap::shared_ptr<Option>>& options() {
+                    return desc.list;
+                }
+
                 template <class Str>
                 void Usage(Str& str, ParseFlag flag, const char* cmdname, const char* usage = "[option]", const char* indent = "    ") {
                     strutil::appends(str, "Usage:\n",
@@ -413,5 +417,5 @@ namespace futils {
                 }
             };
         }  // namespace option
-    }      // namespace cmdline
+    }  // namespace cmdline
 }  // namespace futils
