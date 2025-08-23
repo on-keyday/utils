@@ -89,7 +89,7 @@ namespace futils {
                     return option::desc<Str>(flag, desc.list, indent);
                 }
 
-                const wrap::vector<wrap::shared_ptr<Option>>& options() {
+                const wrap::vector<wrap::shared_ptr<option::Option>>& options() {
                     return desc.list;
                 }
 
