@@ -9,7 +9,6 @@
 // ported from fnet::dll::lazy
 #include <platform/windows/dllexport_header.h>
 #include "detect.h"
-#include "platform/windows/dllexport_source.h"
 #include "windows/dllexport_header.h"
 #include <atomic>
 #include <helper/defer.h>
@@ -288,13 +287,13 @@ namespace futils::platform::dll {
                             status.load_undone();
                         }
                         else {
-                            log_fn_load(name, false);
+                            internal::log_fn_load(name, false);
                             status.load_unavilable();
                         }
                         return false;
                     }
                     fn = reinterpret_cast<T*>(lookedup);
-                    log_fn_load(name, true);
+                    internal::log_fn_load(name, true);
                     status.load_done();
                     break;
                 }
