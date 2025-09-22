@@ -19,9 +19,11 @@ namespace futils::platform::dll {
 #ifdef FUTILS_PLATFORM_WINDOWS
     using dll_path = const wchar_t*;
 #define futils_lazy_dll_path(path) (L##path)
+#define futils_default_dll_suffix ".dll"
 #else
     using dll_path = const char*;
 #define futils_lazy_dll_path(path) (path)
+#define futils_default_dll_suffix ".so"
 #endif
 
     using func_t = void (*)();
