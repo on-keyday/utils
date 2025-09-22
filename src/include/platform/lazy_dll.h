@@ -220,46 +220,49 @@ namespace futils::platform::dll {
         }
     };
 
-    template <class Derived, class T>
-    struct Call;
     futils_DLL_EXPORT void STDCALL set_call_fail_traits(void (*)(const char* fn));
     futils_DLL_EXPORT void STDCALL call_fail_traits(const char* fn);
 
-    template <class Derived, class Ret, class... Arg>
-    struct Call<Derived, Ret(Arg...)> {
-        Ret operator()(Arg... arg) {
-            auto p = static_cast<Derived*>(this);
-            if (!p->find()) {
-                call_fail_traits(p->name);
+    namespace internal {
+
+        template <class Derived, class T>
+        struct Call;
+
+        template <class Derived, class Ret, class... Arg>
+        struct Call<Derived, Ret(Arg...)> {
+            Ret operator()(Arg... arg) {
+                auto p = static_cast<Derived*>(this);
+                if (!p->find()) {
+                    call_fail_traits(p->name);
+                }
+                return p->fn(arg...);
             }
-            return p->fn(arg...);
-        }
 
-        constexpr Ret unsafe_call(Arg... arg) const {
-            return static_cast<Derived*>(this)->fn(arg...);
-        }
-    };
-
-    template <class Derived, class Ret, class... Arg>
-    struct Call<Derived, Ret(Arg...) noexcept> {
-        Ret operator()(Arg... arg) {
-            auto p = static_cast<Derived*>(this);
-            if (!p->find()) {
-                call_fail_traits(p->name);
+            constexpr Ret unsafe_call(Arg... arg) const {
+                return static_cast<Derived*>(this)->fn(arg...);
             }
-            return p->fn(arg...);
-        }
+        };
 
-        constexpr Ret unsafe_call(Arg... arg) const {
-            return static_cast<Derived*>(this)->fn(arg...);
-        }
-    };
+        template <class Derived, class Ret, class... Arg>
+        struct Call<Derived, Ret(Arg...) noexcept> {
+            Ret operator()(Arg... arg) {
+                auto p = static_cast<Derived*>(this);
+                if (!p->find()) {
+                    call_fail_traits(p->name);
+                }
+                return p->fn(arg...);
+            }
 
-    void log_fn_load(const char* fn, bool ok);
+            constexpr Ret unsafe_call(Arg... arg) const {
+                return static_cast<Derived*>(this)->fn(arg...);
+            }
+        };
+        futils_DLL_EXPORT void STDCALL log_fn_load(const char* fn, bool ok);
+    }  // namespace internal
 
     template <class T>
-    struct Func : Call<Func<T>, T> {
-        friend struct Call<Func<T>, T>;
+    struct Func : internal::Call<Func<T>, T> {
+        friend struct internal::Call<Func<T>, T>;
 
        private:
         DLL& dll;

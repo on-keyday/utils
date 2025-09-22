@@ -38,15 +38,16 @@ namespace futils::platform::dll {
         abort();
     }
 
-    void log_fn_load(const char* fn, bool ok) {
-        char buf[120]{};
-        helper::CharVecPushbacker<char> pb{buf, 119};
-        strutil::appends(pb, fn, ok ? " loaded" : " unavailable", "\n");
+    namespace internal {
+        futils_DLL_EXPORT void STDCALL log_fn_load(const char* fn, bool ok) {
+            char buf[120]{};
+            helper::CharVecPushbacker<char> pb{buf, 119};
+            strutil::appends(pb, fn, ok ? " loaded" : " unavailable", "\n");
 #ifdef FUTILS_PLATFORM_WINDOWS
-        OutputDebugStringA(buf);
+            OutputDebugStringA(buf);
 #endif
-    }
-
+        }
+    }  // namespace internal
 #ifdef FUTILS_PLATFORM_WINDOWS
     bool DLL::load_platform() {
         if (sys) {
