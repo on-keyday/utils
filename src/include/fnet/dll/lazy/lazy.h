@@ -8,8 +8,8 @@
 // lazy_func - lazy dll load and function load
 #pragma once
 #include <atomic>
-#include "../../../helper/defer.h"
-#include "../../../core/byte.h"
+#include <helper/defer.h>
+#include <core/byte.h>
 #include "../dll_path.h"
 
 namespace futils {

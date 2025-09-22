@@ -81,7 +81,7 @@ namespace futils {
             constexpr Float(V v)
                 : Float(std::bit_cast<T>(v)) {}
 
-            constexpr operator T() const noexcept {
+            constexpr explicit operator T() const noexcept {
                 return value.as_value();
             }
 
@@ -239,12 +239,35 @@ namespace futils {
             }
         }
 
+        template <class Float>
+        using FloatT = decltype(make_float(Float{}));
+
         // also canonical
         template <class Float>
         constexpr auto quiet_nan = [] {
             auto f = make_float(Float());
             f.exponent(f.exponent_max);
             f.fraction(f.fraction_msb);
+            return f;
+        }();
+
+        template <class Float>
+        constexpr auto signaling_nan = [] {
+            auto f = make_float(Float());
+            f.exponent(f.exponent_max);
+            f.fraction(f.fraction_msb);
+            f.make_quiet_signaling();
+            return f;
+        }();
+
+        template <class Float, typename decltype(make_float(Float{}))::frac_t payload>
+        constexpr auto signaling_nan_with_payload = [] {
+            auto f = make_float(Float());
+            f.exponent(f.exponent_max);
+            f.fraction(f.fraction_msb);
+            if (!f.make_quiet_signaling(payload)) {
+                throw "invalid payload";
+            }
             return f;
         }();
 
@@ -297,21 +320,21 @@ namespace futils {
             constexpr bool check_ieeefloat() {
                 SingleFloat single;
                 single = (0xc0000000);
-                if (single != 0xC0000000 ||
+                if (single.to_int() != 0xC0000000 ||
                     !single.sign() ||
                     single.exponent() != 0x80 ||
                     single.fraction() != 0) {
                     return false;
                 }
                 single = (0x7f7fffff);
-                if (single != 0x7f7fffff ||
+                if (single.to_int() != 0x7f7fffff ||
                     single.sign() ||
                     single.exponent() != 0xFE ||
                     single.fraction() != 0x7fffff) {
                     return false;
                 }
                 single = 1.0e10f;
-                if (single != 0x501502f9 ||
+                if (single.to_int() != 0x501502f9 ||
                     single.sign() ||
                     single.exponent() != 0xA0 ||
                     single.fraction() != 0x1502f9) {

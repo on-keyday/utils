@@ -6,13 +6,15 @@
 */
 
 #pragma once
-#include <type_traits>
 #include <initializer_list>
 #include <tuple>
 #include <cmath>
+#include <type_traits>
+#include "vector.h"
 
 namespace futils::math {
 
+    // m行n列行列
     template <size_t m, size_t n, class Type = double>
     struct Matrix {
        private:
@@ -22,17 +24,24 @@ namespace futils::math {
         friend struct Matrix;
 
        public:
-        struct MatrixColom {
+        template <class T>
+        struct MatrixRow {
            private:
-            Type* data = nullptr;
+            T* data = nullptr;
 
             friend struct Matrix;
 
-            constexpr MatrixColom(Type* d)
+            constexpr MatrixRow(T* d)
                 : data(d) {}
 
            public:
-            constexpr Type& operator[](size_t i) {
+            constexpr T& operator[](size_t i)
+                requires(!std::is_const_v<T>)
+            {
+                return data[i];
+            }
+
+            constexpr const std::remove_const_t<T>& operator[](size_t i) const {
                 return data[i];
             }
 
@@ -41,25 +50,22 @@ namespace futils::math {
             }
         };
 
-        struct InitVec {
-            Type vec[n];
-        };
-
-        constexpr Matrix(std::initializer_list<InitVec> v) {
-            if (v.size() != m) {
-                throw "unexpected initializer";
-            }
+        constexpr Matrix(std::initializer_list<Vector<n, Type>> v) {
             for (auto i = 0; i < m; i++) {
                 for (auto j = 0; j < n; j++) {
-                    matrix[i][j] = v.begin()[i].vec[j];
+                    matrix[i][j] = v.begin()[i][j];
                 }
             }
         }
 
         constexpr Matrix() = default;
 
-        constexpr MatrixColom operator[](size_t i) {
-            return MatrixColom{matrix[i]};
+        constexpr MatrixRow<Type> operator[](size_t i) {
+            return MatrixRow<Type>{matrix[i]};
+        }
+
+        constexpr MatrixRow<const Type> operator[](size_t i) const {
+            return MatrixRow<const Type>{matrix[i]};
         }
 
         constexpr size_t size() const {
@@ -147,10 +153,9 @@ namespace futils::math {
         }
 
         // 単位行列
-        constexpr static Matrix identity() {
-            if constexpr (n != m) {
-                throw "cannot be identity matrix";
-            }
+        constexpr static Matrix identity()
+            requires(n == m)
+        {
             Matrix u;
             u.for_each([&](auto i, auto j) {
                 if (i == j) {
@@ -161,54 +166,45 @@ namespace futils::math {
         }
 
         // 対角行列
-        constexpr bool is_diagonal() const {
-            if constexpr (n != m) {
-                return false;
-            }
-            else {
-                return Matrix::for_each_if([&](auto i, auto j) {
-                    if (i == j) {
-                        return matrix[i][j] != 0;
-                    }
-                    else {
-                        return matrix[i][j] == 0;
-                    }
-                });
-            }
+        constexpr bool is_diagonal() const
+            requires(n == m)
+        {
+            return Matrix::for_each_if([&](auto i, auto j) {
+                if (i == j) {
+                    return matrix[i][j] != 0;
+                }
+                else {
+                    return matrix[i][j] == 0;
+                }
+            });
         }
 
         // 上三角行列
-        constexpr bool is_upper_triangle() const {
-            if constexpr (n != m) {
-                return false;
-            }
-            else {
-                return Matrix::for_each_if([&](auto i, auto j) {
-                    if (i <= j) {
-                        return matrix[i][j] != 0;
-                    }
-                    else {
-                        return matrix[i][j] == 0;
-                    }
-                });
-            }
+        constexpr bool is_upper_triangle() const
+            requires(n == m)
+        {
+            return Matrix::for_each_if([&](auto i, auto j) {
+                if (i <= j) {
+                    return matrix[i][j] != 0;
+                }
+                else {
+                    return matrix[i][j] == 0;
+                }
+            });
         }
 
         // 下三角行列
-        constexpr bool is_lower_triangle() const {
-            if constexpr (n != m) {
-                return false;
-            }
-            else {
-                return Matrix::for_each_if([&](auto i, auto j) {
-                    if (i >= j) {
-                        return matrix[i][j] != 0;
-                    }
-                    else {
-                        return matrix[i][j] == 0;
-                    }
-                });
-            }
+        constexpr bool is_lower_triangle() const
+            requires(n == m)
+        {
+            return Matrix::for_each_if([&](auto i, auto j) {
+                if (i >= j) {
+                    return matrix[i][j] != 0;
+                }
+                else {
+                    return matrix[i][j] == 0;
+                }
+            });
         }
 
         constexpr bool can_lu_decomposition() const {
@@ -266,40 +262,36 @@ namespace futils::math {
         }
 
         // 行と列を1つづつ抜き取る
-        constexpr std::pair<Matrix<m - 1, n - 1, Type>, bool> pullout(size_t h, size_t w) const {
-            if constexpr (m != n || m - 1 == 0) {
+        constexpr std::pair<Matrix<m - 1, n - 1, Type>, bool> pullout(size_t h, size_t w) const
+            requires(m == n && m - 1 > 0)
+        {
+            if (h >= m || w >= n) {
                 return {{}, false};
             }
-            else {
-                if (h >= m || w >= n) {
-                    return {{}, false};
+            Matrix<m - 1, n - 1, Type> a;
+            size_t ishift = 0;
+            for (size_t i = 0; i < m; i++) {
+                if (i == h) {
+                    ishift = 1;
+                    continue;
                 }
-                Matrix<m - 1, n - 1, Type> a;
-                size_t ishift = 0;
-                for (size_t i = 0; i < m; i++) {
-                    if (i == h) {
-                        ishift = 1;
+                size_t jshift = 0;
+                for (size_t j = 0; j < n; j++) {
+                    if (j == w) {
+                        jshift = 1;
                         continue;
                     }
-                    size_t jshift = 0;
-                    for (size_t j = 0; j < n; j++) {
-                        if (j == w) {
-                            jshift = 1;
-                            continue;
-                        }
-                        a.matrix[i - ishift][j - jshift] = matrix[i][j];
-                    }
+                    a.matrix[i - ishift][j - jshift] = matrix[i][j];
                 }
-                return {a, true};
             }
+            return {a, true};
         }
 
         // 行列式
-        constexpr std::pair<Type, bool> det() const {
-            if constexpr (m != n) {
-                return {0, false};
-            }
-            else if constexpr (m == 1) {
+        constexpr std::pair<Type, bool> det() const
+            requires(m == n)
+        {
+            if constexpr (m == 1) {
                 return {matrix[0][0], true};
             }
             else if constexpr (m == 2) {
@@ -330,45 +322,42 @@ namespace futils::math {
         }
 
         // 逆行列
-        constexpr std::pair<Matrix, bool> inverse() const {
-            if constexpr (m != n) {
-                return {{}, false};
-            }
-            else {
-                Matrix<m, n * 2, Type> p;
-                for_each([&](auto i, auto j) {
-                    p.matrix[i][j] = matrix[i][j];
-                    p.matrix[i][j + n] = (i == j) ? 1 : 0;
-                });
-                auto div = [&](auto& arr, auto val) {
-                    if (val == 0) {
-                        return false;
+        constexpr std::pair<Matrix, bool> inverse() const
+            requires(m == n)
+        {
+            Matrix<m, n * 2, Type> p;
+            for_each([&](auto i, auto j) {
+                p.matrix[i][j] = matrix[i][j];
+                p.matrix[i][j + n] = (i == j) ? 1 : 0;
+            });
+            auto div = [&](auto& arr, auto val) {
+                if (val == 0) {
+                    return false;
+                }
+                for (auto& d : arr) {
+                    d /= val;
+                }
+                return true;
+            };
+            for (size_t i = 0; i < n; i++) {
+                if (!div(p.matrix[i], p.matrix[i][i])) {
+                    return {{}, false};
+                }
+                for (size_t j = 0; j < n; j++) {
+                    if (i == j) {
+                        continue;
                     }
-                    for (auto& d : arr) {
-                        d /= val;
-                    }
-                    return true;
-                };
-                for (size_t i = 0; i < n; i++) {
-                    if (!div(p.matrix[i], p.matrix[i][i])) {
-                        return {{}, false};
-                    }
-                    for (size_t j = 0; j < n; j++) {
-                        if (i == j) {
-                            continue;
-                        }
-                        auto t = p.matrix[j][i];
-                        for (auto k = 0; k < n * 2; k++) {
-                            p.matrix[j][k] = p.matrix[j][k] - p.matrix[i][k] * t;
-                        }
+                    auto t = p.matrix[j][i];
+                    for (auto k = 0; k < n * 2; k++) {
+                        p.matrix[j][k] = p.matrix[j][k] - p.matrix[i][k] * t;
                     }
                 }
-                Matrix r;
-                for_each([&](auto i, auto j) {
-                    r.matrix[i][j] = p.matrix[i][j + n];
-                });
-                return {r, true};
             }
+            Matrix r;
+            for_each([&](auto i, auto j) {
+                r.matrix[i][j] = p.matrix[i][j + n];
+            });
+            return {r, true};
         }
 
         // 階段行列
@@ -399,7 +388,7 @@ namespace futils::math {
             });
         }
 
-        constexpr size_t pibot_max(size_t k) {
+        constexpr size_t pivot_max(size_t k) const {
             if constexpr (m != n) {
                 return -1;
             }
@@ -427,36 +416,50 @@ namespace futils::math {
         }
 
         // 掛け算
-        template <size_t x, size_t y, size_t z, class Ty>
-        constexpr friend Matrix<x, z, Ty> operator*(const Matrix<x, y, Ty>& a, const Matrix<y, z, Ty>& b);
-        // アダマール積
-        template <size_t x, size_t y, class Ty>
-        constexpr friend Matrix<x, y, Ty> hadamard(const Matrix<x, y, Ty>& a, const Matrix<x, y, Ty>& b);
-    };
-
-    // 掛け算
-    template <size_t x, size_t y, size_t z, class Ty>
-    constexpr Matrix<x, z, Ty> operator*(const Matrix<x, y, Ty>& a, const Matrix<y, z, Ty>& b) {
-        Matrix<x, z, Ty> p;
-        for (size_t j = 0; j < x; j++) {          // pとaの行の移動
-            for (size_t k = 0; k < z; k++) {      // pとbの列の移動
-                for (size_t i = 0; i < y; i++) {  // aの行とbの列の移動
-                    p.matrix[j][k] += a.matrix[j][i] * b.matrix[i][k];
+        template <size_t z>
+        constexpr friend Matrix<m, z, Type> operator*(const Matrix& a, const Matrix<n, z, Type>& b) {
+            Matrix<m, z, Type> p;
+            for (size_t j = 0; j < m; j++) {          // pとaの行の移動
+                for (size_t k = 0; k < z; k++) {      // pとbの列の移動
+                    for (size_t i = 0; i < n; i++) {  // aの行とbの列の移動
+                        p.matrix[j][k] += a.matrix[j][i] * b.matrix[i][k];
+                    }
                 }
             }
+            return p;
         }
-        return p;
-    }
 
-    // アダマール積
-    template <size_t x, size_t y, class Ty>
-    constexpr Matrix<x, y, Ty> hadamard(const Matrix<x, y, Ty>& a, const Matrix<x, y, Ty>& b) {
-        Matrix<x, y, Ty> r;
-        r.for_each([&](auto i, auto j) {
-            r.matrix[i][j] = a.matrix[i][j] * b.matrix[i][j];
-        });
-        return r;
-    }
+        // 列ベクトルとの掛け算
+        constexpr friend Vector<m, Type> operator*(const Matrix& a, const Vector<n, Type>& b) {
+            Vector<m, Type> p;
+            for (size_t j = 0; j < m; j++) {      // pとaの行の移動
+                for (size_t i = 0; i < n; i++) {  // aの行とbの列の移動
+                    p[j] += a.matrix[j][i] * b[i];
+                }
+            }
+            return p;
+        }
+
+        // 行ベクトルとの掛け算
+        constexpr friend Vector<n, Type> operator*(const Vector<m, Type>& a, const Matrix& b) {
+            Vector<n, Type> p;
+            for (size_t k = 0; k < n; k++) {      // pとbの列の移動
+                for (size_t i = 0; i < m; i++) {  // aの行とbの列の移動
+                    p[k] += a[i] * b.matrix[i][k];
+                }
+            }
+            return p;
+        }
+
+        // アダマール積
+        constexpr friend Matrix hadamard(const Matrix& a, const Matrix& b) {
+            Matrix r;
+            r.for_each([&](auto i, auto j) {
+                r.matrix[i][j] = a.matrix[i][j] * b.matrix[i][j];
+            });
+            return r;
+        }
+    };
 
     // x軸に対して対称移動
     template <class Type = double>
@@ -525,5 +528,41 @@ namespace futils::math {
         }
 
         static_assert(check_matrix());
+
+        constexpr auto diagonal = Matrix<3, 3>{
+            {1, 0, 0},
+            {0, 1, 0},
+            {0, 0, 1},
+        };
+
+        static_assert(diagonal.is_diagonal());
+
+        constexpr auto upper_triangle = Matrix<3, 3>{
+            {1, 1, 1},
+            {0, 1, 1},
+            {0, 0, 1},
+        };
+
+        static_assert(upper_triangle.is_upper_triangle());
+
+        constexpr auto lower_triangle = Matrix<3, 3>{
+            {1, 0, 0},
+            {1, 1, 0},
+            {1, 1, 1},
+        };
+
+        static_assert(lower_triangle.is_lower_triangle());
+
+        constexpr auto mul = upper_triangle * lower_triangle;
+        constexpr auto had = hadamard(upper_triangle, lower_triangle);
+
+        constexpr auto mat2 = Matrix<2, 2>::identity();
+        constexpr auto vec1 = Vector<2>{1, 0};
+
+        constexpr auto mul2 = mat2 * vec1;
+        static_assert(mul2[0] == 1 && mul2[1] == 0);
+
+        constexpr auto mul3 = vec1 * mat2;
+        static_assert(mul3[0] == 1 && mul3[1] == 0);
     }  // namespace test
 }  // namespace futils::math

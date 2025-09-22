@@ -21,7 +21,7 @@ void nan() {
     constexpr bool sign2 = f2.sign();
     constexpr bool test1 = f2.exponent() == f2.exponent_max;
     constexpr auto frac_value = f1.fraction();
-    constexpr auto cmp = f1 == f2;
+    constexpr auto cmp = std::uint32_t(f1) == std::uint32_t(f2);
     constexpr auto cmp2 = f1.to_float() == f2.to_float();
     constexpr auto cmp3 = f1.to_float() == f1.to_float();
     constexpr auto cmp4 = f1.to_int() == f1.to_int();
@@ -79,14 +79,14 @@ void nan() {
     constexpr auto epsilon_plus_1_fraction = epsilon_plus_1.fraction();
     constexpr auto epsilon_plus_1_biased_exponent = epsilon_plus_1.biased_exponent();
     constexpr auto epsilon2 = futils::binary::make_float(epsilon_plus_1.to_float() - 1.0f);
-    static_assert(epsilon2 == epsilon, "epsilon2 != epsilon");
+    static_assert(epsilon2.to_int() == epsilon.to_int(), "epsilon2 != epsilon");
     constexpr auto frac_with_1 = epsilon_plus_1.fraction_with_implicit_1();
     constexpr auto frac_with_1_epsilon = epsilon.fraction_with_implicit_1();
 
-    static_assert(futils::binary::epsilon<float> == epsilon, "ep != epsilon");
-    static_assert(futils::binary::quiet_nan<float> == nanf, "qn != nanf");
-    static_assert(futils::binary::indeterminate_nan<float> == nan_with_sign, "in != nan_with_sign");
-    static_assert(futils::binary::infinity<float> == futils::binary::make_float(INFINITY), "inf != inf");
+    static_assert(futils::binary::epsilon<float>.to_int() == epsilon.to_int(), "ep != epsilon");
+    static_assert(futils::binary::quiet_nan<float>.to_int() == nanf.to_int(), "qn != nanf");
+    static_assert(futils::binary::indeterminate_nan<float>.to_int() == nan_with_sign.to_int(), "in != nan_with_sign");
+    static_assert(futils::binary::infinity<float>.to_int() == futils::binary::make_float(INFINITY).to_int(), "inf != inf");
     constexpr auto vas = futils::binary::epsilon<double>.to_float();
     constexpr auto vas2 = futils::binary::make_float(vas + 1.0);
     constexpr auto vas3 = vas2.to_float();

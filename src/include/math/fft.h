@@ -58,7 +58,7 @@ namespace futils::math::fft {
             if (f.is_denormalized()) {
                 auto z = binary::zero<double>;
                 z.sign(f.sign());
-                return z;
+                return z.to_float();
             }
             auto exponent = f.biased_exponent();
             if (exponent < 0) {
@@ -89,7 +89,7 @@ namespace futils::math::fft {
             if (f.is_denormalized()) {
                 auto z = binary::zero<double>;
                 z.sign(f.sign());
-                return z;
+                return z.to_float();
             }
             bool sign = f.sign();
             auto exponent = f.biased_exponent();
@@ -133,7 +133,7 @@ namespace futils::math::fft {
         constexpr double fmod(double x, double y) {
             auto chk = binary::DoubleFloat(y);
             if (chk.is_zero() || chk.is_nan() || chk.is_infinity()) {
-                return binary::quiet_nan<double>;
+                return binary::quiet_nan<double>.to_float();
             }
             if (chk.is_denormalized()) {
                 return x;

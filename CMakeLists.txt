@@ -139,6 +139,8 @@ add_executable(jit_coroutine "src/test/jit/test_jit_coroutine.cpp")
 add_executable(console_window "src/test/console/test_window.cpp")
 add_executable(variant "src/test/helper/test_variant.cpp")
 add_executable(large_json_parse "src/test/json/test_large_json_parse.cpp")
+add_executable(vector "src/test/math/test_vector.cpp")
+add_executable(simple_render "src/test/cg/test_simple_render.cpp")
 
 # tests(fnet)
 add_executable(fnet_socket "src/test/fnet/test_fnet_socket.cpp")
@@ -276,6 +278,7 @@ target_sources(futils
   "src/lib/file/file.cpp"
   "src/lib/file/console.cpp"
   "src/lib/jit/jit_memory.cpp"
+  "src/lib/platform/lazy_dll.cpp"
 )
 
 if(WIN32)
