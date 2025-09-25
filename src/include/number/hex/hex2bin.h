@@ -11,6 +11,7 @@
 #include <comb2/basic/logic.h>
 #include <comb2/basic/group.h>
 #include <comb2/lexctx.h>
+#include <comb2/seqrange.h>
 #include <view/concat.h>
 #include <binary/reader.h>
 #include <binary/writer.h>
@@ -18,7 +19,7 @@
 namespace futils::number::hex {
     namespace parser {
         using namespace futils::comb2;
-        using ops::operator|, ops::operator&, ops::operator*, ops::operator-,ops::str,ops::eos;
+        using ops::operator|, ops::operator&, ops::operator*, ops::operator-, ops::str, ops::eos;
         namespace cps = composite;
 
         constexpr auto comment = cps::shell_comment;
@@ -44,9 +45,7 @@ namespace futils::number::hex {
             void end_string(Status res, auto&& tag, auto&& seq, Pos pos) {
                 LexContext::end_string(res, tag, seq, pos);
                 if (res == Status::match) {
-                    for (auto i = pos.begin; i < pos.end; i++) {
-                        buf.push_back(seq.buf.buffer[i]);
-                    }
+                    seq_range_to_string(buf, seq, pos);
                 }
             }
         };

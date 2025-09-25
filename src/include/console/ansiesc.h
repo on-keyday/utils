@@ -12,13 +12,15 @@
 namespace futils {
     namespace console::escape {
         enum class CursorMove : byte {
-            up,
-            down,
-            right,
-            left,
-            top_of_up,
-            top_of_down,
-            from_left,
+            up = 'A',
+            down = 'B',
+            right = 'C',
+            left = 'D',
+            top_of_up = 'E',
+            top_of_down = 'F',
+            from_left = 'G',
+            home = 'H',
+            clear = 'J',
         };
 
         constexpr auto escape_sequence_mark = '\x1b';
@@ -47,13 +49,10 @@ namespace futils {
 
         template <class Out>
         constexpr void cursor(Out&& buf, CursorMove m, size_t n) {
-            if (int(m) > int(CursorMove::from_left)) {
-                return;
-            }
             buf.push_back(escape_sequence_mark);
             buf.push_back('[');
             number::to_string(buf, n);
-            buf.push_back('A' + int(m));
+            buf.push_back(int(m));
         }
 
         template <class Out = max_sequence_buffer>

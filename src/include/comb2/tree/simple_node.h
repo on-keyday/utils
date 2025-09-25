@@ -11,47 +11,52 @@
 namespace futils {
     namespace comb2::tree::node {
 
-        struct Node {
+        template <class Tag = const char*>
+        struct GenericNode {
             const bool is_group;
             Pos pos;
-            const char *tag = nullptr;
-            Node(bool g)
+            Tag tag{};
+            GenericNode(bool g)
                 : is_group(g) {}
 #ifdef _DEBUG
-            virtual ~Node() {}
+            virtual ~GenericNode() {}
 #endif
         };
 
-        struct Group : Node {
-            Group()
-                : Node(true) {}
-            std::weak_ptr<Group> parent;
-            std::vector<std::shared_ptr<Node>> children;
+        template <class Tag = const char*>
+        struct GenericGroup : GenericNode<Tag> {
+            GenericGroup()
+                : GenericNode<Tag>(true) {}
+            std::weak_ptr<GenericGroup> parent;
+            std::vector<std::shared_ptr<GenericNode<Tag>>> children;
         };
 
-        struct Token : Node {
-            Token()
-                : Node(false) {}
+        template <class Tag = const char*>
+        struct GenericToken : GenericNode<Tag> {
+            GenericToken()
+                : GenericNode<Tag>(false) {}
             std::string token;
         };
 
-        auto as_tok(auto &&tok) {
-            auto v = static_cast<Token *>(std::to_address(tok));
+        template <class Tag = const char*>
+        auto as_tok(auto&& tok) {
+            auto v = static_cast<GenericToken<Tag>*>(std::to_address(tok));
             return v && !v->is_group ? v : nullptr;
         }
 
-        auto as_group(auto &&tok) {
-            auto v = static_cast<Group *>(std::to_address(tok));
+        template <class Tag = const char*>
+        auto as_group(auto&& tok) {
+            auto v = static_cast<GenericGroup<Tag>*>(std::to_address(tok));
             return v && v->is_group ? v : nullptr;
         }
 
-        // Ident or Group, which is derived from Element, must have const char* tag
-        inline auto collect(const std::shared_ptr<tree::Element> &elm) {
-            std::shared_ptr<Group> root = std::make_shared<Group>();
-            std::shared_ptr<Group> current = root;
-            auto cb = [&](auto &v, bool entry) {
-                if constexpr (std::is_same_v<decltype(v), tree::Ident<const char *> &>) {
-                    auto id = std::make_shared<Token>();
+        template <class Tag = const char*>
+        inline auto collect(const std::shared_ptr<tree::Element>& elm) {
+            std::shared_ptr<GenericGroup<Tag>> root = std::make_shared<GenericGroup<Tag>>();
+            std::shared_ptr<GenericGroup<Tag>> current = root;
+            auto cb = [&](auto& v, bool entry) {
+                if constexpr (std::is_same_v<decltype(v), tree::Ident<Tag>&>) {
+                    auto id = std::make_shared<GenericToken<Tag>>();
                     id->tag = v.tag;
                     id->token = v.ident;
                     id->pos = v.pos;
@@ -59,7 +64,7 @@ namespace futils {
                 }
                 else {
                     if (entry) {
-                        auto child = std::make_shared<Group>();
+                        auto child = std::make_shared<GenericGroup<Tag>>();
                         child->parent = current;
                         child->tag = v.tag;
                         child->pos = v.pos;
@@ -71,9 +76,13 @@ namespace futils {
                     }
                 }
             };
-            tree::visit_nodes(elm, cb);
+            tree::visit_nodes<Tag, Tag>(elm, cb);
             return root;
         }
+
+        using Token = GenericToken<>;
+        using Group = GenericGroup<>;
+        using Node = GenericNode<>;
 
     }  // namespace comb2::tree::node
 }  // namespace futils

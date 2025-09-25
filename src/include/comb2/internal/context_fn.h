@@ -38,7 +38,7 @@ namespace futils::comb2 {
         HAS(logic_result)
 
         constexpr auto context_logic_result(auto&& ctx, CallbackType type, Status status) {
-            if constexpr (has_logic_result<decltype(ctx), CallbackType, Status>) {
+            if constexpr (has_logic_result<decltype(ctx), decltype(type), decltype(status)>) {
                 ctx.logic_result(type, status);
             }
         }
@@ -57,8 +57,8 @@ namespace futils::comb2 {
 
         HAS(end_string)
 
-        constexpr auto context_end_string(auto&& ctx, Status res, auto&& tag, auto&& seq, Pos pos) {
-            if constexpr (has_end_string<decltype(ctx), Status, decltype(tag), decltype(seq), Pos>) {
+        constexpr auto context_end_string(auto&& ctx, Status& res, auto&& tag, auto&& seq, Pos pos) {
+            if constexpr (has_end_string<decltype(ctx), decltype(res), decltype(tag), decltype(seq), Pos>) {
                 ctx.end_string(res, tag, seq, pos);
             }
         }

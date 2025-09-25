@@ -15,7 +15,7 @@
 #include "../cbtype.h"
 #include "../../helper/defer.h"
 #include <cassert>
-
+#include "../seqrange.h"
 namespace futils::comb2::tree {
     enum class ElmType {
         branch,
@@ -197,9 +197,7 @@ namespace futils::comb2::tree {
             }
             auto tok = std::make_shared<Ident<std::decay_t<decltype(tag)>>>();
             tok->tag = tag;
-            for (auto i = pos.begin; i < pos.end; i++) {
-                tok->ident.push_back(seq.buf.buffer[i]);
-            }
+            seq_range_to_string(tok->ident, seq, pos);
             tok->pos = pos;
             maybe_init();
             current_branch->child.push_back(tok);

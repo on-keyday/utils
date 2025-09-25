@@ -51,11 +51,12 @@ namespace futils::comb2 {
             constexpr Status operator()(Sequencer<T>& seq, Ctx& ctx, Rec&& r) const {
                 const auto begin = seq.rptr;
                 ctxs::context_begin_string(ctx, tag);
-                const Status res = this->useA()(seq, ctx, r);
+                Status res = this->useA()(seq, ctx, r);
                 if (res == Status::fatal) {
                     return res;
                 }
                 const auto end = seq.rptr;
+                // user may change res so it may terminates parsing
                 ctxs::context_end_string(ctx, res, tag, seq, Pos{begin, end});
                 return res;
             }

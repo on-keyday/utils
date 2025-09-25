@@ -10,6 +10,7 @@
 #include "status.h"
 #include <concepts>
 #include "../strutil/append.h"
+#include "internal/context_fn.h"
 
 namespace futils::comb2 {
     struct no_errbuf_t {};
