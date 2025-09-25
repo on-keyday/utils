@@ -215,12 +215,12 @@ namespace futils::comb2::tree {
                 cb(*v, false);
             });
             for (auto& e : v->child) {
-                visit_nodes(e, cb);
+                visit_nodes<IdentTag, GroupTag>(e, cb);
             }
         }
         else if (auto v = comb2::tree::is_Branch(elm)) {
             for (auto& e : v->child) {
-                visit_nodes(e, cb);
+                visit_nodes<IdentTag, GroupTag>(e, cb);
             }
         }
     }
