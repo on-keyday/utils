@@ -415,16 +415,18 @@ namespace futils {
                     c.replace_buffer(*self);
                 }
 
-                constexpr static WriteStreamHandler<C> handler = {
-                    .full = full,
-                    .write = write,
-                    .commit = commit,
+                constexpr static WriteStreamHandlerT<C, T> handler = {
+                    .base = {
+                        .full = full,
+                        .write = write,
+                        .commit = commit,
+                    },
                 };
             };
         }  // namespace internal
 
         template <class T, class C = byte>
-        const WriteStreamHandler<C>* resizable_buffer_writer() {
+        const WriteStreamHandlerT<C, T>* resizable_buffer_writer() {
             return &internal::ResizableBufferWriteStream<C, T>::handler;
         }
 

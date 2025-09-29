@@ -1,0 +1,22 @@
+root! start
+start = (statement statement / statement)? eof
+statement = (if_statement / expr)
+expr = expr expr_op term / term
+term = term term_op factor / factor
+factor = '(' expr ')' / number / ident
+ident = [a-zA-Z_][a-zA-Z0-9_]*
+number = [0-9]+
+
+if_statement = "if" "(" expr ")" statement
+
+expr_op = '+' / '-'
+term_op = '*' / '/'
+
+space = ' ' / '\t' / '\n' / '\r'
+spaces = space*
+
+token! ident number expr_op term_op 
+group! factor term expr if_statement
+omit_one! factor term expr
+auto! spaces
+mode! bottom

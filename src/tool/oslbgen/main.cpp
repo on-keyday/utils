@@ -15,12 +15,12 @@
 #include <code/src_location.h>
 #include <fstream>
 struct Flags : futils::cmdline::templ::HelpOption {
-    std::string input;
+    std::string definition;
     std::string output;
 
     void bind(futils::cmdline::option::Context& ctx) {
         bind_help(ctx);
-        ctx.VarString(&input, "i,input", "input file", "FILE", futils::cmdline::option::CustomFlag::required);
+        ctx.VarString(&definition, "i,input", "input file", "FILE", futils::cmdline::option::CustomFlag::required);
         ctx.VarString(&output, "o,output", "output file", "FILE");
     }
 };
@@ -38,8 +38,8 @@ struct Ctx : futils::comb2::tree::BranchTable {
 int Main(Flags& flags, futils::cmdline::option::Context& ctx) {
     Ctx c;
     futils::file::View view;
-    if (!view.open(flags.input)) {
-        cerr << "oslbgen: error: failed to open file: " << flags.input << "\n";
+    if (!view.open(flags.definition)) {
+        cerr << "oslbgen: error: failed to open file: " << flags.definition << "\n";
         return 1;
     }
     auto seq = futils::make_ref_seq(view);
@@ -48,7 +48,7 @@ int Main(Flags& flags, futils::cmdline::option::Context& ctx) {
         seq.rptr = pos.begin;
         auto src_loc = futils::code::write_src_loc(buf, seq);
         cerr << "osslbgen: error: parse failed at here:\n"
-             << flags.input << ":" << src_loc.line << ":" << src_loc.pos << ":\n"
+             << flags.definition << ":" << src_loc.line << ":" << src_loc.pos << ":\n"
              << buf << "\n";
         return 2;
     };

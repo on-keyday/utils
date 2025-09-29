@@ -11,8 +11,8 @@
 
 namespace futils::comb2::opti {
     template <class A, class B,
-              bool = std::is_empty_v<A>&& std::is_default_constructible_v<A>,
-              bool = std::is_empty_v<B>&& std::is_default_constructible_v<B>>
+              bool = std::is_empty_v<A> && std::is_default_constructible_v<A>,
+              bool = std::is_empty_v<B> && std::is_default_constructible_v<B>>
     struct MaybeEmptyAB {
         A a;
         B b;
@@ -24,7 +24,15 @@ namespace futils::comb2::opti {
             return a;
         }
 
+        constexpr A& useA() {
+            return a;
+        }
+
         constexpr const B& useB() const {
+            return b;
+        }
+
+        constexpr B& useB() {
             return b;
         }
     };
@@ -42,6 +50,10 @@ namespace futils::comb2::opti {
         constexpr const B& useB() const {
             return b;
         }
+
+        constexpr B& useB() {
+            return b;
+        }
     };
 
     template <class A, class B>
@@ -52,6 +64,10 @@ namespace futils::comb2::opti {
             : a(std::forward<decltype(a_)>(a_)) {}
 
         constexpr const A& useA() const {
+            return a;
+        }
+
+        constexpr A& useA() {
             return a;
         }
 
@@ -73,13 +89,17 @@ namespace futils::comb2::opti {
         }
     };
 
-    template <class A, bool = std::is_empty_v<A>&& std::is_default_constructible_v<A>>
+    template <class A, bool = std::is_empty_v<A> && std::is_default_constructible_v<A>>
     struct MaybeEmptyA {
         A a;
 
         constexpr MaybeEmptyA(auto&& a_)
             : a(std::forward<decltype(a_)>(a_)) {}
         constexpr const A& useA() const {
+            return a;
+        }
+
+        constexpr A& useA() {
             return a;
         }
     };

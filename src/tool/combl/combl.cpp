@@ -20,14 +20,14 @@
 
 namespace json = futils::json;
 struct Flags : futils::cmdline::templ::HelpOption {
-    std::string input;
+    std::string definition;
     bool parse_js = false;
     json::FmtFlag fmt_html = {};
     bool escape_more = false;
     std::string mode = "ipret";
     void bind(futils::cmdline::option::Context& ctx) {
         bind_help(ctx);
-        ctx.VarString(&input, "i,input", "input file", "FILE", futils::cmdline::option::CustomFlag::required);
+        ctx.VarString(&definition, "i,input", "input file", "FILE", futils::cmdline::option::CustomFlag::required);
         ctx.VarBool(&parse_js, "j,print-json", "print json");
         ctx.VarFlagSet(&fmt_html, "f,format-html", json::FmtFlag::html, "format json with html escape");
         ctx.VarBool(&escape_more, "e,escape-more", "escape json as string literal");
@@ -72,8 +72,8 @@ int run_compiler(std::shared_ptr<combl::trvs::Scope>& global_scope) {
 
 int run_main(Flags& flags, futils::cmdline::option::Context& ctx) {
     futils::file::View view;
-    if (!view.open(flags.input)) {
-        cerr << "combl: error: failed to open file " << flags.input << "\n";
+    if (!view.open(flags.definition)) {
+        cerr << "combl: error: failed to open file " << flags.definition << "\n";
         return -1;
     }
     auto seq = futils::make_ref_seq(view);
@@ -87,7 +87,7 @@ int run_main(Flags& flags, futils::cmdline::option::Context& ctx) {
         cerr << (as_note ? "note: " : "combl: error: ") << msg << "\n";
         out.clear();
         auto loc = futils::space::write_src_loc(out, seq, pos.end - pos.begin);
-        cerr << flags.input << ":" << loc.line + 1 << ":" << loc.pos + 1 << "\n";
+        cerr << flags.definition << ":" << loc.line + 1 << ":" << loc.pos + 1 << "\n";
         cerr << out << "\n";
     };
     if (combl::parser::parse(seq, p) != combl::parser::CombStatus::match) {

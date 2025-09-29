@@ -207,15 +207,40 @@ namespace futils::comb2 {
         }
 
         template <class A, class B>
+        constexpr auto and_(A&& a, B&& b) {
+            return types::And<std::decay_t<A>, std::decay_t<B>>{
+                std::forward<A>(a),
+                std::forward<B>(b),
+            };
+        }
+
+        template <class A, class B>
         constexpr auto operator|(A&& a, B&& b) {
             return types::Or<std::decay_t<A>, std::decay_t<B>>{
                 std::forward<A>(a),
                 std::forward<B>(b),
             };
         }
+
+        template <class A, class B>
+        constexpr auto or_(A&& a, B&& b) {
+            return types::Or<std::decay_t<A>, std::decay_t<B>>{
+                std::forward<A>(a),
+                std::forward<B>(b),
+            };
+        }
+
         // optional (weaker)
         template <class A>
         constexpr auto operator-(A&& a) {
+            return types::Optional<std::decay_t<A>>{
+                std::forward<A>(a),
+            };
+        }
+
+        // optional (weaker)
+        template <class A>
+        constexpr auto optional(A&& a) {
             return types::Optional<std::decay_t<A>>{
                 std::forward<A>(a),
             };
@@ -229,15 +254,37 @@ namespace futils::comb2 {
             };
         }
 
+        // repeat
+        template <class A>
+        constexpr auto repeat(A&& a) {
+            return types::Repeat<std::decay_t<A>>{
+                std::forward<A>(a),
+            };
+        }
+
         // optional repeat
         template <class A>
         constexpr auto operator*(A&& a) {
-            return -~a;
+            return -~std::forward<A>(a);
+        }
+
+        // optional repeat
+        template <class A>
+        constexpr auto optional_repeat(A&& a) {
+            return -~std::forward<A>(a);
         }
 
         // must match (stronger)
         template <class A>
         constexpr auto operator+(A&& a) {
+            return types::MustMatch<std::decay_t<A>>{
+                std::forward<A>(a),
+            };
+        }
+
+        // must match (stronger)
+        template <class A>
+        constexpr auto must_match(A&& a) {
             return types::MustMatch<std::decay_t<A>>{
                 std::forward<A>(a),
             };

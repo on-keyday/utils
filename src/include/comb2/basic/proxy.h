@@ -15,7 +15,9 @@ namespace futils::comb2 {
     namespace types {
 
         struct MustMatchErrorFn {
-            constexpr void operator()(auto&& seq, auto&& ctx, auto&& rec) const {}
+            constexpr void operator()(auto&& a, auto&& seq, auto&& ctx, auto&& rec) const {
+                ::futils::comb2::ctxs::context_call_must_match_error(seq, ctx, a, rec);
+            }
         };
 
         template <class A, class B>
@@ -28,7 +30,7 @@ namespace futils::comb2 {
             }
 
             constexpr auto must_match_error(auto&& seq, auto&& ctx, auto&& rec) const {
-                this->useB()(seq, ctx, rec);
+                this->useB()(this->useA(), seq, ctx, rec);
             }
         };
 
@@ -55,12 +57,12 @@ namespace futils::comb2 {
 
 #define method_proxy(method)                                                                                       \
     proxy([](auto&& seq, auto&& ctx, auto&& rec) -> ::futils::comb2::Status { return rec.method(seq, ctx, rec); }, \
-          [](auto&& seq, auto&& ctx, auto&& rec) { ::futils::comb2::ctxs::context_call_must_match_error(seq, ctx, rec.method, rec); })
+          [](auto&&, auto&& seq, auto&& ctx, auto&& rec) { ::futils::comb2::ctxs::context_call_must_match_error(seq, ctx, rec.method, rec); })
 
 #define decl_method_proxy(method) decltype(method##_) method
 
 #define conditional_method(cond, default_status, method)                         \
     proxy([](auto&& seq, auto&& ctx, auto&& rec) -> ::futils::comb2::Status { if(!rec.cond) { return default_status; }  return method(seq, ctx, rec); }, \
-          [](auto&& seq, auto&& ctx, auto&& rec) { ::futils::comb2::ctxs::context_call_must_match_error(seq, ctx, method, rec); })
+          [](auto&&, auto&& seq, auto&& ctx, auto&& rec) { ::futils::comb2::ctxs::context_call_must_match_error(seq, ctx, method, rec); })
     }  // namespace ops
 }  // namespace futils::comb2

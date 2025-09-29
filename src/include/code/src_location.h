@@ -69,6 +69,7 @@ namespace futils {
                         if (seq.eos()) {
                             break;
                         }
+                        c.push_back(posc);
                         if (seq.current(ptr) == '\r' || seq.current(ptr) == '\n') {
                             omit_pos = true;
                             if (seq.current(ptr) == '\r' && seq.current(ptr + 1) == '\n') {
@@ -77,7 +78,6 @@ namespace futils {
                             ptr++;
                             break;
                         }
-                        c.push_back(posc);
                     }
                     if (show_endof) {
                         if (seq.eos()) {

@@ -228,6 +228,12 @@ add_executable(hwrpg
 "src/tool/hwrpg/foreign.cpp"
 )
 
+add_executable(cmb2parse 
+  "src/tool/cmb2parse/main.cpp"
+  "src/tool/cmb2parse/topdown.cpp"
+  "src/tool/cmb2parse/common.cpp"
+)
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "lib")
@@ -437,7 +443,7 @@ target_link_libraries(ping futils fnet coro)
 target_link_libraries(enumgen futils)
 target_link_libraries(hwrpg futils)
 target_link_libraries(hwrpg_foreign fnet)
-
+target_link_libraries(cmb2parse futils)
 
 if(LLVM_FOUND)
 message(STATUS "LLVM found")
