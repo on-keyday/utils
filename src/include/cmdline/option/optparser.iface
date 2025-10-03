@@ -23,5 +23,6 @@ macro SafeVal SafeVal<Value>
 interface OptParser {
     parse(val &SafeVal,ctx &CmdParseState,reserved bool,count size_t) bool
     __sso__() type = 3
+    decltype() type
 }
 

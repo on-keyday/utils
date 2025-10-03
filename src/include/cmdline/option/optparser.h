@@ -222,6 +222,7 @@ namespace futils {
                private:
                 struct NOVTABLE__ interface__ {
                     virtual bool parse(SafeVal<Value>& val, CmdParseState& ctx, bool reserved, size_t count) = 0;
+                    virtual const void* raw__(const std::type_info&) const noexcept = 0;
                     virtual interface__* move__(void* __storage_box) = 0;
 
                     virtual ~interface__() = default;
@@ -241,6 +242,13 @@ namespace futils {
                             return bool{};
                         }
                         return t_ptr_->parse(val, ctx, reserved, count);
+                    }
+
+                    const void* raw__(const std::type_info& info__) const noexcept override {
+                        if (info__ != typeid(T__)) {
+                            return nullptr;
+                        }
+                        return static_cast<const void*>(std::addressof(t_holder_));
                     }
 
                     interface__* move__(void* __storage_box) override {
@@ -351,6 +359,22 @@ namespace futils {
 
                 bool parse(SafeVal<Value>& val, CmdParseState& ctx, bool reserved, size_t count) {
                     return iface ? iface->parse(val, ctx, reserved, count) : bool{};
+                }
+
+                template <class T__>
+                const T__* type_assert() const {
+                    if (!iface) {
+                        return nullptr;
+                    }
+                    return static_cast<const T__*>(iface->raw__(typeid(T__)));
+                }
+
+                template <class T__>
+                T__* type_assert() {
+                    if (!iface) {
+                        return nullptr;
+                    }
+                    return static_cast<T__*>(const_cast<void*>(iface->raw__(typeid(T__))));
                 }
 
                 OptParser(const OptParser&) = delete;

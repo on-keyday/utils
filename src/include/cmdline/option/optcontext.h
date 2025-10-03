@@ -12,7 +12,7 @@
 #include "option_set.h"
 #include "parsers.h"
 #include "help.h"
-#include <concepts>
+
 namespace futils {
     namespace cmdline {
         namespace option {
@@ -380,14 +380,14 @@ namespace futils {
                 Value* Map(auto&& option, auto&& help, auto&& argdesc, M<Key, Value>&& mapping, CustomFlag flag = CustomFlag::none, Value&& defaultv = Value()) {
                     return Option(option, std::move(defaultv),
                                   MappingParser<Key, Value, M>{std::move(mapping)},
-                                  help, argdesc, flag, "string");
+                                  help, argdesc, flag, "map<string,value>");
                 }
 
                 template <class Key, class Value, template <class...> class M>
                 bool VarMap(Value* ptr, auto&& option, auto&& help, auto&& argdesc, M<Key, Value>&& mapping, CustomFlag flag = CustomFlag::none) {
                     return (bool)Option(option, ptr,
                                         MappingParser<Key, Value, M>{std::move(mapping)},
-                                        help, argdesc, flag, "string");
+                                        help, argdesc, flag, "map<string,value>");
                 }
 
                 auto find(auto&& optname) {
