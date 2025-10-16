@@ -219,6 +219,20 @@ namespace futils::code {
             return lines;
         }
 
+        constexpr String to_string(const char* indent = "    ") const {
+            String r;
+            for (const auto& line : lines) {
+                for (size_t i = 0; i < line.indent_level; i++) {
+                    append(r, indent);
+                }
+                append(r, line.content);
+                if (line.eol) {
+                    append(r, "\n");
+                }
+            }
+            return r;
+        }
+
         constexpr const Vec<LocEntry<Loc>>& locs_data() const {
             return locs;
         }
