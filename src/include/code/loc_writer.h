@@ -223,11 +223,11 @@ namespace futils::code {
             String r;
             for (const auto& line : lines) {
                 for (size_t i = 0; i < line.indent_level; i++) {
-                    append(r, indent);
+                    strutil::append(r, indent);
                 }
-                append(r, line.content);
+                strutil::append(r, line.content);
                 if (line.eol) {
-                    append(r, "\n");
+                    strutil::append(r, "\n");
                 }
             }
             return r;
