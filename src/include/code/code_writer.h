@@ -12,6 +12,7 @@
 #include "../helper/defer.h"
 #include "../helper/defer_ex.h"
 #include <string_view>
+#include "../strutil/per_line.h"
 
 namespace futils {
     namespace code {
@@ -110,58 +111,21 @@ namespace futils {
             }
 
            private:
-            template <class View>
-            constexpr static int count_indent(View view) {
-                int count = 0;
-                for (auto c : view) {
-                    if (c != ' ') {
-                        return count;
-                    }
-                    count++;
-                }
-                return -1;
-            }
-
            public:
             template <class View = std::string_view>
             constexpr void write_unformatted(auto&& v) {
                 auto cur = View(v);
-                auto iter = [&](View cur, auto&& apply, auto&& add_line) {
-                    while (cur.size()) {
-                        auto target = cur.find("\n");
-                        if (auto t = cur.find("\r"); t < target) {
-                            target = t;
-                        }
-                        if (target == cur.npos) {
-                            target = cur.size();
-                        }
-                        auto sub = cur.substr(0, target);
-                        apply(sub);
-                        auto next = cur.substr(target);
-                        if (next.starts_with("\r\n")) {
-                            cur = next.substr(2);
-                            add_line();
-                        }
-                        else if (next.starts_with("\r") || next.starts_with("\n")) {
-                            cur = next.substr(1);
-                            add_line();
-                        }
-                        else {
-                            cur = next;
-                        }
-                    }
-                };
                 int count = -1;
-                iter(
+                strutil::per_line(
                     cur,
                     [&](View view) {
-                        int ind = count_indent(view);
+                        int ind = strutil::count_indent(view);
                         if (ind >= 0 && (count == -1 || ind < count)) {
                             count = ind;
                         }
                     },
                     [] {});
-                iter(
+                strutil::per_line(
                     cur,
                     [&](View view) {
                         if (view.size() < count) {

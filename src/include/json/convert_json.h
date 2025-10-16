@@ -105,6 +105,11 @@ namespace futils {
                 { t.clear() };
             };
 
+            template <class T>
+            concept has_reserve = requires(T t) {
+                { t.reserve(1) };
+            };
+
             template <class JSON>
             struct is_json_t {
                 using base_t = void;
@@ -215,6 +220,9 @@ namespace futils {
                     if (!js.is_array()) {
                         return any(flag & FromFlag::allow_null_obj_array) &&
                                js.is_null();
+                    }
+                    if constexpr (has_reserve<T>) {
+                        t.reserve(js.size());
                     }
                     for (auto&& a : as_array(js)) {
                         using elm_t = strutil::append_size_t<T>;
