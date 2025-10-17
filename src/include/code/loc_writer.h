@@ -64,7 +64,15 @@ namespace futils::code {
         // writer does not guarantee args has no '\n'
         void write(auto&&... args) {
             maybe_init_line();
-            strutil::appends(lines.back().content, args...);
+            auto handle_for_each = [&](auto&& arg) {
+                if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, LocWriter>) {
+                    merge(std::forward<decltype(arg)>(arg));
+                }
+                else {
+                    strutil::append(lines.back().content, arg);
+                }
+            };
+            (handle_for_each(std::forward<decltype(args)>(args)), ...);
         }
 
         // should not contain '\n'
@@ -105,6 +113,14 @@ namespace futils::code {
             line();
         }
 
+       private:
+        void maybe_update_indent_level() {
+            if (!lines.empty() && !lines.back().eol && lines.back().content.empty()) {
+                lines.back().indent_level = indent_level;
+            }
+        }
+
+       public:
         auto indent_scope(std::uint32_t i = 1) {
             indent_level += i;
             return helper::defer([this, i] {
@@ -114,6 +130,7 @@ namespace futils::code {
                 else {
                     indent_level -= i;
                 }
+                maybe_update_indent_level();
             });
         }
 
@@ -126,6 +143,7 @@ namespace futils::code {
                 else {
                     indent_level -= i;
                 }
+                maybe_update_indent_level();
             });
         }
 
@@ -176,6 +194,34 @@ namespace futils::code {
             }
             line_count_ += other.line_count_ - 1;
             other.reset();
+        }
+
+        void merge(const LocWriter& other) {
+            maybe_init_line();
+            if (!other.lines.empty()) {
+                for (const auto& line : other.lines) {
+                    Line<String> new_line = line;
+                    new_line.indent_level += indent_level;
+                    if (lines.back().eol) {
+                        lines.push_back(std::move(new_line));
+                    }
+                    else {
+                        if (lines.back().content.empty()) {
+                            lines.back().indent_level = new_line.indent_level;
+                        }
+                        lines.back().content += new_line.content;
+                        lines.back().eol = new_line.eol;
+                    }
+                }
+            }
+            size_t line_offset = line_count_ - 1;
+            for (const auto& loc : other.locs) {
+                LocEntry<Loc> new_loc = loc;
+                new_loc.start.line += line_offset;
+                new_loc.end.line += line_offset;
+                locs.push_back(std::move(new_loc));
+            }
+            line_count_ += other.line_count_ - 1;
         }
 
         template <class View = std::string_view>
@@ -231,6 +277,21 @@ namespace futils::code {
                 }
             }
             return r;
+        }
+
+        constexpr bool empty() const {
+            return lines.empty() || (lines.size() == 1 && lines[0].content.empty());
+        }
+
+        const size_t str_size() const {
+            size_t size = 0;
+            for (const auto& line : lines) {
+                size += line.content.size();
+                if (line.eol) {
+                    size += 1;
+                }
+            }
+            return size;
         }
 
         constexpr const Vec<LocEntry<Loc>>& locs_data() const {
