@@ -78,10 +78,8 @@ namespace futils::code {
         // should not contain '\n'
         // writer does not guarantee args has no '\n'
         void write_with_loc(const Loc& loc, auto&&... args) {
-            maybe_init_line();
-            size_t pos = lines.back().content.size();  // 0-based;
-            strutil::appends(lines.back().content, args...);
-            locs.push_back(LocEntry{loc, LinePos{line_count_, pos}, LinePos{line_count_, lines.back().content.size()}});  // 0-based
+            auto loc_scope = with_loc_scope(loc);
+            write(std::forward<decltype(args)>(args)...);
         }
 
         auto with_loc_scope(const Loc& loc) {
