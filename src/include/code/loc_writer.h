@@ -63,12 +63,12 @@ namespace futils::code {
         // should not contain '\n'
         // writer does not guarantee args has no '\n'
         void write(auto&&... args) {
-            maybe_init_line();
             auto handle_for_each = [&](auto&& arg) {
                 if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, LocWriter>) {
                     merge(std::forward<decltype(arg)>(arg));
                 }
                 else {
+                    maybe_init_line();
                     strutil::append(lines.back().content, arg);
                 }
             };
