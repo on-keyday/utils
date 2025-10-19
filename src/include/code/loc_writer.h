@@ -169,6 +169,7 @@ namespace futils::code {
 
         void merge(LocWriter&& other) {
             maybe_init_line();
+            size_t column_offset = 0;
             if (!other.lines.empty()) {
                 for (auto& line : other.lines) {
                     line.indent_level += indent_level;
@@ -179,6 +180,7 @@ namespace futils::code {
                         if (lines.back().content.empty()) {
                             lines.back().indent_level = line.indent_level;
                         }
+                        column_offset = lines.back().content.size();
                         lines.back().content += std::move(line.content);
                         lines.back().eol = line.eol;
                     }
@@ -186,6 +188,12 @@ namespace futils::code {
             }
             size_t line_offset = line_count_ - 1;
             for (auto& loc : other.locs) {
+                if (loc.start.line == 1) {
+                    loc.start.pos += column_offset;
+                }
+                if (loc.end.line == 1) {
+                    loc.end.pos += column_offset;
+                }
                 loc.start.line += line_offset;
                 loc.end.line += line_offset;
                 locs.push_back(std::move(loc));
@@ -196,6 +204,7 @@ namespace futils::code {
 
         void merge(const LocWriter& other) {
             maybe_init_line();
+            size_t column_offset = 0;
             if (!other.lines.empty()) {
                 for (const auto& line : other.lines) {
                     Line<String> new_line = line;
@@ -207,6 +216,7 @@ namespace futils::code {
                         if (lines.back().content.empty()) {
                             lines.back().indent_level = new_line.indent_level;
                         }
+                        column_offset = lines.back().content.size();
                         lines.back().content += new_line.content;
                         lines.back().eol = new_line.eol;
                     }
@@ -215,6 +225,12 @@ namespace futils::code {
             size_t line_offset = line_count_ - 1;
             for (const auto& loc : other.locs) {
                 LocEntry<Loc> new_loc = loc;
+                if (new_loc.start.line == 1) {
+                    new_loc.start.pos += column_offset;
+                }
+                if (new_loc.end.line == 1) {
+                    new_loc.end.pos += column_offset;
+                }
                 new_loc.start.line += line_offset;
                 new_loc.end.line += line_offset;
                 locs.push_back(std::move(new_loc));

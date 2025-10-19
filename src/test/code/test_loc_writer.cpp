@@ -13,7 +13,8 @@
 #include "wrap/cout.h"
 
 int main() {
-    futils::code::LocWriter<std::string, std::vector, futils::code::SrcLoc> w, t;
+    using Writer = futils::code::LocWriter<std::string, std::vector, futils::code::SrcLoc>;
+    Writer w, t;
     w.writeln_with_loc({.line = 0}, "int main() {");
     {
         auto ind = t.indent_scope();
@@ -26,6 +27,9 @@ int main() {
     x: 100,
     y: 200,
 })");
+    Writer v;
+    v.write_with_loc({.line = 4}, "ok!");
+    w.merge(std::move(v));
 
     futils::wrap::cout_wrap() << "Generated code:\n";
     futils::wrap::cout_wrap() << w.lines_data().size() << " lines\n";
