@@ -84,7 +84,8 @@ namespace futils {
             return decode(pn_wire.value, pn_wire.len, largest_pn);
         }
 
-        constexpr std::uint64_t log2i(std::uint64_t bit) noexcept {
+        // return number of bits to shift
+        constexpr std::uint64_t shift_count(std::uint64_t bit) noexcept {
             if (bit == 1) {
                 return 0;
             }
@@ -107,7 +108,7 @@ namespace futils {
             else {
                 num_unacked = pn - size_t(largest_ack);
             }
-            auto min_bits = log2i(num_unacked) + 1;
+            auto min_bits = shift_count(num_unacked) + 1;
             auto min_bytes = min_bits / 8 + (min_bits % 8 ? 1 : 0);
             auto wire = [&](std::uint32_t mask, byte len) {
                 return WireVal{std::uint32_t(pn & mask), len};

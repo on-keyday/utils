@@ -35,6 +35,18 @@ namespace futils::binary {
         constexpr auto test1 = log2i_impl<0, 64>(31);
         constexpr auto test2 = log2i_impl<0, 64>(8);
         constexpr auto test3 = log2i_impl<0, 64>(0);
+        constexpr auto test4 = log2i_impl<0, 64>(1);
+        constexpr auto test5 = log2i_impl<0, 64>(2);
+        constexpr auto test6 = log2i_impl<0, 64>(3);
+        constexpr auto test7 = log2i_impl<0, 64>(0xffffffffffffffff);
+
+        static_assert(test1 == 5);
+        static_assert(test2 == 4);
+        static_assert(test3 == 0);
+        static_assert(test4 == 1);
+        static_assert(test5 == 2);
+        static_assert(test6 == 2);
+        static_assert(test7 == 64);
 
         constexpr bool check_border() {
             for (auto i = 0; i <= 64; i++) {
@@ -51,12 +63,6 @@ namespace futils::binary {
     }  // namespace internal
 
     constexpr size_t log2i(std::uint64_t n) {
-        if (n == 1) {
-            return 0;
-        }
-        else if (n == 2 || n == 3) {
-            return 1;
-        }
         return internal::log2i_impl<0, 64>(n);
     }
 }  // namespace futils::binary
