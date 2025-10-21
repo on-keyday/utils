@@ -15,7 +15,7 @@ namespace futils::number::hex {
     constexpr void to_hex(Header& result, auto&& in) {
         auto seq = make_ref_seq(in);
         while (!seq.eos()) {
-            auto c = seq.current();
+            auto c = std::uint8_t(seq.current());
             result.push_back(to_num_char(c >> 4));
             result.push_back(to_num_char(c & 0xf));
             seq.consume();
