@@ -5,6 +5,7 @@
     https://opensource.org/licenses/mit-license.php
 */
 
+#pragma once
 #include <cstddef>
 #include <utility>
 #include "helper/defer.h"
