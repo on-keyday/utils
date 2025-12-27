@@ -250,9 +250,9 @@ namespace futils::code {
                     int ind = strutil::count_indent(view);
                     if (ind >= 0 && (count == -1 || ind < count)) {
                         count = ind;
-                        if (ind > 0 && (least_indent == -1 || ind < least_indent)) {
-                            least_indent = ind;
-                        }
+                    }
+                    if (ind > 0 && (least_indent == -1 || ind < least_indent)) {
+                        least_indent = ind;
                     }
                 },
                 [] {});
@@ -270,12 +270,12 @@ namespace futils::code {
                         return;
                     }
                     auto ind = strutil::count_indent(view);
-                    next_indent = ind / least_indent;
+                    next_indent = (ind - count) / least_indent;
                     auto to_written = view.substr(ind);
+                    auto scope = indent_scope(next_indent);
                     write(to_written);
                 },
                 [&, this] {
-                    auto ind = indent_scope(next_indent);
                     line();
                 });
         }
