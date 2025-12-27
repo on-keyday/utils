@@ -243,15 +243,20 @@ namespace futils::code {
         constexpr void write_unformatted(auto&& v) {
             auto cur = View(v);
             int count = -1;
+            int least_indent = -1;
             strutil::per_line(
                 cur,
                 [&](View view) {
                     int ind = strutil::count_indent(view);
                     if (ind >= 0 && (count == -1 || ind < count)) {
                         count = ind;
+                        if (ind > 0 && (least_indent == -1 || ind < least_indent)) {
+                            least_indent = ind;
+                        }
                     }
                 },
                 [] {});
+            size_t next_indent = 0;
             strutil::per_line(
                 cur,
                 [&](View view) {
@@ -259,9 +264,18 @@ namespace futils::code {
                         write("");
                         return;
                     }
-                    write(view.substr(count));
+                    auto base_line = view.substr(count);
+                    if (least_indent <= 0) {
+                        write(base_line);
+                        return;
+                    }
+                    auto ind = strutil::count_indent(view);
+                    next_indent = ind / least_indent;
+                    auto to_written = view.substr(ind);
+                    write(to_written);
                 },
-                [this] {
+                [&, this] {
+                    auto ind = indent_scope(next_indent);
                     line();
                 });
         }

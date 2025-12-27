@@ -23,10 +23,12 @@ int main() {
     w.merge(std::move(t));
     w.writeln_with_loc({.line = 2}, "}");
     w.writeln();
+    auto ind = w.indent_scope();
     w.write_unformatted_with_loc({.line = 4}, R"(teleport to {
     x: 100,
     y: 200,
-})");
+} )");
+    ind.execute();
     Writer v;
     v.write_with_loc({.line = 4}, "ok!");
     w.merge(std::move(v));

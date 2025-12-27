@@ -23,15 +23,26 @@ namespace futils {
         template <class T>
         concept is_string = sizeof(std::declval<T>()[1]) <= 4;
 
+        template <class Out, class T>
+        concept can_direct_write = requires(Out& out, T&& t) {
+            { out.write(std::forward<T>(t)) };
+        };
+
         struct WriteWrapper {
             // SFINAE_BLOCK_T_BEGIN(is_string, (std::enable_if_t<sizeof(std::declval<T>()[0]) <= 4>)0)
             template <class Out, class T>
                 requires is_string<T>
             static Out& invoke(Out& out, T&& t, stringstream&, thread::LiteLock*) {
-                path_string tmp;
-                utf::convert(t, tmp);
-                out.write(tmp);
-                return out;
+                if constexpr (can_direct_write<Out, T>) {
+                    out.write(std::forward<T>(t));
+                    return out;
+                }
+                else {
+                    path_string tmp;
+                    utf::convert(t, tmp);
+                    out.write(tmp);
+                    return out;
+                }
             }
             // SFINAE_BLOCK_T_ELSE(is_string)
             template <class Out, class T>
