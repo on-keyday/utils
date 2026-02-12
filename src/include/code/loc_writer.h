@@ -270,6 +270,9 @@ namespace futils::code {
                         return;
                     }
                     auto ind = strutil::count_indent(view);
+                    if (ind < count) {
+                        ind = count;
+                    }
                     next_indent = (ind - count) / least_indent;
                     auto to_written = view.substr(ind);
                     auto scope = indent_scope(next_indent);

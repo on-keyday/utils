@@ -15,6 +15,11 @@ namespace futils {
         namespace templ {
 
             template <class T>
+            concept has_args_fn = requires(T t) {
+                { t.args() };
+            };
+
+            template <class T>
             concept has_args = requires(T t) {
                 { t.args };
             };
@@ -32,14 +37,17 @@ namespace futils {
                 option::Context ctx;
                 opt.bind(ctx);
                 option::FlagType err;
-                if constexpr (has_args<decltype(opt)>) {
+                if constexpr (has_args_fn<decltype(opt)>) {
+                    err = option::parse_required(argc, argv, ctx, opt.args(), option::ParseFlag::assignable_mode);
+                }
+                else if constexpr (has_args<decltype(opt)>) {
                     err = option::parse_required(argc, argv, ctx, opt.args, option::ParseFlag::assignable_mode);
                 }
                 else {
                     err = option::parse_required(argc, argv, ctx, helper::nop, option::ParseFlag::assignable_mode);
                 }
                 if (perfect_parsed(err) && opt.help) {
-                    if constexpr (has_args<decltype(opt)>) {
+                    if constexpr (has_args_fn<decltype(opt)> || has_args<decltype(opt)>) {
                         if constexpr (has_arg_desc<decltype(opt)>) {
                             show(ctx.Usage<String>(option::ParseFlag::assignable_mode, argv[0], opt.arg_desc), false);
                         }
