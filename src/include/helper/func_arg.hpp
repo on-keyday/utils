@@ -34,6 +34,12 @@ namespace futils::helper {
         using type = typename func_next_arg<I, Args...>::type;
     };
 
+    // const member function pointer
+    template <class R, class C, size_t I, class... Args>
+    struct func_args<R (C::*)(Args...) const, I> {
+        using type = typename func_next_arg<I, Args...>::type;
+    };
+
     template <class V>
     concept has_operator_call = requires(V v) {
         { &V::operator() };
