@@ -32,6 +32,7 @@ namespace futils::code {
         String content;
         size_t indent_level = 0;
         bool eol = false;
+        bool no_indent = false;
     };
 
     template <class String, template <class...> class Vec, class Loc>
@@ -40,14 +41,15 @@ namespace futils::code {
         Vec<LocEntry<Loc>> locs;
         size_t line_count_ = 1;
         size_t indent_level = 0;
+        bool no_indent = false;
         Vec<Line<String>> lines;
 
         void maybe_init_line() {
             if (lines.empty()) {
-                lines.emplace_back(Line<String>{.indent_level = indent_level});
+                lines.emplace_back(Line<String>{.indent_level = indent_level, .no_indent = no_indent});
             }
             if (lines.back().eol) {
-                lines.emplace_back(Line<String>{.indent_level = indent_level});
+                lines.emplace_back(Line<String>{.indent_level = indent_level, .no_indent = no_indent});
             }
         }
 
@@ -103,6 +105,18 @@ namespace futils::code {
         }
 
         void writeln(auto&&... args) {
+            write(std::forward<decltype(args)>(args)...);
+            line();
+        }
+
+        void writeln_noindent(auto&&... args) {
+            size_t current_indent = indent_level;
+            auto d = helper::defer([this, current_indent] {
+                indent_level = current_indent;
+                no_indent = false;
+            });
+            indent_level = 0;
+            no_indent = true;
             write(std::forward<decltype(args)>(args)...);
             line();
         }
@@ -173,7 +187,9 @@ namespace futils::code {
             size_t column_offset = 0;
             if (!other.lines.empty()) {
                 for (auto& line : other.lines) {
-                    line.indent_level += indent_level;
+                    if (!line.no_indent) {
+                        line.indent_level += indent_level;
+                    }
                     if (lines.back().eol) {
                         lines.push_back(std::move(line));
                     }
@@ -209,7 +225,9 @@ namespace futils::code {
             if (!other.lines.empty()) {
                 for (const auto& line : other.lines) {
                     Line<String> new_line = line;
-                    new_line.indent_level += indent_level;
+                    if (!new_line.no_indent) {
+                        new_line.indent_level += indent_level;
+                    }
                     if (lines.back().eol) {
                         lines.push_back(std::move(new_line));
                     }
