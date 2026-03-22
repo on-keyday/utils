@@ -46,8 +46,11 @@ namespace futils::comb2::composite {
     constexpr auto bin_prefix = '0'_l & ('b'_l | 'B'_l);
 
     constexpr auto hex_integer = hex_prefix & +~hexadecimal_number;
+    constexpr auto hex_integer_weak = hex_prefix & ~hexadecimal_number;
     constexpr auto oct_integer = oct_prefix & +~octal_number;
+    constexpr auto oct_integer_weak = oct_prefix & ~octal_number;
     constexpr auto oct_c_integer = '0'_l & ~octal_number;
+    constexpr auto bin_integer_weak = bin_prefix & ~binary_number;
     constexpr auto bin_integer = bin_prefix & +~binary_number;
     constexpr auto dec_integer = ~decimal_number;
 
