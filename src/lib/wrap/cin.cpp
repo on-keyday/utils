@@ -81,7 +81,9 @@ namespace futils {
                     return true;
                 };
                 for (;;) {
-                    read_one();
+                    if (!read_one()) {
+                        break;
+                    }
                     auto len = unicode::utf8::first_byte_to_len(input);
                     if (len == 0) {
                         utf::from_utf32(unicode::replacement_character, out);
