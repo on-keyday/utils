@@ -38,6 +38,7 @@ namespace futils {
         }
 
         UtfIn& UtfIn::operator>>(path_string& out) {
+            eof_ = false;
             if (glbuf.size()) {
                 out.append(glbuf);
                 glbuf.clear();
@@ -50,6 +51,8 @@ namespace futils {
                 for (;;) {
                     auto f = file.read_console(buf);
                     if (!f) {
+                        out.resize(len);
+                        eof_ = true;
                         break;  // error but no way to handle
                     }
                     if (f->size() < out.size()) {
@@ -82,6 +85,7 @@ namespace futils {
                 };
                 for (;;) {
                     if (!read_one()) {
+                        eof_ = true;
                         break;
                     }
                     auto len = unicode::utf8::first_byte_to_len(input);

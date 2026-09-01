@@ -22,11 +22,16 @@ namespace futils {
            private:
             const file::File& file;
             thread::LiteLock lock;
+            bool eof_ = false;
 
            public:
             UtfIn(const file::File& i)
                 : file(i) {}
             UtfIn& operator>>(path_string& out);
+
+            bool eof() const {
+                return eof_;
+            }
 
             template <class T>
             UtfIn& operator>>(T& out) {
