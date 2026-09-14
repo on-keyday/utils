@@ -8,6 +8,7 @@
 #include <platform/windows/dllexport_source.h>
 #include <platform/detect.h>
 #include <wrap/trace.h>
+#include <cstdlib>
 #ifdef FUTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #include <ImageHlp.h>

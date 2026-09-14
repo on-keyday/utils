@@ -10,6 +10,7 @@
 #include <iterator>
 #include <compare>
 #include <memory>
+#include <new>
 #include "../helper/defer.h"
 
 namespace futils {
