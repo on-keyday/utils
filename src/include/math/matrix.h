@@ -13,14 +13,72 @@
 #include "vector.h"
 
 namespace futils::math {
+    template <class Type, size_t m, size_t n>
+    using RawMatrix = Type[m][n];
 
-    // m行n列行列
-    template <size_t m, size_t n, class Type = double>
-    struct Matrix {
+    template <size_t m, size_t n, class Type, DynamicStatus dynamic>
+    struct MatrixStorage {
        private:
         Type matrix[m][n]{};
 
-        template <size_t x, size_t y, class Ty>
+       public:
+        constexpr Type* operator[](size_t i) {
+            return matrix[i];
+        }
+
+        constexpr const Type* operator[](size_t i) const {
+            return matrix[i];
+        }
+
+        constexpr const RawMatrix<Type, n, n>* raw() const {
+            return matrix;
+        }
+    };
+
+    template <size_t m, size_t n, class Type>
+    struct MatrixStorage<m, n, Type, DynamicStatusDynamic> {
+       private:
+        Type (*matrix)[m][n];
+
+       public:
+        constexpr MatrixStorage() {
+            matrix = new Type[1][m][n]{};
+        }
+
+        constexpr MatrixStorage(const MatrixStorage& in) : MatrixStorage() {
+            memcpy(matrix, in.matrix, m * n * sizeof(Type));
+        }
+
+        constexpr ~MatrixStorage() {
+            delete[] matrix;
+        }
+
+        constexpr MatrixStorage& operator=(const MatrixStorage& in) {
+            memcpy(matrix, in.matrix, m * n * sizeof(Type));
+            return *this;
+        }
+
+        constexpr Type* operator[](size_t i) {
+            return (*matrix)[i];
+        }
+
+        constexpr const Type* operator[](size_t i) const {
+            return (*matrix)[i];
+        }
+
+        constexpr const RawMatrix<Type, m, n>* raw() const {
+            return matrix;
+        }
+    };
+
+    // m行n列行列
+    template <size_t m, size_t n, class Type = double, class Config = DefaultAllocation<>>
+    struct Matrix {
+       private:
+        static constexpr auto dynamic = Config::allocation;
+        MatrixStorage<m, n, Type, dynamic> matrix;
+
+        template <size_t x, size_t y, class Ty, class Conf>
         friend struct Matrix;
 
        public:
@@ -91,11 +149,13 @@ namespace futils::math {
         }
 
         // 転置行列
-        constexpr Matrix<n, m, Type> T() const {
-            Matrix<n, m, Type> t;
+        constexpr Matrix<n, m, Type, Config> T() const {
+            observe_access<Config>(ObservePoint::entry_right, *this);
+            Matrix<n, m, Type, Config> t;
             for_each([&](auto i, auto j) {
                 t.matrix[j][i] = matrix[i][j];
             });
+            observe_access<Config>(ObservePoint::init, t);
             return t;
         }
 
@@ -108,37 +168,59 @@ namespace futils::math {
 
         // 足し算
         constexpr friend Matrix operator+(const Matrix& a, const Matrix& b) {
+            observe_access<Config>(ObservePoint::entry_left, a);
+            observe_access<Config>(ObservePoint::entry_right, b);
             Matrix p;
             Matrix::for_each([&](auto i, auto j) {
                 p.matrix[i][j] = a.matrix[i][j] + b.matrix[i][j];
             });
+            observe_access<Config>(ObservePoint::init, p);
             return p;
         }
 
         // 引き算
         constexpr friend Matrix operator-(const Matrix& a, const Matrix& b) {
+            observe_access<Config>(ObservePoint::entry_left, a);
+            observe_access<Config>(ObservePoint::entry_right, b);
             Matrix p;
             Matrix::for_each([&](auto i, auto j) {
                 p.matrix[i][j] = a.matrix[i][j] - b.matrix[i][j];
             });
+            observe_access<Config>(ObservePoint::init, p);
             return p;
         }
 
         // 単項マイナス
         constexpr Matrix operator-() {
+            observe_access<Config>(ObservePoint::entry_right, *this);
             Matrix p;
             Matrix::for_each([&](auto i, auto j) {
                 p.matrix[i][j] = -matrix[i][j];
             });
+            observe_access<Config>(ObservePoint::init, p);
             return p;
         }
 
         // スカラー倍
         constexpr friend Matrix operator*(const Matrix& a, Type b) {
+            observe_access<Config>(ObservePoint::entry_left, a);
+            observe_access<Config>(ObservePoint::entry_right, b);
             Matrix p;
             Matrix::for_each([&](auto i, auto j) {
                 p.matrix[i][j] = a.matrix[i][j] * b;
             });
+            observe_access<Config>(ObservePoint::init, p);
+            return p;
+        }
+
+        constexpr friend Matrix operator/(const Matrix& a, Type b) {
+            observe_access<Config>(ObservePoint::entry_left, a);
+            observe_access<Config>(ObservePoint::entry_right, b);
+            Matrix p;
+            Matrix::for_each([&](auto i, auto j) {
+                p.matrix[i][j] = a.matrix[i][j] / b;
+            });
+            observe_access<Config>(ObservePoint::init, p);
             return p;
         }
 
@@ -162,6 +244,7 @@ namespace futils::math {
                     u.matrix[i][j] = 1;
                 }
             });
+            observe_access<Config>(ObservePoint::init, u);
             return u;
         }
 
@@ -257,12 +340,14 @@ namespace futils::math {
                         U = q3 * U;
                     }
                 }
+                observe_access<Config>(ObservePoint::init, L);
+                observe_access<Config>(ObservePoint::init, U);
                 return {L, U, true};
             }
         }
 
         // 行と列を1つづつ抜き取る
-        constexpr std::pair<Matrix<m - 1, n - 1, Type>, bool> pullout(size_t h, size_t w) const
+        constexpr std::pair<Matrix<m - 1, n - 1, Type, Config>, bool> pullout(size_t h, size_t w) const
             requires(m == n && m - 1 > 0)
         {
             if (h >= m || w >= n) {
@@ -284,6 +369,7 @@ namespace futils::math {
                     a.matrix[i - ishift][j - jshift] = matrix[i][j];
                 }
             }
+            observe_access<Config>(ObservePoint::init, a);
             return {a, true};
         }
 
@@ -417,8 +503,11 @@ namespace futils::math {
 
         // 掛け算
         template <size_t z>
-        constexpr friend Matrix<m, z, Type> operator*(const Matrix& a, const Matrix<n, z, Type>& b) {
-            Matrix<m, z, Type> p;
+        constexpr friend Matrix<m, z, Type, Config> operator*(const Matrix& a, const Matrix<n, z, Type, Config>& b) {
+            observe_access<Config>(ObservePoint::entry_left, a);
+            observe_access<Config>(ObservePoint::entry_right, b);
+
+            Matrix<m, z, Type, Config> p;
             for (size_t j = 0; j < m; j++) {          // pとaの行の移動
                 for (size_t k = 0; k < z; k++) {      // pとbの列の移動
                     for (size_t i = 0; i < n; i++) {  // aの行とbの列の移動
@@ -426,38 +515,53 @@ namespace futils::math {
                     }
                 }
             }
+            observe_access<Config>(ObservePoint::init, p);
             return p;
         }
 
         // 列ベクトルとの掛け算
-        constexpr friend Vector<m, Type> operator*(const Matrix& a, const Vector<n, Type>& b) {
-            Vector<m, Type> p;
+        constexpr friend Vector<m, Type, Config> operator*(const Matrix& a, const Vector<n, Type, Config>& b) {
+            observe_access<Config>(ObservePoint::entry_left, a);
+            observe_access<Config>(ObservePoint::entry_right, b);
+            Vector<m, Type, Config> p;
             for (size_t j = 0; j < m; j++) {      // pとaの行の移動
                 for (size_t i = 0; i < n; i++) {  // aの行とbの列の移動
                     p[j] += a.matrix[j][i] * b[i];
                 }
             }
+            observe_access<Config>(ObservePoint::init, p);
             return p;
         }
 
         // 行ベクトルとの掛け算
-        constexpr friend Vector<n, Type> operator*(const Vector<m, Type>& a, const Matrix& b) {
+        constexpr friend Vector<n, Type, Config> operator*(const Vector<m, Type, Config>& a, const Matrix& b) {
+            observe_access<Config>(ObservePoint::entry_left, a);
+            observe_access<Config>(ObservePoint::entry_right, b);
+
             Vector<n, Type> p;
             for (size_t k = 0; k < n; k++) {      // pとbの列の移動
                 for (size_t i = 0; i < m; i++) {  // aの行とbの列の移動
                     p[k] += a[i] * b.matrix[i][k];
                 }
             }
+            observe_access<Config>(ObservePoint::init, p);
             return p;
         }
 
         // アダマール積
         constexpr friend Matrix hadamard(const Matrix& a, const Matrix& b) {
+            observe_access<Config>(ObservePoint::entry_left, a);
+            observe_access<Config>(ObservePoint::entry_right, b);
             Matrix r;
             r.for_each([&](auto i, auto j) {
                 r.matrix[i][j] = a.matrix[i][j] * b.matrix[i][j];
             });
+            observe_access<Config>(ObservePoint::init, r);
             return r;
+        }
+
+        constexpr auto raw() const {
+            return matrix.raw();
         }
     };
 

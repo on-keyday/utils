@@ -7,6 +7,7 @@
 
 #pragma once
 #include <cstddef>
+#include <initializer_list>
 #include <type_traits>
 #include <binary/float.h>
 
@@ -33,9 +34,141 @@ namespace futils::math {
         return x;
     }
 
-    template <size_t n, class Type = double>
-    struct Vector {
+    using DynamicStatus = bool;
+    constexpr auto DynamicStatusDynamic = true;
+    constexpr auto DynamicStatusFixed = false;
+
+    template <DynamicStatus status = DynamicStatusFixed>
+    struct DefaultAllocation {
+        static constexpr auto allocation = status;
+    };
+
+    enum class ObservePoint {
+        init,
+        entry_right,
+        entry_left
+    };
+
+    constexpr const char* to_string(ObservePoint p) {
+        switch (p) {
+            case futils::math::ObservePoint::init:
+                return "init";
+            case ObservePoint::entry_left:
+                return "entry_left";
+            case ObservePoint::entry_right:
+                return "entry_right";
+            default:
+                return "(unknown)";
+        }
+    }
+
+    template <class Observer, class... Args>
+    constexpr void observe_access(ObservePoint o, Args&&... args) {
+        if constexpr (requires { Observer::observe(o, args...); }) {
+            Observer::observe(o, args...);
+        }
+    }
+
+    template <class Type, size_t n>
+    using RawVector = Type[n];
+
+    template <size_t n, class Type, class Config, DynamicStatus dynamic>
+    struct VectorStorage {
         Type elements[n]{};
+
+        constexpr Type& operator[](size_t i) {
+            return elements[i];
+        }
+
+        constexpr const Type& operator[](size_t i) const {
+            return elements[i];
+        }
+
+        constexpr auto begin() {
+            return std::begin(elements);
+        }
+
+        constexpr auto end() {
+            return std::end(elements);
+        }
+
+        constexpr auto begin() const {
+            return elements;
+        }
+
+        constexpr auto end() const {
+            return elements + n;
+        }
+
+        constexpr const RawVector<Type, n>* raw() const {
+            return elements;
+        }
+    };
+
+    template <size_t n, class Type, class Config>
+    struct VectorStorage<n, Type, Config, DynamicStatusDynamic> {
+        Type (*elements)[n];
+
+        constexpr VectorStorage() {
+            elements = new Type[1][n]{};
+        }
+
+        constexpr VectorStorage(const VectorStorage& in) : VectorStorage() {
+            memcpy(elements, in.elements, n * sizeof(Type));
+        }
+
+        constexpr ~VectorStorage() {
+            delete[] elements;
+        }
+
+        constexpr VectorStorage& operator=(const VectorStorage& in) {
+            memcpy(elements, in.elements, n * sizeof(Type));
+            return *this;
+        }
+
+        constexpr Type& operator[](size_t i) {
+            return (*elements)[i];
+        }
+
+        constexpr const Type& operator[](size_t i) const {
+            return (*elements)[i];
+        }
+
+        constexpr auto begin() {
+            return std::begin(*elements);
+        }
+
+        constexpr auto end() {
+            return std::end(*elements);
+        }
+
+        constexpr auto begin() const {
+            return (*elements);
+        }
+
+        constexpr auto end() const {
+            return (*elements) + n;
+        }
+
+        constexpr RawVector<Type, n>* raw() const {
+            return elements;
+        }
+    };
+
+    template <size_t n, class Type = double, class Config = DefaultAllocation<>>
+    struct Vector {
+       private:
+        static constexpr auto dynamic = Config::allocation;
+        VectorStorage<n, Type, Config, dynamic> elements;
+
+       public:
+        constexpr Vector() = default;
+
+        constexpr Vector(std::initializer_list<Type> t) {
+            for (size_t i = 0; i < n && i < t.size(); i++) {
+                elements[i] = t.begin()[i];
+            }
+        }
 
         constexpr Type& operator[](size_t i) {
             return elements[i];
@@ -54,22 +187,30 @@ namespace futils::math {
         static constexpr Vector make_for_each(auto&& fn) {
             Vector v;
             for_each([&](size_t i) { v[i] = fn(i); });
+            observe_access<Config>(ObservePoint::init, v);
             return v;
         }
 
         constexpr Vector operator-() const {
+            observe_access<Config>(ObservePoint::entry_right, *this);
             return make_for_each([&](size_t i) { return -elements[i]; });
         }
 
         constexpr friend Vector operator+(const Vector& a, const Vector& b) {
+            observe_access<Config>(ObservePoint::entry_left, a);
+            observe_access<Config>(ObservePoint::entry_right, b);
             return make_for_each([&](size_t i) { return a[i] + b[i]; });
         }
 
         constexpr friend Vector operator-(const Vector& a, const Vector& b) {
+            observe_access<Config>(ObservePoint::entry_left, a);
+            observe_access<Config>(ObservePoint::entry_right, b);
             return make_for_each([&](size_t i) { return a[i] - b[i]; });
         }
 
         constexpr friend Vector operator*(const Vector& a, Type b) {
+            observe_access<Config>(ObservePoint::entry_left, a);
+            observe_access<Config>(ObservePoint::entry_right, b);
             return make_for_each([&](size_t i) { return a[i] * b; });
         }
 
@@ -83,10 +224,13 @@ namespace futils::math {
 
         // inner product
         constexpr friend Type dot(const Vector& a, const Vector& b) {
+            observe_access<Config>(ObservePoint::entry_left, a);
+            observe_access<Config>(ObservePoint::entry_right, b);
             Type v{};
             for_each([&](size_t i) {
                 v += a[i] * b[i];
             });
+            observe_access<Config>(ObservePoint::init, v);
             return v;
         }
 
@@ -94,10 +238,13 @@ namespace futils::math {
         constexpr friend Vector cross(const Vector& a, const Vector& b)
             requires(n == 3)
         {
+            observe_access<Config>(ObservePoint::entry_left, a);
+            observe_access<Config>(ObservePoint::entry_right, b);
             Vector v;
             v.elements[0] = a.elements[1] * b.elements[2] - a.elements[2] * b.elements[1];
             v.elements[1] = a.elements[2] * b.elements[0] - a.elements[0] * b.elements[2];
             v.elements[2] = a.elements[0] * b.elements[1] - a.elements[1] * b.elements[0];
+            observe_access<Config>(ObservePoint::init, v);
             return v;
         }
 
@@ -118,19 +265,19 @@ namespace futils::math {
         }
 
         constexpr auto begin() {
-            return elements;
+            return std::begin(elements);
         }
 
         constexpr auto end() {
-            return elements + n;
+            return std::end(elements);
         }
 
         constexpr auto begin() const {
-            return elements;
+            return std::begin(elements);
         }
 
         constexpr auto end() const {
-            return elements + n;
+            return std::end(elements);
         }
 
         constexpr bool has(auto&& fn) const {
