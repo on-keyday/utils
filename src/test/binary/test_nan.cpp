@@ -13,13 +13,13 @@
 void nan() {
     constexpr futils::binary::SingleFloat f1 = 2143289344u;               // qNAN
     constexpr futils::binary::SingleFloat f2 = 0x80000000 | 2143289344u;  // -qNAN
-    constexpr auto mask = f1.exponent_mask;
+    constexpr auto mask = f1.biased_exponent_mask;
     constexpr bool is_nan = f1.is_nan();
     constexpr bool is_quiet_nan = f1.is_quiet_nan();
     constexpr bool is_nan2 = f2.is_nan();
     constexpr bool sign = f1.sign();
     constexpr bool sign2 = f2.sign();
-    constexpr bool test1 = f2.exponent() == f2.exponent_max;
+    constexpr bool test1 = f2.biased_exponent() == f2.biased_exponent_max;
     constexpr auto frac_value = f1.fraction();
     constexpr auto cmp = std::uint32_t(f1) == std::uint32_t(f2);
     constexpr auto cmp2 = f1.to_float() == f2.to_float();
@@ -71,11 +71,11 @@ void nan() {
     constexpr auto reconvert_nan = futils::binary::make_float(yes_nan);
     constexpr auto reconvert_nan2 = futils::binary::make_float(yes_nan2);
     constexpr auto epsilon = futils::binary::make_float(FLT_EPSILON);
-    constexpr auto epsilon_exponent = epsilon.exponent();
+    constexpr auto epsilon_exponent = epsilon.biased_exponent();
     constexpr auto epsilon_fraction = epsilon.fraction();
     constexpr auto epsilon_biased_exponent = epsilon.biased_exponent();
     constexpr auto epsilon_plus_1 = futils::binary::make_float(1.0f + FLT_EPSILON);
-    constexpr auto epsilon_plus_1_exponent = epsilon_plus_1.exponent();
+    constexpr auto epsilon_plus_1_exponent = epsilon_plus_1.biased_exponent();
     constexpr auto epsilon_plus_1_fraction = epsilon_plus_1.fraction();
     constexpr auto epsilon_plus_1_biased_exponent = epsilon_plus_1.biased_exponent();
     constexpr auto epsilon2 = futils::binary::make_float(epsilon_plus_1.to_float() - 1.0f);

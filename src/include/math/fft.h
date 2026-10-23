@@ -60,7 +60,7 @@ namespace futils::math::fft {
                 z.sign(f.sign());
                 return z.to_float();
             }
-            auto exponent = f.biased_exponent();
+            auto exponent = f.exponent();
             if (exponent < 0) {
                 return f.sign() ? 0.0 : 1.0;
             }
@@ -77,7 +77,7 @@ namespace futils::math::fft {
                 }
             }
             mantissa &= ~mask;
-            f.biased_exponent(exponent);
+            f.exponent(exponent);
             f.fraction(mantissa);
             return f.to_float();
         }
@@ -92,7 +92,7 @@ namespace futils::math::fft {
                 return z.to_float();
             }
             bool sign = f.sign();
-            auto exponent = f.biased_exponent();
+            auto exponent = f.exponent();
             auto mantissa = f.fraction();
             int mul_factor = 1;
             auto i = exponent < 0 ? -exponent : exponent;

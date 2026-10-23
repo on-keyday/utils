@@ -82,6 +82,8 @@ namespace futils::math {
         friend struct Matrix;
 
        public:
+        static constexpr auto dimention = 2;
+
         template <class T>
         struct MatrixRow {
            private:

@@ -46,7 +46,8 @@ namespace futils::math {
     enum class ObservePoint {
         init,
         entry_right,
-        entry_left
+        entry_left,
+        report,
     };
 
     constexpr const char* to_string(ObservePoint p) {
@@ -162,6 +163,7 @@ namespace futils::math {
         VectorStorage<n, Type, Config, dynamic> elements;
 
        public:
+        static constexpr auto dimention = 1;
         constexpr Vector() = default;
 
         constexpr Vector(std::initializer_list<Type> t) {

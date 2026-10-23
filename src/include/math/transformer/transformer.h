@@ -10,6 +10,7 @@
 #include <random>
 #include "../matrix.h"
 #include "../vector.h"
+#include "math/matrix.h"
 #include "math/vector.h"
 
 namespace futils::math::transformer {
@@ -273,6 +274,8 @@ namespace futils::math::transformer {
             std::array<ChunkedMat, chunk_count> chunked_dq, chunked_dk, chunked_dv;
 
             for (size_t i = 0; i < chunk_count; i++) {
+                apply_rope(chunked_q[i]);  // ← 順伝播と同じ回転をかけてから
+                apply_rope(chunked_k[i]);
                 auto [dq, dk, dv] = back_attention(chunked_attension[i], chunked_q[i], chunked_k[i], chunked_v[i]);
                 back_rope(dq);
                 back_rope(dk);
@@ -517,34 +520,113 @@ namespace futils::math::transformer {
         }
 
         template <size_t layer>
-        constexpr static Type train_step(
-            TokenInput input_ids,   // 入力トークン埋め込み列 (N x D)
-            TokenInput target_ids,  // 正解トークンID配列 (N)
-            FullWeights<layer>& w,  // Transformerブロック重み
-            Type learning_rate      // 学習率
-        ) {
-            WordMat x = embed_lookup(input_ids, w.embed);
-            // 1. 順伝播
-            std::array<InputX, layer> input{};
-            WordMat next_input = x;
+        constexpr static std::tuple<WordMat, VocabMat, Type> forward(const FullWeights<layer>& w,
+                                                                     std::array<InputX, layer>& input,
+                                                                     const TokenInput& input_ids,
+                                                                     const TokenInput& target_ids) {
+            auto x = embed_lookup(input_ids, w.embed);
             for (size_t i = 0; i < layer; i++) {
-                next_input = run_step(next_input, w.weights[i], input[i]);
+                x = run_step(x, w.weights[i], input[i]);
             }
-            VocabMat logits = logit(next_input, w.vocab);
-            VocabMat p = probability(logits);
+            auto logits = logit(x, w.vocab);
+            auto p = probability(logits);
+            return {x, p, cross_entropy(p, target_ids)};
+        }
 
-            // 2. 損失計算
-            Type loss = cross_entropy(p, target_ids);
-
+        template <size_t layer>
+        constexpr static FullWeights<layer> backward(const FullWeights<layer>& w,
+                                                     const std::array<InputX, layer>& input,
+                                                     VocabMat& p,
+                                                     const TokenInput& input_ids,
+                                                     const TokenInput& target_ids, const WordMat& final_input) {
             VocabMat dz = back_logit(p, target_ids);
             FullWeights<layer> update;
-            WordMat next_back = back_start(next_input, w.vocab, dz, update);
+            WordMat next_back = back_start(final_input, w.vocab, dz, update);
 
             for (size_t i = 0; i < layer; i++) {
                 next_back = back_step(next_back, w.weights[layer - 1 - i], update.weights[layer - 1 - i], input[layer - 1 - i]);
             }
-
             back_embed(next_back, input_ids, update);
+            return update;
+        }
+
+        template <class MatrixT>
+        constexpr static void check_matrix(
+            MatrixT& mat, const MatrixT& analytic, const char* name, size_t layer,
+            size_t report_limit,
+            auto&& loss_fn, Type eps = 1e-5, Type border = 1e-4) {
+            Type worst = 0;
+            size_t count = 0;
+
+            auto logic = [&](auto&& access, auto&& analys, auto&&... args) {
+                const auto original = access();
+                access() = original + eps;
+                const auto lp = loss_fn();
+                access() = original - eps;
+                const auto lm = loss_fn();
+                access() = original;
+
+                const auto num = (lp - lm) / (2 * eps);
+                const auto ana = analys();
+                const auto denom = std::max(1e-12, abs(num) + abs(ana));
+                const auto rel = abs(num - ana) / denom;
+                if (rel > border && count < report_limit) {
+                    observe_access<Config>(ObservePoint::report, layer, name, lp, lm, num, ana, rel, args...);
+                    count++;
+                }
+                worst = std::max(worst, rel);
+            };
+
+            if constexpr (MatrixT::dimention == 2) {
+                mat.for_each([&](size_t i, size_t j) {
+                    logic([&]() -> Type& { return mat[i][j]; }, [&]() -> const Type& { return analytic[i][j]; }, i, j);
+                });
+            }
+            else if constexpr (MatrixT::dimention == 1) {
+                mat.for_each([&](size_t i) {
+                    logic([&]() -> Type& { return mat[i]; }, [&]() -> const Type& { return analytic[i]; }, i);
+                });
+            }
+            observe_access<Config>(ObservePoint::report, layer, name, worst);
+        }
+
+        template <size_t layer>
+        constexpr static Type train_step(
+            TokenInput input_ids,   // 入力トークン埋め込み列 (N x D)
+            TokenInput target_ids,  // 正解トークンID配列 (N)
+            FullWeights<layer>& w,  // Transformer重み
+            Type learning_rate,     // 学習率
+            size_t matrix_check = 0) {
+            std::array<InputX, layer> input;
+            auto [next_input, p, loss] = forward(w, input, input_ids, target_ids);
+            auto update = backward(w, input, p, input_ids, target_ids, next_input);
+            if (matrix_check) {
+                auto L = [&] {
+                    auto [_0, _1, loss] = forward(w, input, input_ids, target_ids);
+                    return loss;
+                };
+
+#define CHECK(path, l)                                      \
+    observe_access<Config>(ObservePoint::report, l, #path); \
+    check_matrix(w.path, update.path, #path, l, matrix_check, L)
+
+                CHECK(vocab, layer + 1);
+                for (size_t i = 0; i < layer; i++) {
+                    size_t l = layer - 1 - i;
+                    CHECK(weights[l].down, l + 1);
+                    CHECK(weights[l].up, l + 1);
+                    CHECK(weights[l].gate, l + 1);
+                    CHECK(weights[l].norm2, l + 1);
+                    CHECK(weights[l].o, l + 1);
+                    CHECK(weights[l].v, l + 1);
+                    CHECK(weights[l].k, l + 1);
+                    CHECK(weights[l].q, l + 1);
+                    CHECK(weights[l].norm1, l + 1);
+                }
+                CHECK(embed, 0);
+
+#undef CHECK
+            }
             w.sgd(update, learning_rate);
 
             return loss;

@@ -88,39 +88,43 @@ namespace futils {
             // raw values getter/setter
 
             bits_flag_alias_method(value, 0, sign);
-            bits_flag_alias_method(value, 1, exponent);
+            bits_flag_alias_method(value, 1, biased_exponent);
             bits_flag_alias_method(value, 2, fraction);
 
-            constexpr std::make_signed_t<exp_t> biased_exponent() const noexcept {
-                return exponent() - bias;
+            constexpr std::make_signed_t<exp_t> exponent() const noexcept {
+                return biased_exponent() - bias;
             }
 
-            constexpr bool biased_exponent(std::make_signed_t<exp_t> exp) noexcept {
-                return exponent(exp + bias);
+            constexpr bool exponent(std::make_signed_t<exp_t> exp) noexcept {
+                return biased_exponent(exp + bias);
+            }
+
+            constexpr std::make_signed_t<exp_t> exponent_10_estimate() const noexcept {
+                return ((exponent() + 1) / 3) - ((exponent() - 1) / 32);
             }
 
             // status
 
             constexpr bool has_implicit_1() const noexcept {
-                return exponent() != 0;
+                return biased_exponent() != 0;
             }
 
             constexpr bool is_denormalized() const noexcept {
-                return exponent() == 0 && fraction() != 0;
+                return biased_exponent() == 0 && fraction() != 0;
             }
 
             constexpr bool is_normalized() const noexcept {
-                return exponent() != 0;
+                return biased_exponent() != 0;
             }
 
             // ±Inf
             constexpr bool is_infinity() const noexcept {
-                return exponent() == exponent_max && fraction() == 0;
+                return biased_exponent() == biased_exponent_max && fraction() == 0;
             }
 
             // NaN (both quiet and signaling)
             constexpr bool is_nan() const noexcept {
-                return exponent() == exponent_max && fraction() != 0;
+                return biased_exponent() == biased_exponent_max && fraction() != 0;
             }
 
             constexpr bool is_quiet_nan() const noexcept {
@@ -128,7 +132,7 @@ namespace futils {
             }
 
             constexpr bool is_canonical_nan() const noexcept {
-                return exponent() == exponent_max && fraction() == fraction_msb;
+                return biased_exponent() == biased_exponent_max && fraction() == fraction_msb;
             }
 
             constexpr bool is_indeterminate_nan() const noexcept {
@@ -158,6 +162,56 @@ namespace futils {
                     return set_fraction((fraction() | fraction_msb));
                 }
                 return true;
+            }
+
+            constexpr void make_normalized() {
+                constexpr auto bits_size = sizeof(unsigned long long) * bit_per_byte;
+                constexpr auto zero_prefix = bits_size - float_bits_width;
+                auto clzll = [](unsigned long long x) {
+                    if (std::is_constant_evaluated()) {
+                        for (int i = 0; i < bits_size; i++) {
+                            if (!(x & (1ull << (bits_size - 1 - i)))) {
+                                return i;
+                            }
+                        }
+                        throw "undefined";
+                    }
+                    else {
+                        return __builtin_clzll(x);
+                    }
+                };
+                auto shift = clzll(fraction()) - zero_prefix - exponent_bits_width;
+                if (shift < 0) {
+                    uint32_t rshift = (uint32_t)(-shift);
+                    auto max = exponent() + rshift;
+                    if (max > bias) {
+                        biased_exponent(biased_exponent_max);
+                        fraction(0);
+                        return;
+                    }
+                    fraction(fraction() >> rshift);
+                    exponent(max);
+                }
+                else if (shift > 0) {
+                    auto min = exponent() - shift;
+                    if (min < -(bias) + 1) {
+                        biased_exponent(0);
+                        fraction(0);
+                        return;
+                    }
+                    int32_t max_shift = exponent() - (bias) + 1;
+                    if (shift > max_shift) {
+                        // 正規化しきると指数がアンダーフローするため、非正規化数の限界までシフト
+                        if (max_shift > 0) {
+                            fraction(fraction() << max_shift);
+                            exponent(exponent() - max_shift);
+                        }
+                    }
+                    else {
+                        fraction(fraction() << shift);
+                        exponent(min);
+                    }
+                }
             }
 
             // ±0
@@ -246,7 +300,7 @@ namespace futils {
         template <class Float>
         constexpr auto quiet_nan = [] {
             auto f = make_float(Float());
-            f.exponent(f.exponent_max);
+            f.biased_exponent(f.biased_exponent_max);
             f.fraction(f.fraction_msb);
             return f;
         }();
@@ -254,7 +308,7 @@ namespace futils {
         template <class Float>
         constexpr auto signaling_nan = [] {
             auto f = make_float(Float());
-            f.exponent(f.exponent_max);
+            f.biased_exponent(f.biased_exponent_max);
             f.fraction(f.fraction_msb);
             f.make_quiet_signaling();
             return f;
@@ -263,7 +317,7 @@ namespace futils {
         template <class Float, typename decltype(make_float(Float{}))::frac_t payload>
         constexpr auto signaling_nan_with_payload = [] {
             auto f = make_float(Float());
-            f.exponent(f.exponent_max);
+            f.biased_exponent(f.biased_exponent_max);
             f.fraction(f.fraction_msb);
             if (!f.make_quiet_signaling(payload)) {
                 throw "invalid payload";
@@ -274,7 +328,7 @@ namespace futils {
         template <class Float>
         constexpr auto indeterminate_nan = [] {
             auto f = make_float(Float());
-            f.exponent(f.exponent_max);
+            f.biased_exponent(f.biased_exponent_max);
             f.fraction(f.fraction_msb);
             f.sign(true);
             return f;
@@ -283,7 +337,7 @@ namespace futils {
         template <class Float>
         constexpr auto infinity = [] {
             auto f = make_float(Float());
-            f.exponent(f.exponent_max);
+            f.biased_exponent(f.biased_exponent_max);
             return f;
         }();
 
@@ -293,7 +347,7 @@ namespace futils {
         template <class Float>
         constexpr auto epsilon = [] {
             auto f = make_float(Float());
-            f.exponent(f.bias - f.fraction_bits_width);
+            f.biased_exponent(f.bias - f.fraction_bits_width);
             return f;
         }();
 
@@ -301,8 +355,16 @@ namespace futils {
         template <class Float>
         constexpr auto min_denormalized = [] {
             auto f = make_float(Float());
-            f.exponent(0);
+            f.biased_exponent(0);
             f.fraction(1);
+            return f;
+        }();
+
+        template <class Float>
+        constexpr auto max_denormalized = [] {
+            auto f = make_float(Float());
+            f.biased_exponent(0);
+            f.fraction(f.fraction_max);
             return f;
         }();
 
@@ -310,9 +372,24 @@ namespace futils {
         template <class Float>
         constexpr auto min_normalized = [] {
             auto f = make_float(Float());
-            f.exponent(1);
+            f.biased_exponent(1);
             return f;
         }();
+
+        template <class Float>
+        constexpr auto max_normalized = [] {
+            auto f = make_float(Float());
+            f.biased_exponent(f.biased_exponent_max - 1);
+            f.fraction(f.fraction_max);
+            return f;
+        }();
+
+        template <class Float>
+        constexpr auto normalize(Float x) {
+            auto f = make_float(x);
+            f.make_normalized();
+            return f;
+        }
 
         namespace test {
             // static_assert(HalfFloat::exponent_shift == 10 && SingleFloat::exponent_shift == 23 && DoubleFloat::exponent_shift == 52);
@@ -322,21 +399,21 @@ namespace futils {
                 single = (0xc0000000);
                 if (single.to_int() != 0xC0000000 ||
                     !single.sign() ||
-                    single.exponent() != 0x80 ||
+                    single.biased_exponent() != 0x80 ||
                     single.fraction() != 0) {
                     return false;
                 }
                 single = (0x7f7fffff);
                 if (single.to_int() != 0x7f7fffff ||
                     single.sign() ||
-                    single.exponent() != 0xFE ||
+                    single.biased_exponent() != 0xFE ||
                     single.fraction() != 0x7fffff) {
                     return false;
                 }
                 single = 1.0e10f;
                 if (single.to_int() != 0x501502f9 ||
                     single.sign() ||
-                    single.exponent() != 0xA0 ||
+                    single.biased_exponent() != 0xA0 ||
                     single.fraction() != 0x1502f9) {
                     return false;
                 }

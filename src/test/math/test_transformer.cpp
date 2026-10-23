@@ -7,11 +7,13 @@
 #include <iostream>
 #include "binary/float.h"
 #include "math/vector.h"
+#include "wrap/cout.h"
 #include <wrap/trace.h>
+#include <console/ansiesc.h>
 bool nan_fired = false;
 struct Config : futils::math::DefaultAllocation<futils::math::DynamicStatusDynamic> {
     template <size_t m, size_t n, class T, class C>
-    static void observe(futils::math::ObservePoint p, const futils::math::Matrix<m, n, T, C>& mat) {
+    static void observe(futils::math::ObservePoint p, futils::math::Matrix<m, n, T, C>& mat) {
         if (nan_fired) return;
         mat.for_each([&](size_t i, size_t j) {
             auto val = futils::binary::make_float(mat[i][j]);
@@ -29,6 +31,82 @@ struct Config : futils::math::DefaultAllocation<futils::math::DynamicStatusDynam
                 }
             }
         });
+    }
+    static constexpr auto df0 = futils::binary::DoubleFloat(1e-1);
+    static constexpr auto df1 = futils::binary::DoubleFloat(1e-2);
+    static constexpr auto df2 = futils::binary::DoubleFloat(1e-3);
+    static constexpr auto df3 = futils::binary::DoubleFloat(1e-4);
+    static constexpr auto df4 = futils::binary::DoubleFloat(1e-5);
+    static constexpr auto df5 = futils::binary::DoubleFloat(1e-6);
+    static constexpr auto df6 = futils::binary::DoubleFloat(1e-7);
+    static constexpr auto df7 = futils::binary::DoubleFloat(1e-8);
+    static constexpr auto df8 = futils::binary::DoubleFloat(1e-9);
+    static constexpr auto df9 = futils::binary::DoubleFloat(1e-10);
+    static constexpr auto df10 = futils::binary::DoubleFloat(1e-11);
+    static constexpr auto df11 = futils::binary::DoubleFloat(1e-12);
+    static constexpr auto df12 = futils::binary::DoubleFloat(1e-13);
+    static constexpr auto df13 = futils::binary::DoubleFloat(1e-14);
+    static constexpr auto df14 = futils::binary::DoubleFloat(1e-15);
+    static constexpr auto df15 = futils::binary::DoubleFloat(1e+308);
+    static constexpr auto df16 = futils::binary::DoubleFloat(1e+154);
+    static constexpr auto df17 = futils::binary::DoubleFloat(1e-77);
+
+    static constexpr auto exp0 = (df0.exponent() + 1) / 3 - ((df0.exponent() - 1) / 32);
+    static constexpr auto exp1 = (df1.exponent() + 1) / 3 - ((df1.exponent() - 1) / 32);
+    static constexpr auto exp2 = (df2.exponent() + 1) / 3 - ((df2.exponent() - 1) / 32);
+    static constexpr auto exp3 = (df3.exponent() + 1) / 3 - ((df3.exponent() - 1) / 32);
+    static constexpr auto exp4 = (df4.exponent() + 1) / 3 - ((df4.exponent() - 1) / 32);
+    static constexpr auto exp5 = (df5.exponent() + 1) / 3 - ((df5.exponent() - 1) / 32);
+    static constexpr auto exp6 = (df6.exponent() + 1) / 3 - ((df6.exponent() - 1) / 32);
+    static constexpr auto exp7 = (df7.exponent() + 1) / 3 - ((df7.exponent() - 1) / 32);
+    static constexpr auto exp8 = (df8.exponent() + 1) / 3 - ((df8.exponent() - 1) / 32);
+    static constexpr auto exp9 = (df9.exponent() + 1) / 3 - ((df9.exponent() - 1) / 32);
+    static constexpr auto exp10 = (df10.exponent() + 1) / 3 - ((df10.exponent() - 1) / 32);
+    static constexpr auto exp11 = (df11.exponent() + 1) / 3 - ((df11.exponent() - 1) / 32);
+    static constexpr auto exp12 = (df12.exponent() + 1) / 3 - ((df12.exponent() - 1) / 32);
+    static constexpr auto exp13 = (df13.exponent() + 1) / 3 - ((df13.exponent() - 1) / 32);
+    static constexpr auto exp14 = (df14.exponent() + 1) / 3 - ((df14.exponent() - 1) / 32);
+    static constexpr auto exp15 = (df15.exponent() + 1) / 3 - ((df15.exponent() - 1) / 32);
+    static constexpr auto exp16 = (df16.exponent() + 1) / 3 - ((df16.exponent() - 1) / 32);
+    static constexpr auto exp17 = (df17.exponent() + 1) / 3 - ((df17.exponent() - 1) / 32);
+
+    static constexpr auto max = futils::binary::max_normalized<double>;
+    static constexpr auto max_int = max.to_int();
+    static constexpr auto max_f = max.to_float();
+    static constexpr auto max_de = futils::binary::max_denormalized<double>;
+    static constexpr auto norm_max = futils::binary::normalize(max_de).to_float();
+    static constexpr auto max_de_f = max_de.to_float();
+    static constexpr auto min_de = futils::binary::min_denormalized<double>;
+    static constexpr auto min_de_i = min_de.to_int();
+    static constexpr auto norm = futils::binary::normalize(min_de).to_float();
+    static constexpr auto min_de_f = min_de.to_float();
+    static constexpr auto min_no = futils::binary::min_normalized<double>;
+    static constexpr auto min_no_f = min_no.to_float();
+    static constexpr auto ep = futils::binary::epsilon<double>.to_float();
+    static constexpr auto norm_ep = futils::binary::normalize(ep).to_float();
+    static constexpr auto exp_max = (min_no.exponent() + 1) / 3;
+
+    static constexpr auto frac = df1.fraction_with_implicit_1();
+    static constexpr auto dfr = df1.to_float();
+    static constexpr auto dfr2 = df2.to_float();
+    static constexpr auto red = futils::console::escape::letter_color<futils::console::escape::ColorPalette::red>;
+    static constexpr auto reset = futils::console::escape::color_reset;
+
+    static void observe(futils::math::ObservePoint p, size_t layer, const char* name, futils::binary::DoubleFloat lp, futils::binary::DoubleFloat lm, futils::binary::DoubleFloat num, futils::binary::DoubleFloat ana, futils::binary::DoubleFloat rel, auto... dim) {
+        futils::wrap::cout_wrap() << layer << ":" << name << ":" << lp.to_float() << ":" << lm.to_float() << ":" << num.exponent() << ":" << ana.exponent() << ":" << red << rel.exponent() << reset;
+        auto call = [&](auto i) {
+            futils::wrap::cout_wrap() << ":" << i;
+        };
+        (call(dim), ...);
+        futils::wrap::cout_wrap() << "\n";
+    }
+
+    static void observe(futils::math::ObservePoint p, size_t layer, const char* name) {
+        futils::wrap::cout_wrap() << "start " << name << " at " << layer << "\n";
+    }
+
+    static void observe(futils::math::ObservePoint p, size_t layer, const char* name, futils::binary::DoubleFloat worst) {
+        futils::wrap::cout_wrap() << "end " << name << " at " << layer << ":" << worst.to_float() << ":" << red << worst.exponent() << reset << "\n";
     }
 };
 
@@ -115,7 +193,7 @@ int main() {
                 item.input_ids,
                 item.target_ids,
                 weights,
-                lr);
+                lr, 5);
             /*
             weights.vocab.for_each([&](size_t i, size_t j) {
                 auto b = (*rb)[j][i].fraction();
@@ -138,7 +216,7 @@ int main() {
         }
 
         if (epoch % 100 == 0) {
-            std::cout << "Exponent: " << (*rb)[0][0].biased_exponent() << std::endl;
+            std::cout << "Exponent: " << (*rb)[0][0].exponent() << std::endl;
             std::cout << "Fraction: " << (*rb)[0][0].fraction() << std::endl;
 
             std::cout << "Epoch " << epoch << " Loss: " << total_loss / dataset.size() << std::endl;
