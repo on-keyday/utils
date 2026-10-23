@@ -11,6 +11,7 @@
 #include <helper/pushbacker.h>
 #include <strutil/append.h>
 #include <platform/detect.h>
+#include <stdlib.h>
 
 #ifdef FUTILS_PLATFORM_WINDOWS
 #include <windows.h>
