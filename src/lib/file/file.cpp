@@ -9,6 +9,7 @@
 #include <platform/detect.h>
 #include <file/file.h>
 #include <unicode/utf/convert.h>
+#include <cstdlib>
 #ifdef FUTILS_PLATFORM_WINDOWS
 #include <windows.h>
 #else
